@@ -3,3 +3,5 @@ export function load() {
         'register_entrypoint': (f) => Deno.core.ops.op_register_entrypoint(f)
     };
 }
+
+load()

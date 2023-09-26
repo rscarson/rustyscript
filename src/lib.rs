@@ -5,8 +5,15 @@
 //! 
 #![warn(missing_docs)]
 
-pub mod script;
+mod script;
+pub use script::Script;
+
+mod runtime;
+pub use runtime::{ Runtime, RuntimeOptions };
+
+/// Holds subclasses of js_playground::Error
 pub mod error;
-pub mod runtime;
+pub use error::Error;
 
 pub use deno_core;
+pub use deno_core::serde_json;
