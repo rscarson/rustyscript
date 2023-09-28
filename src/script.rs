@@ -1,4 +1,5 @@
 use std::ffi::OsStr;
+use std::fmt::Display;
 use std::fs::{ read_to_string, read_dir };
 use std::path::Path;
 use serde::{ Serialize, Deserialize };
@@ -11,6 +12,12 @@ pub struct Script {
     contents: String
 }
 
+impl Display for Script {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.filename())
+    }
+}
+
 impl Script {
     /// Creates a new `Script` instance with the given filename and contents.
     /// If filename is relative it will be resolved to the current working dir at runtime
@@ -20,7 +27,6 @@ impl Script {
     /// * `contents` - A string containing the contents of the script.
     ///
     /// # Returns
-    ///
     /// A new `Script` instance.
     ///
     /// # Example
@@ -43,7 +49,6 @@ impl Script {
     /// * `filename` - A string representing the filename of the script file.
     ///
     /// # Returns
-    ///
     /// A `Result` containing the loaded `Script` instance or an `std::io::Error` if there
     /// are issues reading the file.
     ///
@@ -52,16 +57,10 @@ impl Script {
     /// ```rust
     /// use js_playground::Script;
     /// 
-    /// match Script::load("script.js") {
-    ///     Ok(script) => {
-    ///         // Handle the loaded script here
-    ///         println!("Loaded script: {:?}", script);
-    ///     }
-    ///     Err(error) => {
-    ///         // Handle the error here
-    ///         eprintln!("Error loading script: {}", error);
-    ///     }
-    /// }
+    /// # fn main() -> Result<(), js_playground::Error> {
+    /// let script = Script::load("src/ext/js_playground.js")?;
+    /// # Ok(())
+    /// # }
     /// ```
     pub fn load(filename: &str) -> Result<Self, std::io::Error> {
         let contents = read_to_string(filename)?;
@@ -75,7 +74,6 @@ impl Script {
     /// * `directory` - A string representing the target directory
     ///
     /// # Returns
-    ///
     /// A `Result` containing a vec of loaded `Script` instances or an `std::io::Error` if there
     /// are issues reading a file.
     ///
@@ -84,16 +82,10 @@ impl Script {
     /// ```rust
     /// use js_playground::Script;
     /// 
-    /// match Script::load_dir("my_scripts") {
-    ///     Ok(scripts) => {
-    ///         // Handle the loaded script here
-    ///         println!("Loaded scripts: {:?}", scripts);
-    ///     }
-    ///     Err(error) => {
-    ///         // Handle the error here
-    ///         eprintln!("Error loading a script: {}", error);
-    ///     }
-    /// }
+    /// # fn main() -> Result<(), js_playground::Error> {
+    /// let all_scripts = Script::load_dir("src/ext")?;
+    /// # Ok(())
+    /// # }
     /// ```
     pub fn load_dir(directory: &str) -> Result<Vec<Self>, std::io::Error> {
         let mut files: Vec<Self> = Vec::new();
@@ -115,14 +107,13 @@ impl Script {
     /// Returns the filename of the script.
     ///
     /// # Returns
-    ///
     /// A reference to a string containing the filename.
     ///
     /// # Example
     ///
     /// ```rust
     /// use js_playground::Script;
-    /// 
+    ///
     /// let script = Script::new("script.js", "console.log('Hello, World!');");
     /// println!("Filename: {}", script.filename());
     /// ```
@@ -133,18 +124,41 @@ impl Script {
     /// Returns the contents of the script.
     ///
     /// # Returns
-    ///
     /// A reference to a string containing the script contents.
     ///
     /// # Example
     ///
     /// ```rust
     /// use js_playground::Script;
-    /// 
+    ///
     /// let script = Script::new("script.js", "console.log('Hello, World!');");
     /// println!("Script Contents: {}", script.contents());
     /// ```
     pub fn contents(&self) -> &str {
         &self.contents
+    }
+}
+
+#[cfg(test)]
+mod test_script {
+    use super::*;
+
+    #[test]
+    fn test_new_script() {
+        let script = Script::new("script.js", "console.log('Hello, World!');");
+        assert_eq!(script.filename(), "script.js");
+        assert_eq!(script.contents(), "console.log('Hello, World!');");
+    }
+
+    #[test]
+    fn test_load_script() {
+        let script = Script::load("src/ext/js_playground.js").expect("Failed to load script");
+        assert_eq!(script.filename(), "src/ext/js_playground.js");
+    }
+
+    #[test]
+    fn test_load_dir() {
+        let scripts = Script::load_dir("src/ext").expect("Failed to load scripts from directory");
+        assert!(scripts.len() > 0);
     }
 }

@@ -1,18 +1,19 @@
-use deno_core::anyhow::{anyhow, self};
-use deno_core::v8::HandleScope;
 use tokio::runtime;
-use deno_core::{ 
-    serde_json, v8, resolve_path,
-    JsRuntime, FsModuleLoader, ModuleSpecifier, ModuleId
-};
-use std::{
-    env::current_dir,
-    rc::Rc,
-    time::Duration
-};
 
+use deno_core::FsModuleLoader;
+use deno_core::serde_json;
+use deno_core::JsRuntime;
+use deno_core::ModuleId;
+use deno_core::v8;
+
+use std::time::Duration;
+use std::rc::Rc;
+
+use crate::ext::*;
+use crate::ModuleHandle;
 use crate::script::Script;
-use crate::error::*;
+use crate::Error;
+use crate::traits::*;
 
 #[derive(Default)]
 /// Represents the set of options accepted by the runtime constructor
@@ -27,64 +28,13 @@ pub struct RuntimeOptions {
     pub timeout: Option<Duration>
 }
 
-mod extensions {
-    use deno_core::{ v8, op2, extension, OpState };
-    use crate::error::Error;
-
-    #[op2]
-    /// Registers a JS function with the runtime as being the entrypoint for the script
-        ///
-        /// # Arguments
-        /// * `state` - The runtime's state, into which the function will be put
-        /// * `callback` - The function to register
-    fn op_register_entrypoint(state: &mut OpState, #[global] callback: v8::Global<v8::Function>) -> Result<(), Error> {
-        state.put(callback);
-        Ok(())
-    }
-
-    extension!(
-        js_playground,
-        ops = [op_register_entrypoint],
-        esm_entry_point = "ext:js_playground/js_playground.js",
-        esm = [ dir "src/ext", "js_playground.js" ],
-    );
-}
-
-/// Represents a loaded instance of a module within a runtime
-pub struct ModuleHandle {
-    entrypoint: Option<v8::Global<v8::Function>>,
-    module_id: ModuleId,
-    module: Script
-}
-
-impl ModuleHandle {
-    /// Create a new module instance
-    pub fn new(module: &Script, module_id: ModuleId, entrypoint: Option<v8::Global<v8::Function>>) -> Self {
-        Self {
-            module_id, entrypoint, module: module.clone()
-        }
-    }
-
-    /// Return this module's contents
-    pub fn module(&self) -> &Script {
-        &self.module
-    }
-
-    /// Return this module's ID
-    pub fn id(&self) -> &ModuleId {
-        &self.module_id
-    }
-
-    /// Return this module's entrypoint
-    pub fn entrypoint(&self) -> &Option<v8::Global<v8::Function>> {
-        &self.entrypoint
-    }
-}
+/// For functions returning nothing
+pub type Undefined = serde_json::Value;
 
 /// Represents a configured runtime ready to run modules
 pub struct Runtime {
     deno_runtime: JsRuntime,
-    timeout: Option<Duration>
+    options: RuntimeOptions
 }
 
 impl Runtime {
@@ -98,245 +48,124 @@ impl Runtime {
     /// * `options` - A `RuntimeOptions` struct that specifies the configuration options for the runtime.
     ///
     /// # Returns
-    ///
     /// A `Result` containing either the initialized runtime instance on success (`Ok`) or an error on failure (`Err`).
     ///
     /// # Example
-    ///
-    /// ```
-    /// // Create a new runtime with default options
-    /// use js_playground::{ Runtime, RuntimeOptions };
+    /// ```rust
+    /// use js_playground::{ Runtime, RuntimeOptions, Script };
+    /// use std::time::Duration;
     /// 
-    /// let runtime = Runtime::new(RuntimeOptions::default());
-    /// match runtime {
-    ///     Ok(runtime) => {
-    ///         // Successfully created the runtime instance
+    /// # fn main() -> Result<(), js_playground::Error> {
+    /// // Creates a runtime that will attempt to run function load() on start
+    /// // And which will time-out after 50ms
+    /// let mut runtime = Runtime::new(RuntimeOptions {
+    ///     default_entrypoint: Some("load".to_string()),
+    ///     timeout: Some(Duration::from_millis(50)),
+    ///     ..Default::default()
+    /// })?;
+    /// 
+    /// let script = Script::new("test.js", "
+    ///     export const load = () => {
+    ///         return 'Hello World!';
     ///     }
-    ///     Err(error) => {
-    ///         // Handle the error
-    ///         eprintln!("Failed to create the runtime: {:?}", error);
-    ///     }
-    /// }
+    /// ");
+    /// 
+    /// let module_handle = runtime.load_modules(script, vec![])?;
+    /// let value: String = runtime.call_entrypoint(&module_handle, Runtime::EMPTY_ARGS)?;
+    /// assert_eq!("Hello World!", value);
+    /// # Ok(())
+    /// # }
     /// ```
     ///
-    pub fn new(options: RuntimeOptions) -> Result<Self, Error> {
+    pub fn new(mut options: RuntimeOptions) -> Result<Self, Error> {
         // Prep extensions
-        let mut extensions = vec![extensions::js_playground::init_ops_and_esm()];
-        extensions.extend(options.extensions);
+        options.extensions.extend(
+            vec![js_playground::js_playground::init_ops_and_esm()]
+        );
+
+        #[cfg(feature = "console")]
+        options.extensions.extend(
+            vec![
+                deno_console::deno_console::init_ops_and_esm(),
+                init_console::init_console::init_ops_and_esm(),
+            ]
+        );
+
+        #[cfg(feature = "url")]
+        options.extensions.extend(
+            vec![
+                deno_webidl::deno_webidl::init_ops_and_esm(), 
+                deno_url::deno_url::init_ops_and_esm(),
+                init_url::init_url::init_ops_and_esm(),
+            ]
+        );
+
+        #[cfg(feature = "web")]
+        options.extensions.extend(
+            vec![deno_web::deno_web::init_ops_and_esm()]
+        );
 
         let js_runtime = JsRuntime::new(deno_core::RuntimeOptions {
             module_loader: Some(Rc::new(FsModuleLoader)),
-            extensions,
+            extensions: options.extensions,
             ..Default::default()
         });
 
-        let mut runtime_instance = Self {
+        Ok(Self {
             deno_runtime: js_runtime,
-            timeout: options.timeout
-        };
-        
-        // Default entrypoint
-        if let Some(entrypoint) = options.default_entrypoint {
-            if let Ok(function) = runtime_instance.get_function_by_name(None, &entrypoint) {
-                let state = runtime_instance.deno_runtime().op_state();
-                let mut deep_state = state.try_borrow_mut()?;
-                deep_state.put(function);
+            options: RuntimeOptions { 
+                default_entrypoint: options.default_entrypoint.clone(),
+                timeout: options.timeout,
+                ..Default::default()
             }
-        }
-
-        Ok(runtime_instance)
+        })
     }
 
-    /// Get a mutable borrow of the internal runtime
+    /// Access the underlying deno runtime instance directly
     pub fn deno_runtime(&mut self) -> &mut JsRuntime {
         &mut self.deno_runtime
     }
 
-    /// resolve a module specifier to the current wd if relative
-    fn get_module_specifier(path: &str) -> Result<ModuleSpecifier, Error> {
-        Ok(resolve_path(
-            path, 
-            &current_dir()?
-        )?)
+    /// Access the options used to create this runtime
+    pub fn options(&self) -> &RuntimeOptions {
+        &self.options
     }
 
-    fn get_value_from_v8_object(&mut self, scope: &mut HandleScope, context: v8::Local<v8::Object>, name: &str)-> Result<v8::Global<v8::Value>, Error> {
-        // Turn the name into a v8 value
-        let key = v8::String::new(scope, name).ok_or(
-            V8EncodingError::new(name.to_string())
-        )?;
-
-        let value: v8::Local<v8::Value> = context.get(scope, key.into()).ok_or(
-            ValueNotFoundError::new(name.to_string())
-        )?;
-        
-        if value.is_undefined() {
-            Err(ValueNotFoundError::new(name.to_string()).into())
-        } else {
-            Ok(v8::Global::<v8::Value>::new(scope, value))
-        }
-    }
-
-    /// Attempt to get a value out of the global context (globalThis.name)
-    fn get_global_value(&mut self, name: &str) -> Result<v8::Global<v8::Value>, Error> {
-        let context = self.deno_runtime.main_context();
-        let mut scope = self.deno_runtime.handle_scope();
-        let global = context.open(&mut scope).global(&mut scope);
-
-        self.get_value_from_v8_object(&mut scope, global, name)
-    }
-    
-    /// Attempt to get a value out of a module context
-    fn get_module_export_value(&mut self, module: &ModuleHandle, name: &str) -> Result<v8::Global<v8::Value>, Error> {
-        let module_namespace = self.deno_runtime.get_module_namespace(*module.id())?;
-        let mut scope = self.deno_runtime.handle_scope();
-        let module_namespace = v8::Local::<v8::Object>::new(&mut scope, module_namespace);
-        
-        self.get_value_from_v8_object(&mut scope, module_namespace, name)
-    }
-
-    /// Calls a JavaScript function and deserializes its return value into a Rust type.
-    ///
-    /// This method takes a JavaScript function and invokes it within the Deno runtime.
-    /// It then serializes the return value of the function into a JSON string and
-    /// deserializes it into the specified Rust type (`T`).
-    ///
-    /// # Arguments
-    /// * `function` - A reference to a JavaScript function (`v8::Function`)
-    ///
-    /// # Returns
-    ///
-    /// A `Result` containing the deserialized result of the function call (`T`)
-    /// or an error (`Error`) if the function call fails or the return value cannot
-    /// be deserialized.
-    ///
-    /// # Example
-    ///
-    /// ```
-    /// use js_playground::{ Runtime, RuntimeOptions, Script, Error };
+    /// Encode an argument as a json value for use as a function argument
+    /// ```rust
+    /// use js_playground::{ Runtime, RuntimeOptions, Script };
+    /// use std::time::Duration;
     /// 
-    /// fn main() -> Result<(), Error> {
-    ///     let mut runtime = Runtime::new(Default::default())?;
-    ///     let script = Script::new("/path/to/module.ts", "
-    ///         const f = () => 2;
-    ///     ");
-    ///     let module = runtime.load_modules(script, vec![])?;
-    ///     let f = runtime.get_function_by_name(Some(&module), "f").unwrap();
-    ///     let value: usize = runtime.call_function(f, Runtime::EMPTY_ARGS)?;
-    ///     Ok(())
-    /// }
-    /// ```
-    ///
-    pub fn call_function<T, A>(&mut self, function: v8::Global<v8::Function>, args: &[A]) -> Result<T, Error>
-    where T: deno_core::serde::de::DeserializeOwned, A: deno_core::serde::Serialize {
-        let mut scope = self.deno_runtime.handle_scope();
-        let function_instance = function.open(&mut scope);
-        let name = function_instance.get_name(&mut scope).to_rust_string_lossy(&mut scope);
-
-        // Prep arguments
-        let f_args: Result<Vec<v8::Local<v8::Value>>, deno_core::serde_v8::Error>
-            = args.iter().map(|f| deno_core::serde_v8::to_v8(&mut scope, f)).collect();
-        let final_args = f_args?;
-
-        // Call the function
-        let undefined: v8::Local<v8::Value> = v8::undefined(&mut scope).into();
-        let result = function_instance.call(&mut scope, undefined, &final_args).ok_or(
-            JsonDecodeError::new(anyhow!("{} did not return a value", name))
-        )?;
-
-        // Re-Serialize to get a rust value
-        let json_string = v8::json::stringify(&mut scope, result).ok_or(
-            JsonDecodeError::new(anyhow!("{} returned an invalid value", name))
-        )?.to_rust_string_lossy(&mut scope);
-        
-        Ok(serde_json::from_str(&json_string)?)
-    }
-
-    /// Retrieves a JavaScript function by its name from the Deno runtime's global context.
-    ///
-    /// This method attempts to find a JavaScript function within the global context of the
-    /// Deno runtime by specifying its name. If the function is found, it is returned as
-    /// a `v8::Global<v8::Function>`, which allows you to safely
-    /// reference and use the function.
-    ///
-    /// # Arguments
-    /// * `name` - A string representing the name of the JavaScript function to retrieve.
-    ///
-    /// # Returns
-    ///
-    /// A `Result` containing a `v8::Global<v8::Function>` if
-    /// the function is found, or an error (`Error`) if the function cannot be found or
-    /// if it is not a valid JavaScript function.
-    ///
-    /// # Example
-    ///
-    /// ```
-    /// use js_playground::{ Runtime, Script, Error };
+    /// # fn main() -> Result<(), js_playground::Error> {
+    /// let script = Script::new("test.js", "
+    ///     function load(a, b) {
+    ///         console.log(`Hello world: a=${a}, b=${b}`);
+    ///     }
+    ///     js_playground.register_entrypoint(load);
+    /// ");
     /// 
-    /// fn main() -> Result<(), Error> {
-    ///     let mut runtime = Runtime::new(Default::default())?;
-    ///     let script = Script::new("/path/to/module.js", "export function f() { return 2; }");
-    ///     let module = runtime.load_modules(script, vec![])?;
-    ///     let function = runtime.get_function_by_name(Some(&module), "f")?;
-    ///     Ok(())
-    /// }
+    /// Runtime::execute_module(
+    ///     script, vec![], 
+    ///     Default::default(), 
+    ///     &[
+    ///         Runtime::arg("test"),
+    ///         Runtime::arg(5),
+    ///     ]
+    /// )?;
+    /// # Ok(())
+    /// # }
     /// ```
-    ///
-    /// # Note
-    ///
-    /// This method is designed to retrieve JavaScript functions by name from the global
-    /// context of the Deno runtime. It checks whether the retrieved value is indeed a
-    /// JavaScript function and returns it as a global reference.
-    ///
-    /// Ensure that you have set up the Deno runtime (`Runtime`) correctly before using
-    /// this method, and provide the correct function name as an argument.
-    ///
-    pub fn get_function_by_name(&mut self, module_context: Option<&ModuleHandle>, name: &str) -> Result<v8::Global<v8::Function>, Error> {
-        let mut value: Option<v8::Global<v8::Value>> = None;
-
-        // Get the value (try module first)
-        if let Some(module) = module_context {
-            if let Ok(v) = self.get_module_export_value(module, name) {
-                value = Some(v);
-            }
-        }
-        
-        // Get the value (then globals)
-        if let Ok(v) = self.get_global_value(name) {
-            value = Some(v);
-        }
-
-        let mut scope = self.deno_runtime.handle_scope();
-        if value.is_none() || value.clone().unwrap().open(&mut scope).is_undefined() {
-            Err(ValueNotFoundError::new(name.to_string()).into())
-        } else {
-
-            // Need to turn it back into a local for casting
-            let local_value = v8::Local::<v8::Value>::new(&mut scope, value.unwrap());
-            println!("{:?}", local_value);
-
-            // Convert it into a function
-            let f: v8::Local<v8::Function> = local_value.try_into().or::<Error>(
-                Err(ValueNotCallableError::new(name.to_string()).into())
-            )?;
-            
-            // Return it as a global
-            Ok(v8::Global::<v8::Function>::new(&mut scope, f))
-        }
+    pub fn arg<A>(value: A) -> serde_json::Value
+    where serde_json::Value: From<A> {
+        serde_json::Value::from(value)
     }
 
     /// Calls a JavaScript function within the Deno runtime by its name and deserializes its return value.
     ///
-    /// This method allows you to call a JavaScript function within the Deno runtime by specifying
-    /// its name. It retrieves the function using the `get_function_by_name` method and then invokes
-    /// it. Finally, it deserializes the return value of the function into the specified Rust type (`T`).
-    ///
     /// # Arguments
-    ///
     /// * `name` - A string representing the name of the JavaScript function to call.
     ///
     /// # Returns
-    ///
     /// A `Result` containing the deserialized result of the function call (`T`)
     /// or an error (`Error`) if the function cannot be found, if there are issues with
     /// calling the function, or if the result cannot be deserialized.
@@ -346,41 +175,60 @@ impl Runtime {
     /// ```rust
     /// use js_playground::{ Runtime, Script, Error };
     /// 
-    /// fn main() -> Result<(), Error> {
-    ///     let mut runtime = Runtime::new(Default::default())?;
-    ///     let script = Script::new("/path/to/module.js", "export function f() { return 2; };");
-    ///     let module = runtime.load_modules(script, vec![])?;
-    ///     let value: usize = runtime.call_function_by_name(Some(&module), "f", Runtime::EMPTY_ARGS)?;
-    ///     Ok(())
-    /// }
+    /// # fn main() -> Result<(), Error> {
+    /// let mut runtime = Runtime::new(Default::default())?;
+    /// let script = Script::new("/path/to/module.js", "export function f() { return 2; };");
+    /// let module = runtime.load_modules(script, vec![])?;
+    /// let value: usize = runtime.call_function(&module, "f", Runtime::EMPTY_ARGS)?;
+    /// # Ok(())
+    /// # }
     /// ```
-    ///
-    /// # Note
-    ///
-    /// This method simplifies the process of calling a JavaScript function within the Deno runtime
-    /// by its name. It internally uses the `get_function_by_name` method to retrieve the function
-    /// and then invokes it using the `call_function` method. Ensure that you have set up the Deno
-    /// runtime (`Runtime`) correctly and provide the correct function name as an argument.
-    ///
-    pub fn call_function_by_name<T, A>(&mut self, module_context: Option<&ModuleHandle>, name: &str, args: &[A]) -> Result<T, Error>
-    where T: deno_core::serde::de::DeserializeOwned, A: deno_core::serde::Serialize {
+    pub fn call_function<T>(&mut self, module_context: &ModuleHandle, name: &str, args: &[serde_json::Value]) -> Result<T, Error>
+    where T: deno_core::serde::de::DeserializeOwned {
         let function = self.get_function_by_name(module_context, name)?;
-        self.call_function(function, args)
+        self.call_function_by_ref(module_context, function, args)
     }
 
-    /// Runs a JavaScript script within the Deno runtime and returns its result.
+    /// Get a value from a runtime instance
     ///
-    /// This method allows you to execute a JavaScript script within the Deno runtime.
-    /// It takes a `Script` object representing the script to run and returns the
-    /// result of the script's execution, deserialized into the specified Rust type (`T`).
+    /// # Arguments
+    /// * `name` - A string representing the name of the value to find
+    ///
+    /// # Returns
+    /// A `Result` containing the deserialized result or an error (`Error`) if the 
+    /// value cannot be found, if there are issues with, or if the result cannot be
+    ///  deserialized.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use js_playground::{ Runtime, Script, Error };
+    /// 
+    /// # fn main() -> Result<(), Error> {
+    /// let mut runtime = Runtime::new(Default::default())?;
+    /// let script = Script::new("/path/to/module.js", "globalThis.my_value = 2;");
+    /// let module = runtime.load_modules(script, vec![])?;
+    /// let value: usize = runtime.get_value(&module, "my_value")?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub fn get_value<T>(&mut self, module_context: &ModuleHandle, name: &str) -> Result<T, Error>
+    where T: deno_core::serde::de::DeserializeOwned {
+        let value = self.get_value_ref(module_context, name)?;
+        let mut scope = self.deno_runtime.handle_scope();
+        let local_value = v8::Local::<v8::Value>::new(&mut scope, value);
+        Ok(deno_core::serde_v8::from_v8(&mut scope, local_value)?)
+    }
+
+    /// Executes the given script, and returns a handle allowing you to extract values
+    /// And call functions
     ///
     /// # Arguments
     /// * `module` - A `Script` object containing the module's filename and contents.
     /// * `side_modules` - A set of additional modules to be loaded into memory for use
     ///
     /// # Returns
-    ///
-    /// A `Result` containing the ID for the loaded module
+    /// A `Result` containing a handle for the loaded module
     /// or an error (`Error`) if there are issues with loading modules, executing the
     /// script, or if the result cannot be deserialized.
     ///
@@ -390,42 +238,40 @@ impl Runtime {
     /// // Create a script with filename and contents
     /// use js_playground::{Runtime, Script, Error};
     /// 
-    /// fn main() -> Result<(), Error> {
-    ///     // Create a Deno runtime and a script
-    ///     let mut runtime = Runtime::new(Default::default())?;
-    ///     let script = Script::new("test.js", "js_playground.register_entrypoint(() => 'test')");
-    ///     runtime.load_modules(script, vec![]);
-    ///     Ok(())
-    /// }
+    /// # fn main() -> Result<(), Error> {
+    /// let mut runtime = Runtime::new(Default::default())?;
+    /// let script = Script::new("test.js", "js_playground.register_entrypoint(() => 'test')");
+    /// runtime.load_modules(script, vec![]);
+    /// # Ok(())
+    /// # }
     /// ```
-    ///
-    #[allow(unused_assignments)]
     pub fn load_modules(&mut self, module: Script, side_modules: Vec<Script>) -> Result<ModuleHandle, Error> {
-
         // Evaluate the script
         let deno_runtime = &mut self.deno_runtime;
-        let mut module_id: ModuleId = 0;
         let mod_copy = module.clone();
         let future = async move {
             // Get additional modules
             for side_module in side_modules {
                 let s_modid = deno_runtime.load_side_module(
-                    &Self::get_module_specifier(side_module.filename())?, 
+                    &side_module.filename().to_module_specifier()?, 
                     Some(deno_core::FastString::from(side_module.contents().to_string()))
                 ).await?;
-                deno_runtime.mod_evaluate(s_modid);
+                let result = deno_runtime.mod_evaluate(s_modid);
+                deno_runtime.run_event_loop(false).await?;
+                result.await??;
             }
 
             // Load main module
-            module_id = deno_runtime.load_main_module(
-                &Self::get_module_specifier(module.filename())?, 
+            let module_id = deno_runtime.load_main_module(
+                &module.filename().to_module_specifier()?, 
                 Some(deno_core::FastString::from(module.contents().to_string()))
             ).await?;
 
             // Finish execution
             let result = deno_runtime.mod_evaluate(module_id);
             deno_runtime.run_event_loop(false).await?;
-            result.await?
+            result.await??;
+            Ok::<ModuleId, deno_core::anyhow::Error>(module_id)
         };
         
         // Get the thread ready
@@ -433,31 +279,40 @@ impl Runtime {
             .enable_all().build()?;
 
         // Let it play out...
-        tokio_runtime.block_on(future)?;
-        if let Some(timeout) = self.timeout {
+        let module_id = tokio_runtime.block_on(future)?;
+        if let Some(timeout) = self.options.timeout {
             tokio_runtime.shutdown_timeout(timeout);
         }
 
+        let module_handle_stub = ModuleHandle::new(
+            &mod_copy,
+            module_id,
+            None
+        );
+
         // Try to get an entrypoint
-        let state = self.deno_runtime.op_state();
+        let state = self.deno_runtime().op_state();
         let mut deep_state = state.try_borrow_mut()?;
+        let f_entrypoint = match deep_state.try_take::<v8::Global<v8::Function>>() {
+            Some(entrypoint) => Some(entrypoint),
+            None => self.options.default_entrypoint.clone().and_then(|default_entrypoint| {
+                self.get_function_by_name(&module_handle_stub, &default_entrypoint).ok()
+            })
+        };
+
         Ok(ModuleHandle::new(
             &mod_copy,
             module_id,
-            deep_state.try_take::<v8::Global<v8::Function>>()
+            f_entrypoint
         ))
     }
+
     /// Executes the entrypoint function of a script within the Deno runtime.
     ///
-    /// This method attempts to retrieve and execute the entrypoint function within the Deno runtime.
-    /// If the entrypoint function is found, it is invoked, and the result is deserialized into
-    /// the specified Rust type (`T`).
-    ///
     /// # Arguments
-    /// * `module_context` - A context object returned by loading a module into the runtime
+    /// * `module_context` - A handle returned by loading a module into the runtime
     ///
     /// # Returns
-    ///
     /// A `Result` containing the deserialized result of the entrypoint execution (`T`)
     /// if successful, or an error (`Error`) if the entrypoint is missing, the execution fails,
     /// or the result cannot be deserialized.
@@ -467,25 +322,23 @@ impl Runtime {
     /// ```rust
     /// use js_playground::{Runtime, Script, Error};
     /// 
-    /// fn main() -> Result<(), Error> {
-    ///     // Create a Deno runtime and a script
-    ///     let mut runtime = Runtime::new(Default::default())?;
-    ///     let script = Script::new("test.js", "js_playground.register_entrypoint(() => 'test')");
-    ///     let module = runtime.load_modules(script, vec![]);
+    /// # fn main() -> Result<(), Error> {
+    /// let mut runtime = Runtime::new(Default::default())?;
+    /// let script = Script::new("test.js", "js_playground.register_entrypoint(() => 'test')");
+    /// let module = runtime.load_modules(script, vec![])?;
     ///
-    ///     // Run the entrypoint and handle the result
-    ///     let value: String = runtime.call_entrypoint(&module)?;
-    ///     Ok(())
-    /// }
+    /// // Run the entrypoint and handle the result
+    /// let value: String = runtime.call_entrypoint(&module, Runtime::EMPTY_ARGS)?;
+    /// # Ok(())
+    /// # }
     /// ```
-    ///
-    pub fn call_entrypoint<T>(&mut self, module_context: &ModuleHandle) -> Result<T, Error>
+    pub fn call_entrypoint<T>(&mut self, module_context: &ModuleHandle, args: &[serde_json::Value]) -> Result<T, Error>
     where T: deno_core::serde::de::DeserializeOwned {
-        if let Some(entrypoint) = &module_context.entrypoint {
-            let value: serde_json::Value = self.call_function(entrypoint.clone(), Self::EMPTY_ARGS)?;
+        if let Some(entrypoint) = module_context.entrypoint() {
+            let value: serde_json::Value = self.call_function_by_ref(module_context, entrypoint.clone(), args)?;
             Ok(serde_json::from_value(value)?)
         } else {
-            Err(MissingEntrypointError::new(module_context.module().clone()).into())
+            Err(Error::MissingEntrypoint(module_context.module().clone()).into())
         }
     }
 
@@ -496,9 +349,9 @@ impl Runtime {
     /// * `module` - A `Script` object containing the module's filename and contents.
     /// * `side_modules` - A set of additional modules to be loaded into memory for use
     /// * `runtime_options` - Options for the creation of the runtime
+    /// * `entrypoint_args` - Arguments to pass to the entrypoint function
     ///
     /// # Returns
-    ///
     /// A `Result` containing the deserialized result of the entrypoint execution (`T`)
     /// if successful, or an error (`Error`) if the entrypoint is missing, the execution fails,
     /// or the result cannot be deserialized.
@@ -509,60 +362,311 @@ impl Runtime {
     /// // Create a script with filename and contents
     /// use js_playground::{Runtime, Script, Error};
     /// 
-    /// fn main() -> Result<(), Error> {
-    ///     let script = Script::new("test.js", "js_playground.register_entrypoint(() => 2)");
-    ///     let value: usize = Runtime::execute_module(script, vec![], Default::default())?;
-    ///     Ok(())
-    /// }
+    /// # fn main() -> Result<(), Error> {
+    /// let script = Script::new("test.js", "js_playground.register_entrypoint(() => 2)");
+    /// let value: usize = Runtime::execute_module(script, vec![], Default::default(), Runtime::EMPTY_ARGS)?;
+    /// # Ok(())
+    /// # }
     /// ```
-    ///
-    pub fn execute_module<T>(module: Script, side_modules: Vec<Script>, runtime_options: RuntimeOptions) -> Result<T, Error>
+    pub fn execute_module<T>(module: Script, side_modules: Vec<Script>, runtime_options: RuntimeOptions, entrypoint_args: &[serde_json::Value]) -> Result<T, Error>
     where T: deno_core::serde::de::DeserializeOwned {
         let mut runtime = Runtime::new(runtime_options)?;
         let module = runtime.load_modules(module, side_modules)?;
-        let value: T = runtime.call_entrypoint(&module)?;
+        let value: T = runtime.call_entrypoint(&module, entrypoint_args)?;
         Ok(value)
+    }
+
+    /// Attempt to get a value out of the global context (globalThis.name)
+    /// 
+    /// # Arguments
+    /// * `name` - Name of the object to extract
+    ///
+    /// # Returns
+    /// A `Result` containing the non-null value extracted or an error (`Error`)
+    fn get_global_value(&mut self, name: &str) -> Result<v8::Global<v8::Value>, Error> {
+        let context = self.deno_runtime.main_context();
+        let mut scope = self.deno_runtime.handle_scope();
+        let global = context.open(&mut scope).global(&mut scope);
+        
+        let key = name.to_v8_string(&mut scope)?;
+        let value = global.get(&mut scope, key.into());
+
+        match value.if_defined() {
+            Some(v) => Ok(v8::Global::<v8::Value>::new(&mut scope, v)),
+            _ => Err(Error::ValueNotFound(name.to_string()).into())
+        }
+    }
+    
+    /// Attempt to get a value out of a module context (export ...)
+    /// 
+    /// # Arguments
+    /// * `module` - A handle to a loaded module
+    /// * `name` - Name of the object to extract
+    ///
+    /// # Returns
+    /// A `Result` containing the non-null value extracted or an error (`Error`)
+    fn get_module_export_value(&mut self, module: &ModuleHandle, name: &str) -> Result<v8::Global<v8::Value>, Error> {
+        let module_namespace = self.deno_runtime.get_module_namespace(module.id())?;
+        let mut scope = self.deno_runtime.handle_scope();
+        let module_namespace = module_namespace.open(&mut scope);
+        assert!(module_namespace.is_module_namespace_object());
+        
+        let key = name.to_v8_string(&mut scope)?;
+        let value = module_namespace.get(&mut scope, key.into());
+
+        match value.if_defined() {
+            Some(v) => Ok(v8::Global::<v8::Value>::new(&mut scope, v)),
+            _ => Err(Error::ValueNotFound(name.to_string()).into())
+        }
+    }
+
+    /// Attempt to get a value out of a runtime
+    /// 
+    /// # Arguments
+    /// * `module` - A handle to a loaded module
+    /// * `name` - Name of the object to extract
+    ///
+    /// # Returns
+    /// A `Result` containing the non-null value extracted or an error (`Error`)
+    fn get_value_ref(&mut self, module: &ModuleHandle, name: &str) -> Result<v8::Global<v8::Value>, Error> {
+        match self.get_global_value(name) {
+            Ok(v) => Some(v),
+            _ => self.get_module_export_value(module, name).ok()
+        }.ok_or::<Error>(
+            Error::ValueNotFound(name.to_string()).into()
+        )
+    }
+
+    /// This method takes a JavaScript function and invokes it within the Deno runtime.
+    /// It then serializes the return value of the function into a JSON string and
+    /// deserializes it into the specified Rust type (`T`).
+    ///
+    /// # Arguments
+    /// * `function` - A reference to a JavaScript function (`v8::Function`)
+    ///
+    /// # Returns
+    /// A `Result` containing the deserialized result of the function call (`T`)
+    /// or an error (`Error`) if the function call fails or the return value cannot
+    /// be deserialized.
+    fn call_function_by_ref<T>(&mut self, module_context: &ModuleHandle, function: v8::Global<v8::Function>, args: &[serde_json::Value]) -> Result<T, Error>
+    where T: deno_core::serde::de::DeserializeOwned {
+        let module_namespace = self.deno_runtime.get_module_namespace(module_context.id())?;
+        let mut scope = self.deno_runtime.handle_scope();
+        let module_namespace = v8::Local::<v8::Object>::new(&mut scope, module_namespace);
+        let function_instance = function.open(&mut scope);
+
+        // Prep arguments
+        let f_args: Result<Vec<v8::Local<v8::Value>>, deno_core::serde_v8::Error>
+            = args.iter().map(|f| deno_core::serde_v8::to_v8(&mut scope, f)).collect();
+        let final_args = f_args?;
+
+        // Call the function
+        let result = function_instance.call(&mut scope, module_namespace.into(), &final_args).unwrap_or(
+            deno_core::serde_v8::to_v8(&mut scope, serde_json::Value::Null)?
+        );
+
+        // Decode value
+        let value: T = deno_core::serde_v8::from_v8(&mut scope, result)?;
+        Ok(value)
+    }
+
+    /// Retrieves a JavaScript function by its name from the Deno runtime's global context.
+    ///
+    /// # Arguments
+    /// * `name` - A string representing the name of the JavaScript function to retrieve.
+    ///
+    /// # Returns
+    /// A `Result` containing a `v8::Global<v8::Function>` if
+    /// the function is found, or an error (`Error`) if the function cannot be found or
+    /// if it is not a valid JavaScript function.
+    fn get_function_by_name(&mut self, module_context: &ModuleHandle, name: &str) -> Result<v8::Global<v8::Function>, Error> {
+        // Get the value
+        let value = self.get_value_ref(module_context, name)?;
+
+        // Convert it into a function
+        let mut scope = self.deno_runtime.handle_scope();
+        let local_value = v8::Local::<v8::Value>::new(&mut scope, value);
+        let f: v8::Local<v8::Function> = local_value.try_into().or::<Error>(
+            Err(Error::ValueNotCallable(name.to_string()))
+        )?;
+
+        
+        // Return it as a global
+        Ok(v8::Global::<v8::Function>::new(&mut scope, f))
     }
 }
 
 #[cfg(test)]
 mod test_runtime {
+    use deno_core::extension;
     use super::*;
+
     
     #[test]
-    fn test_run() {
-        let script = Script::new("test.js", "
-            js_playground.register_entrypoint(function() {
-                console.log('Hello World');
-                return 2;
-            })
-        ");
-        let mut runtime = Runtime::new(Default::default()).unwrap();
-        let module = runtime.load_modules(script, vec![]).unwrap();
+    fn test_new() {
+        Runtime::new(Default::default()).expect("Could not create the runtime");
 
-        let value: serde_json::Value = runtime.call_entrypoint(&module).unwrap();
-        assert_eq!(value, 2);
+        extension!(test_extension);
+        Runtime::new(RuntimeOptions {
+            extensions: vec![test_extension::init_ops_and_esm()],
+            ..Default::default()
+        }).expect("Could not create runtime with extensions");
     }
-
+    
     #[test]
-    fn test_get_module_export_value() {
+    fn test_arg() {
+        assert_eq!(2, Runtime::arg(2));
+        assert_eq!("test", Runtime::arg("test"));
+        assert_ne!("test", Runtime::arg(2));
+    }
+    
+    #[test]
+    fn test_get_value() {
         let script = Script::new("test.js", "
-            export const test_value = 1;
-            export function test_func() {
-                return 'test';
-            }
+            globalThis.a = 2;
+            export const b = 'test';
+            export const fnc = null;
         ");
-        let mut runtime = Runtime::new(Default::default()).unwrap();
-        let module = runtime.load_modules(script, vec![]).unwrap();
 
-        let v1 = runtime.get_module_export_value(&module, "test_value").unwrap();
-        let v1_local = v8::Local::<v8::Value>::new(&mut runtime.deno_runtime.handle_scope(), v1);
-        assert!(!v1_local.is_undefined());
-        assert!(!v1_local.is_number());
+        let mut runtime = Runtime::new(Default::default()).expect("Could not create the runtime");
+        let module = runtime.load_modules(script, vec![]).expect("Could not load module");
 
-        let v1 = runtime.get_module_export_value(&module, "test_func").unwrap();
-        let v1_local = v8::Local::<v8::Value>::new(&mut runtime.deno_runtime.handle_scope(), v1);
-        assert!(!v1_local.is_undefined());
-        assert!(!v1_local.is_function());
+        assert_eq!(2, runtime.get_value::<usize>(&module, "a").expect("Could not find global"));
+        assert_eq!("test", runtime.get_value::<String>(&module, "b").expect("Could not find export"));
+        runtime.get_value::<Undefined>(&module, "c").expect_err("Could not detect null");
+        runtime.get_value::<Undefined>(&module, "d").expect_err("Could not detect undeclared");
+    }
+    
+    #[test]
+    fn test_load_modules() {
+        let mut runtime = Runtime::new(Default::default()).expect("Could not create the runtime");
+        let script = Script::new("test.js", "
+            js_playground.register_entrypoint(() => 2);
+        ");
+        let module = runtime.load_modules(script, vec![]).expect("Could not load module");
+        assert_ne!(0, module.id());
+        
+        let mut runtime = Runtime::new(Default::default()).expect("Could not create the runtime");
+        let script1 = Script::new("importme.js", "
+            export const value = 2;
+        ");
+        let script2 = Script::new("test.js", "
+            import { value } from './importme.js';
+            js_playground.register_entrypoint(() => value);
+        ");
+        let module = runtime.load_modules(script2, vec![script1]).expect("Could not load modules");
+        let value: usize = runtime.call_entrypoint(&module, Runtime::EMPTY_ARGS).expect("Could not call exported fn");
+        assert_eq!(2, value);
+        
+        let mut runtime = Runtime::new(RuntimeOptions {
+            timeout: Some(Duration::from_millis(50)),
+            ..Default::default()
+        }).expect("Could not create the runtime");
+        let script = Script::new("test.js", "
+            await new Promise(r => setTimeout(r, 2000));
+        ");
+        runtime.load_modules(script, vec![]).expect_err("Did not interupt after timeout");
+    }
+    
+    #[test]
+    fn test_call_entrypoint() {
+        let mut runtime = Runtime::new(Default::default()).expect("Could not create the runtime");
+        let script = Script::new("test.js", "
+            js_playground.register_entrypoint(() => 2);
+        ");
+        let module = runtime.load_modules(script, vec![]).expect("Could not load module");
+        let value: usize = runtime.call_entrypoint(&module, Runtime::EMPTY_ARGS).expect("Could not call registered fn");
+        assert_eq!(2, value);
+        
+        let mut runtime = Runtime::new(RuntimeOptions {
+            default_entrypoint: Some("load".to_string()),
+            ..Default::default()
+        }).expect("Could not create the runtime");
+        let script = Script::new("test.js", "
+            export const load = () => 2;
+        ");
+        let module = runtime.load_modules(script, vec![]).expect("Could not load module");
+        let value: usize = runtime.call_entrypoint(&module, Runtime::EMPTY_ARGS).expect("Could not call exported fn");
+        assert_eq!(2, value);
+        
+        let mut runtime = Runtime::new(Default::default()).expect("Could not create the runtime");
+        let script = Script::new("test.js", "
+            export const load = () => 2;
+        ");
+        let module = runtime.load_modules(script, vec![]).expect("Could not load module");
+        runtime.call_entrypoint::<Undefined>(&module, Runtime::EMPTY_ARGS).expect_err("Did not detect no entrypoint");
+    }
+    
+    #[test]
+    fn test_execute_module() {
+        let script = Script::new("test.js", "
+            js_playground.register_entrypoint(() => 2);
+        ");
+        let value: usize = Runtime::execute_module(script, vec![], Default::default(), Runtime::EMPTY_ARGS)
+        .expect("Could not exec module");
+        assert_eq!(2, value);
+        
+        let script = Script::new("test.js", "
+            function load() { return 2; }
+        ");
+        Runtime::execute_module::<Undefined>(script, vec![], Default::default(), Runtime::EMPTY_ARGS)
+        .expect_err("Could not detect no entrypoint");
+    }
+    
+    #[test]
+    fn test_get_value_by_ref() {
+        let script = Script::new("test.js", "
+            globalThis.a = 2;
+            export const b = 'test';
+            export const fnc = null;
+        ");
+
+        let mut runtime = Runtime::new(Default::default()).expect("Could not create the runtime");
+        let module = runtime.load_modules(script, vec![]).expect("Could not load module");
+
+        runtime.get_value_ref(&module, "a").expect("Could not find global");
+        runtime.get_value_ref(&module, "b").expect("Could not find export");
+        runtime.get_value_ref(&module, "c").expect_err("Could not detect null");
+        runtime.get_value_ref(&module, "d").expect_err("Could not detect undeclared");
+    }
+    
+    #[test]
+    fn call_function() {
+        let script = Script::new("test.js", "
+            globalThis.fna = (i) => i;
+            export function fnb() { return 'test'; }
+            export const fnc = 2;
+            export const fne = () => {};
+        ");
+
+        let mut runtime = Runtime::new(Default::default()).expect("Could not create the runtime");
+        let module = runtime.load_modules(script, vec![]).expect("Could not load module");
+
+        let result: usize = runtime.call_function(&module, "fna", &[Runtime::arg(2)]).expect("Could not call global");
+        assert_eq!(2, result);
+
+        let result: String = runtime.call_function(&module, "fnb", Runtime::EMPTY_ARGS).expect("Could not call export");
+        assert_eq!("test", result);
+
+        runtime.call_function::<Undefined>(&module, "fnc", Runtime::EMPTY_ARGS).expect_err("Did not detect non-function");
+        runtime.call_function::<Undefined>(&module, "fnd", Runtime::EMPTY_ARGS).expect_err("Did not detect undefined");
+        runtime.call_function::<Undefined>(&module, "fne", Runtime::EMPTY_ARGS).expect("Did not allow undefined return");
+    }
+    
+    #[test]
+    fn test_get_function_by_name() {
+        let script = Script::new("test.js", "
+            globalThis.fna = () => {};
+            export function fnb() {}
+            export const fnc = 2;
+        ");
+
+        let mut runtime = Runtime::new(Default::default()).expect("Could not create the runtime");
+        let module = runtime.load_modules(script, vec![]).expect("Could not load module");
+
+        runtime.get_function_by_name(&module, "fna").expect("Did not find global");
+        runtime.get_function_by_name(&module, "fnb").expect("Did not find export");
+        runtime.get_function_by_name(&module, "fnc").expect_err("Did not detect non-function");
+        runtime.get_function_by_name(&module, "fnd").expect_err("Did not detect undefined");
     }
 }
