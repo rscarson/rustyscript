@@ -5,12 +5,13 @@ edition = "2021"
 
 [features]
 default = ["console", "url"]
+no_extensions = []
+all = ["console", "url", "web"]
 url = ["deno_url", "deno_webidl"]
 console = ["deno_console"]
 web = ["deno_web"]
 
 [dev-dependencies]
-cargo-llvm-cov = "0.1.13"
 version-sync = "0.9.4"
 cargo-readme = "3.2.0"
 
