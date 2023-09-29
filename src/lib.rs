@@ -80,6 +80,8 @@
 //!
 //! // The handle returned is used to get exported functions and values from that module.
 //! // We then call the entrypoint function, but do not need a return value.
+//! //Load can be called multiple times, and scripts can import other loaded scripts
+//! // Using `import './filename.js'`
 //! let module_handle = runtime.load_module(&script)?;
 //! runtime.call_entrypoint::<Undefined>(&module_handle, &[ Runtime::arg(2) ])?;
 //!

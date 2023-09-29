@@ -2,6 +2,10 @@
 
 ## Simple deno wrapper for module execution
 
+[![Crates.io](https://img.shields.io/crates/v/js-playground.svg)](https://crates.io/crates/js-playground)
+[![Build Status](https://github.com/rscarson/js-playground/workflows/Rust/badge.svg)](https://github.com/rscarson/js-playground/actions?workflow=Rust)
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](https://raw.githubusercontent.com/rscarson/js-playground/master/LICENSE)
+
 This crate is meant to provide a quick and simple way to integrate a runtime JS or TS component from within rust.
 By default, the code being run is entirely sandboxed from the host, having no filesystem or network access.
 
@@ -74,6 +78,8 @@ let mut runtime = Runtime::new(RuntimeOptions {
 
 // The handle returned is used to get exported functions and values from that module.
 // We then call the entrypoint function, but do not need a return value.
+//Load can be called multiple times, and scripts can import other loaded scripts
+// Using `import './filename.js'`
 let module_handle = runtime.load_module(&script)?;
 runtime.call_entrypoint::<Undefined>(&module_handle, &[ Runtime::arg(2) ])?;
 
@@ -81,8 +87,4 @@ let internal_value: i64 = runtime.call_function(&module_handle, "getValue", Runt
 ```
 
 Please also check out [@Bromeon/js_sandbox](https://github.com/Bromeon/js-sandbox), another great crate in this niche
-
-[![Crates.io](https://img.shields.io/crates/v/js-playground.svg)](https://crates.io/crates/js-playground)
-[![Build Status](https://github.com/rscarson/js-playground/workflows/Rust/badge.svg)](https://github.com/rscarson/js-playground/actions?workflow=Rust)
-[![License](https://img.shields.io/badge/license-MIT-blue.svg)](https://raw.githubusercontent.com/rscarson/js-playground/master/LICENSE)
 
