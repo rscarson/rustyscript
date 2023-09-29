@@ -15,6 +15,19 @@ use crate::traits::*;
 use crate::Error;
 use crate::ModuleHandle;
 
+#[cfg(feature = "web")]
+#[derive(Clone)]
+struct Permissions;
+#[cfg(feature = "web")]
+impl deno_web::TimersPermission for Permissions {
+    fn allow_hrtime(&mut self) -> bool {
+        false
+    }
+    fn check_unstable(&self, _state: &OpState, _api_name: &'static str) {
+        unreachable!()
+    }
+}
+
 #[derive(Default)]
 /// Represents the set of options accepted by the runtime constructor
 pub struct RuntimeOptions {
@@ -619,7 +632,10 @@ impl Runtime {
         ]);
 
         #[cfg(feature = "web")]
-        user_extensions.extend(vec![deno_web::deno_web::init_ops_and_esm()]);
+        user_extensions.extend(vec![deno_web::deno_web::init_ops_and_esm::<Permissions>(
+            Default::default(),
+            None,
+        )]);
 
         user_extensions
     }
