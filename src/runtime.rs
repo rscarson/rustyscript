@@ -366,7 +366,7 @@ impl Runtime {
     }
 
     /// Reset the runtime
-    /// This clears any side-effects in global, and unloads and running modules
+    /// This clears any side-effects in global, and unloads any running modules
     ///
     /// Use this function if you need to clear the sandbox between runs, to prevent
     /// interop side-effects

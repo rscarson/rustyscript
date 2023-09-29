@@ -11,6 +11,8 @@ It can be extended to include the capabilities and more if desired - please see 
 
 Asynchronous code is supported - I suggest using the timeout option when creating your runtime to avoid infinite hangs.
 
+Modules loaded can be imported by other code, and `reset()` can be called to unload modules and reset the global object.
+
 Here is a very basic use of this crate to execute a JS module. It will create a basic runtime, load the script,
 call the registered entrypoint function with the given arguments, and return the resulting value:
 ```rust
@@ -29,7 +31,7 @@ let script = Script::new(
 );
 
 let value: usize = Runtime::execute_module(
-    script, vec![],
+    &script, vec![],
     Default::default(),
     &[
         Runtime::arg("test"),
@@ -55,12 +57,13 @@ use js_playground::{Runtime, RuntimeOptions, Script, Error, Undefined};
 use std::time::Duration;
 
 let script = Script::new(
-    "test.js", "
-    
+    "test.js",
+    "
     let internalValue = 0;
     export const load = (value) => internalValue = value;
     export const getValue = () => internalValue;
-");
+    "
+);
 
 // Create a new runtime
 let mut runtime = Runtime::new(RuntimeOptions {
@@ -71,7 +74,7 @@ let mut runtime = Runtime::new(RuntimeOptions {
 
 // The handle returned is used to get exported functions and values from that module.
 // We then call the entrypoint function, but do not need a return value.
-let module_handle = runtime.load_modules(script, vec![])?;
+let module_handle = runtime.load_module(&script)?;
 runtime.call_entrypoint::<Undefined>(&module_handle, &[ Runtime::arg(2) ])?;
 
 let internal_value: i64 = runtime.call_function(&module_handle, "getValue", Runtime::EMPTY_ARGS)?;
