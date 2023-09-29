@@ -4,6 +4,47 @@ use std::fmt::Display;
 use std::fs::{read_dir, read_to_string};
 use std::path::Path;
 
+/// A static representation of a script
+/// use `.to_script()` to get a script instance to use with a runtime
+pub struct StaticScript(&'static str, &'static str);
+impl StaticScript {
+    /// Create a new StaticScript
+    /// use the script!(filename, contents) macro instead!
+    pub const fn new(filename: &'static str, contents: &'static str) -> Self {
+        Self(filename, contents)
+    }
+
+    /// Get an instance of this StaticScript that can be used with a runtime
+    pub fn to_script(&self) -> Script {
+        Script::new(self.0, self.1)
+    }
+}
+
+/// Creates a static script
+///
+/// # Arguments
+/// * `filename` - A string representing the filename of the script.
+/// * `contents` - A string containing the contents of the script.
+///
+/// # Example
+///
+/// ```rust
+/// use js_playground::{ script, StaticScript };
+///
+/// const MY_SCRIPT: StaticScript = script!(
+///     "filename.js",
+///     "export const myValue = 42;"
+/// );
+///
+/// let script_instance = MY_SCRIPT.to_script();
+/// ```
+#[macro_export]
+macro_rules! script {
+    ($filename:literal, $contents:literal) => {
+        StaticScript::new($filename, $contents)
+    };
+}
+
 #[derive(Clone, Debug, Serialize, Deserialize, Default)]
 /// Represents a pice of javascript for execution.
 /// Must be ESM formatted

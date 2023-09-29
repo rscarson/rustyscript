@@ -11,11 +11,21 @@
 /// Extensions consist of a set of #[op2] functions, an extension! macro,
 /// and one or more optional JS modules.
 ///
-use js_playground::{serde_json, Error, ModuleHandle, Runtime, RuntimeOptions, Script};
+use js_playground::{
+    script, serde_json, Error, ModuleHandle, Runtime, RuntimeOptions, Script, StaticScript,
+};
 use std::time::Duration;
 
 mod ext;
 use ext::example_extension;
+
+// A script that will always be loaded into the custom runtime
+const MY_MODULE: StaticScript = script!(
+    "my_module.js",
+    "export function importantFunction() {
+        return 42;
+    }"
+);
 
 /// A runtime which will timeout after 0.5s, imports an exension,
 /// And ensures that a preset module is always available for import.
@@ -88,18 +98,9 @@ impl MyRuntime {
 }
 
 fn main() {
-    let script = Script::new(
-        "test.js",
-        "
-        import { importantFunction } from './my_module.js';
-        export const result = importantFunction();
-        example_ext.add(2, 5);
-        ",
-    );
-
     let mut runtime = MyRuntime::new().expect("Could not create the runtime");
     let module_handle = runtime
-        .load_module(&script)
+        .load_module(&MY_MODULE.to_script())
         .expect("Error loading the module");
     assert_eq!(
         42,

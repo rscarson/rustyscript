@@ -1,5 +1,9 @@
 //! # Simple deno wrapper for module execution
 //!
+//! [![Crates.io](https://img.shields.io/crates/v/js-playground.svg)](https://crates.io/crates/js-playground)
+//! [![Build Status](https://github.com/rscarson/js-playground/workflows/Rust/badge.svg)](https://github.com/rscarson/js-playground/actions?workflow=Rust)
+//! [![License](https://img.shields.io/badge/license-MIT-blue.svg)](https://raw.githubusercontent.com/rscarson/js-playground/master/LICENSE)
+//!
 //! This crate is meant to provide a quick and simple way to integrate a runtime JS or TS component from within rust.
 //! By default, the code being run is entirely sandboxed from the host, having no filesystem or network access.
 //!
@@ -86,14 +90,11 @@
 //!
 //! Please also check out [@Bromeon/js_sandbox](https://github.com/Bromeon/js-sandbox), another great crate in this niche
 //!
-//! [![Crates.io](https://img.shields.io/crates/v/js-playground.svg)](https://crates.io/crates/js-playground)
-//! [![Build Status](https://github.com/rscarson/js-playground/workflows/Rust/badge.svg)](https://github.com/rscarson/js-playground/actions?workflow=Rust)
-//! [![License](https://img.shields.io/badge/license-MIT-blue.svg)](https://raw.githubusercontent.com/rscarson/js-playground/master/LICENSE)
-//!
 #![warn(missing_docs)]
 
 mod error;
 mod ext;
+mod inner_runtime;
 mod module_handle;
 mod runtime;
 mod script;
@@ -108,5 +109,5 @@ pub use deno_core::serde_json;
 pub use error::Error;
 pub use module_handle::ModuleHandle;
 pub use runtime::{Runtime, RuntimeOptions, Undefined};
-pub use script::Script;
+pub use script::{Script, StaticScript};
 pub use utilities::{evaluate, resolve_path, validate};
