@@ -10,7 +10,7 @@ console = ["deno_console"]
 web = ["deno_web"]
 
 [dev-dependencies]
-cargo-llvm-cov = "0.1.13"
+cargo-llvm-cov = "0.5.33"
 version-sync = "0.9.4"
 cargo-readme = "3.2.0"
 
