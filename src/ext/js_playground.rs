@@ -1,13 +1,16 @@
-use deno_core::{ v8, op2, extension, OpState };
 use crate::error::Error;
+use deno_core::{extension, op2, v8, OpState};
 
 #[op2]
 /// Registers a JS function with the runtime as being the entrypoint for the script
-    ///
-    /// # Arguments
-    /// * `state` - The runtime's state, into which the function will be put
-    /// * `callback` - The function to register
-fn op_register_entrypoint(state: &mut OpState, #[global] callback: v8::Global<v8::Function>) -> Result<(), Error> {
+///
+/// # Arguments
+/// * `state` - The runtime's state, into which the function will be put
+/// * `callback` - The function to register
+fn op_register_entrypoint(
+    state: &mut OpState,
+    #[global] callback: v8::Global<v8::Function>,
+) -> Result<(), Error> {
     state.put(callback);
     Ok(())
 }

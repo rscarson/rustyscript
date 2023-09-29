@@ -9,16 +9,7 @@ Typescript is supported by default
 
 It can be extended to include the capabilities and more if desired - please see the `runtime_extensions` example
 
-Asynchronous code is supported - I suggest using the timeout option when creating your runtime to avoid infinite hangs:
-```rust
-use js_playground::{Runtime, RuntimeOptions};
-use std::time::Duration;
-
-let runtime = Runtime::new(RuntimeOptions {
-    timeout: Some(Duration::from_millis(50)),
-    ..Default::default()
-}).expect("Something went wrong creating the runtime");
-```
+Asynchronous code is supported - I suggest using the timeout option when creating your runtime to avoid infinite hangs.
 
 Here is a very basic use of this crate to execute a JS module. It will create a basic runtime, load the script,
 call the registered entrypoint function with the given arguments, and return the resulting value:
@@ -49,12 +40,14 @@ let value: usize = Runtime::execute_module(
 assert_eq!(value, 2);
 ```
 
+Scripts can also be loaded from the filesystem with `Script::load` or `Script::load_dir` if you want to collect all modules in a given directory.
+
 If all you need is the result of a single javascript expression, you can use:
 ```rust
 let result: i64 = js_playground::evaluate("5 + 5").expect("The expression was invalid!");
 ```
 
-Scripts can also be loaded from the filesystem with `Script::load` or `Script::load_dir` if you want to collect all modules in a given directory.
+There are a few other utilities included, such as `js_playground::validate` and `js_playground::resolve_path`
 
 A more detailed version of the crate's usage can be seen below, which breaks down the steps instead of using the one-liner `Runtime::execute_module`:
 ```rust
@@ -62,13 +55,12 @@ use js_playground::{Runtime, RuntimeOptions, Script, Error, Undefined};
 use std::time::Duration;
 
 let script = Script::new(
-    "test.js",
-    "
+    "test.js", "
+    
     let internalValue = 0;
     export const load = (value) => internalValue = value;
     export const getValue = () => internalValue;
-    "
-);
+");
 
 // Create a new runtime
 let mut runtime = Runtime::new(RuntimeOptions {

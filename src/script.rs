@@ -1,15 +1,15 @@
+use serde::{Deserialize, Serialize};
 use std::ffi::OsStr;
 use std::fmt::Display;
-use std::fs::{ read_to_string, read_dir };
+use std::fs::{read_dir, read_to_string};
 use std::path::Path;
-use serde::{ Serialize, Deserialize };
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize, Default)]
 /// Represents a pice of javascript for execution.
 /// Must be ESM formatted
 pub struct Script {
     filename: String,
-    contents: String
+    contents: String,
 }
 
 impl Display for Script {
@@ -33,7 +33,7 @@ impl Script {
     ///
     /// ```rust
     /// use js_playground::Script;
-    /// 
+    ///
     /// let script = Script::new("script.js", "console.log('Hello, World!');");
     /// ```
     pub fn new(filename: &str, contents: &str) -> Self {
@@ -56,7 +56,7 @@ impl Script {
     ///
     /// ```rust
     /// use js_playground::Script;
-    /// 
+    ///
     /// # fn main() -> Result<(), js_playground::Error> {
     /// let script = Script::load("src/ext/js_playground.js")?;
     /// # Ok(())
@@ -81,7 +81,7 @@ impl Script {
     ///
     /// ```rust
     /// use js_playground::Script;
-    /// 
+    ///
     /// # fn main() -> Result<(), js_playground::Error> {
     /// let all_scripts = Script::load_dir("src/ext")?;
     /// # Ok(())
@@ -92,12 +92,15 @@ impl Script {
         for file in read_dir(directory)?.flatten() {
             if let Some(filename) = file.path().to_str() {
                 // Skip non-js files
-                let extension = Path::new(&filename).extension().and_then(OsStr::to_str).unwrap_or_default();
-                if ["js", "ts"].contains(&extension) { continue; }
+                let extension = Path::new(&filename)
+                    .extension()
+                    .and_then(OsStr::to_str)
+                    .unwrap_or_default();
+                if ["js", "ts"].contains(&extension) {
+                    continue;
+                }
 
-                files.push(
-                    Self::load(filename)?
-                );
+                files.push(Self::load(filename)?);
             }
         }
 

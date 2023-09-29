@@ -48,7 +48,13 @@ mod error_macro {
 map_error!(std::cell::BorrowMutError, |e| Error::Runtime(e.to_string()));
 map_error!(std::io::Error, |e| Error::Runtime(e.to_string()));
 map_error!(deno_core::v8::DataError, |e| Error::Runtime(e.to_string()));
-map_error!(deno_core::ModuleResolutionError, |e| Error::Runtime(e.to_string()));
-map_error!(deno_core::serde_json::Error, |e| Error::JsonDecode(e.to_string()));
-map_error!(deno_core::serde_v8::Error, |e| Error::JsonDecode(e.to_string()));
+map_error!(deno_core::ModuleResolutionError, |e| Error::Runtime(
+    e.to_string()
+));
+map_error!(deno_core::serde_json::Error, |e| Error::JsonDecode(
+    e.to_string()
+));
+map_error!(deno_core::serde_v8::Error, |e| Error::JsonDecode(
+    e.to_string()
+));
 map_error!(deno_core::anyhow::Error, |e| Error::Runtime(e.to_string()));

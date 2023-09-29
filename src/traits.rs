@@ -1,6 +1,6 @@
-use deno_core::v8::{ self, HandleScope };
-use deno_core::ModuleSpecifier;
 use deno_core::resolve_path;
+use deno_core::v8::{self, HandleScope};
+use deno_core::ModuleSpecifier;
 
 use std::env::current_dir;
 
@@ -14,20 +14,24 @@ impl ToModuleSpecifier for str {
     fn to_module_specifier(&self) -> Result<ModuleSpecifier, Error> {
         match resolve_path(self, &current_dir()?) {
             Ok(v) => Ok(v),
-            Err(e) => Err(e.into())
+            Err(e) => Err(e.into()),
         }
     }
 }
 
 pub trait ToV8String {
-    fn to_v8_string<'a>(&self, scope: &mut HandleScope<'a>) -> Result<v8::Local<'a, v8::String>, Error>;
+    fn to_v8_string<'a>(
+        &self,
+        scope: &mut HandleScope<'a>,
+    ) -> Result<v8::Local<'a, v8::String>, Error>;
 }
 
 impl ToV8String for str {
-    fn to_v8_string<'a>(&self, scope: &mut HandleScope<'a>) -> Result<v8::Local<'a, v8::String>, Error> {
-        v8::String::new(scope, self).ok_or(
-            Error::V8Encoding(self.to_string()).into()
-        )
+    fn to_v8_string<'a>(
+        &self,
+        scope: &mut HandleScope<'a>,
+    ) -> Result<v8::Local<'a, v8::String>, Error> {
+        v8::String::new(scope, self).ok_or(Error::V8Encoding(self.to_string()))
     }
 }
 
