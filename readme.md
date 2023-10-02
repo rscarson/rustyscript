@@ -6,10 +6,8 @@
 [![Build Status](https://github.com/rscarson/js-playground/workflows/Rust/badge.svg)](https://github.com/rscarson/js-playground/actions?workflow=Rust)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](https://raw.githubusercontent.com/rscarson/js-playground/master/LICENSE)
 
-This crate is meant to provide a quick and simple way to integrate a runtime JS or TS component from within rust.
+This crate is meant to provide a quick and simple way to execute javascript or typescript from within rust.
 By default, the code being run is entirely sandboxed from the host, having no filesystem or network access.
-
-Typescript is supported by default
 
 It can be extended to include the capabilities and more if desired - please see the `runtime_extensions` example
 
