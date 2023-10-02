@@ -401,11 +401,11 @@ dependencies = [
 
 [[package]]
 name = "deno_url"
-version = "0.119.0"
+version = "0.120.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "df3885daa41f0236c622801aa7e7b6efdff1e253fbaa941eb5087ec3e7339114"
+checksum = "47dcced032b60c40920e2c4586565838a52f53e423610196d0e42404d1cd4c10"
 dependencies = [
- "deno_core 0.214.0",
+ "deno_core 0.218.0",
  "serde",
  "urlpattern",
 ]

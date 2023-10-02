@@ -23,6 +23,6 @@ tokio = "1.32.0"
 
 # Feature deps
 deno_webidl = { version = "0.119.0", optional = true }
-deno_url = { version = "0.119.0", optional = true }
+deno_url = { version = "0.120.0", optional = true }
 deno_console = { version = "0.120.0", optional = true }
 deno_web = { version = "0.151.0", optional = true }
