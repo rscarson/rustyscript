@@ -18,7 +18,7 @@
 //! Here is a very basic use of this crate to execute a JS module. It will create a basic runtime, load the script,
 //! call the registered entrypoint function with the given arguments, and return the resulting value:
 //! ```rust
-//! use js_playground::{Runtime, Script, Error};
+//! use js_playground::{json_args, Runtime, Script, Error};
 //!
 //! # fn main() -> Result<(), Error> {
 //! let script = Script::new(
@@ -36,10 +36,7 @@
 //! let value: usize = Runtime::execute_module(
 //!     &script, vec![],
 //!     Default::default(),
-//!     &[
-//!         Runtime::arg("test"),
-//!         Runtime::arg(5),
-//!     ]
+//!     json_args!("test", 5)
 //! )?;
 //!
 //! assert_eq!(value, 2);
@@ -58,7 +55,7 @@
 //!
 //! A more detailed version of the crate's usage can be seen below, which breaks down the steps instead of using the one-liner `Runtime::execute_module`:
 //! ```rust
-//! use js_playground::{Runtime, RuntimeOptions, Script, Error, Undefined};
+//! use js_playground::{json_args, Runtime, RuntimeOptions, Script, Error, Undefined};
 //! use std::time::Duration;
 //!
 //! # fn main() -> Result<(), Error> {
@@ -73,7 +70,7 @@
 //!
 //! // Create a new runtime
 //! let mut runtime = Runtime::new(RuntimeOptions {
-//!     timeout: Some(Duration::from_millis(50)), // Stop execution by force after 50ms
+//!     timeout: Duration::from_millis(50), // Stop execution by force after 50ms
 //!     default_entrypoint: Some("load".to_string()), // Run this as the entrypoint function if none is registered
 //!     ..Default::default()
 //! })?;
@@ -83,9 +80,9 @@
 //! //Load can be called multiple times, and scripts can import other loaded scripts
 //! // Using `import './filename.js'`
 //! let module_handle = runtime.load_module(&script)?;
-//! runtime.call_entrypoint::<Undefined>(&module_handle, &[ Runtime::arg(2) ])?;
+//! runtime.call_entrypoint::<Undefined>(&module_handle, json_args!(2))?;
 //!
-//! let internal_value: i64 = runtime.call_function(&module_handle, "getValue", Runtime::EMPTY_ARGS)?;
+//! let internal_value: i64 = runtime.call_function(&module_handle, "getValue", json_args!())?;
 //! # Ok(())
 //! # }
 //! ```
@@ -97,6 +94,7 @@
 mod error;
 mod ext;
 mod inner_runtime;
+mod js_function;
 mod module_handle;
 mod runtime;
 mod script;
@@ -109,6 +107,7 @@ pub use deno_core::serde_json;
 
 // Expose some important stuff from us
 pub use error::Error;
+pub use js_function::JsFunction;
 pub use module_handle::ModuleHandle;
 pub use runtime::{Runtime, RuntimeOptions, Undefined};
 pub use script::{Script, StaticScript};

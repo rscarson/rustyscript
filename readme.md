@@ -69,7 +69,7 @@ let script = Script::new(
 
 // Create a new runtime
 let mut runtime = Runtime::new(RuntimeOptions {
-    timeout: Some(Duration::from_millis(50)), // Stop execution by force after 50ms
+    timeout: Duration::from_millis(50), // Stop execution by force after 50ms
     default_entrypoint: Some("load".to_string()), // Run this as the entrypoint function if none is registered
     ..Default::default()
 })?;
@@ -81,7 +81,7 @@ let mut runtime = Runtime::new(RuntimeOptions {
 let module_handle = runtime.load_module(&script)?;
 runtime.call_entrypoint::<Undefined>(&module_handle, &[ Runtime::arg(2) ])?;
 
-let internal_value: i64 = runtime.call_function(&module_handle, "getValue", Runtime::EMPTY_ARGS)?;
+let internal_value: i64 = runtime.call_function(&module_handle, "getValue", json_args!())?;
 ```
 
 Please also check out [@Bromeon/js_sandbox](https://github.com/Bromeon/js-sandbox), another great crate in this niche

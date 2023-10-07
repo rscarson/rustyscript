@@ -28,6 +28,10 @@ pub enum Error {
     /// Triggers on runtime issues during execution of a script
     #[error("{0}")]
     Runtime(String),
+
+    /// Triggers when a module times out before finishing
+    #[error("Module timed out: {0}")]
+    Timeout(String),
 }
 
 #[macro_use]
@@ -58,3 +62,9 @@ map_error!(deno_core::serde_v8::Error, |e| Error::JsonDecode(
     e.to_string()
 ));
 map_error!(deno_core::anyhow::Error, |e| Error::Runtime(e.to_string()));
+map_error!(tokio::time::error::Elapsed, |e| {
+    Error::Timeout(e.to_string())
+});
+map_error!(deno_core::futures::channel::oneshot::Canceled, |e| {
+    Error::Timeout(e.to_string())
+});

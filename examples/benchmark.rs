@@ -8,7 +8,7 @@
 /// They are most useful in the context of Runtime::execute_module, which can be seen
 /// in the 'hello_world' example.
 ///
-use js_playground::{Error, ModuleHandle, Runtime, Script};
+use js_playground::{json_args, Error, ModuleHandle, Runtime, Script};
 use std::time::{Duration, Instant};
 
 #[macro_use]
@@ -65,7 +65,7 @@ fn main() -> Result<(), Error> {
     benchmark!(
         {
             value = runtime
-                .call_function::<i64>(&module, "getValue", Runtime::EMPTY_ARGS)
+                .call_function::<i64>(&module, "getValue", json_args!())
                 .expect("Could not call function");
         },
         now,

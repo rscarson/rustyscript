@@ -22,6 +22,31 @@ function deepClone(obj, hash = new WeakMap()) {
         key => ({ [key]: deepClone(obj[key], hash) }) ));
 }
 
+const ObjectProperties = {
+    'nonEnumerable': {writable: true, enumerable: false, configurable: true},
+    'readOnly': {writable: true, enumerable: false, configurable: true},
+    'writeable': {writable: true, enumerable: true, configurable: true},
+    'getterOnly': {enumerable: true, configurable: true},
+
+    'apply': (value, type) => {
+        return {
+            'value': value,
+            ...ObjectProperties[type]
+        };
+    }
+}
+const nonEnumerable = (value) => ObjectProperties.apply(value, nonEnumerable);
+const readOnly = (value) => ObjectProperties.apply(value, readOnly);
+const writeable = (value) => ObjectProperties.apply(value, writeable);
+const getterOnly = (getter) => {
+    return {
+        get: getter,
+        set() {},
+        ...ObjectProperties.getterOnly
+    };
+}
+const applyToGlobal = (properties) => Object.defineProperties(globalThis, properties);
+
 globalThis.js_playground_reset = () => {
     let backup = deepClone(globalThis.js_playground.global_backup);
     for (const key of Object.keys(globalThis)) {
@@ -40,3 +65,7 @@ globalThis.js_playground = {
     'global_backup': deepClone(globalThis),
 };
 Object.freeze(globalThis.js_playground);
+
+export {
+    nonEnumerable, readOnly, writeable, getterOnly, applyToGlobal
+};

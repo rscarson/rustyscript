@@ -1,32 +1,18 @@
 use deno_core::serde_json;
-use std::time::Duration;
 
-use crate::inner_runtime::InnerRuntime;
-use crate::script::Script;
-use crate::Error;
-use crate::ModuleHandle;
+use crate::{
+    inner_runtime::{InnerRuntime, InnerRuntimeOptions},
+    Error, JsFunction, ModuleHandle, Script,
+};
 
-#[derive(Default)]
 /// Represents the set of options accepted by the runtime constructor
-pub struct RuntimeOptions {
-    /// A set of deno_core extensions to add to the runtime
-    pub extensions: Vec<deno_core::Extension>,
-
-    /// Function to use as entrypoint if the script does not provide one
-    pub default_entrypoint: Option<String>,
-
-    /// Amount of time to run for before killing the thread
-    pub timeout: Option<Duration>,
-}
+pub type RuntimeOptions = InnerRuntimeOptions;
 
 /// For functions returning nothing
 pub type Undefined = serde_json::Value;
 
 /// Represents a configured runtime ready to run modules
-pub struct Runtime {
-    inner_runtime: InnerRuntime,
-    options: RuntimeOptions,
-}
+pub struct Runtime(InnerRuntime);
 
 impl Runtime {
     /// The lack of any arguments - used to simplify calling functions
@@ -43,7 +29,7 @@ impl Runtime {
     ///
     /// # Example
     /// ```rust
-    /// use js_playground::{ Runtime, RuntimeOptions, Script };
+    /// use js_playground::{ json_args, Runtime, RuntimeOptions, Script };
     /// use std::time::Duration;
     ///
     /// # fn main() -> Result<(), js_playground::Error> {
@@ -51,7 +37,7 @@ impl Runtime {
     /// // And which will time-out after 50ms
     /// let mut runtime = Runtime::new(RuntimeOptions {
     ///     default_entrypoint: Some("load".to_string()),
-    ///     timeout: Some(Duration::from_millis(50)),
+    ///     timeout: Duration::from_millis(50),
     ///     ..Default::default()
     /// })?;
     ///
@@ -62,31 +48,24 @@ impl Runtime {
     /// ");
     ///
     /// let module_handle = runtime.load_module(&script)?;
-    /// let value: String = runtime.call_entrypoint(&module_handle, Runtime::EMPTY_ARGS)?;
+    /// let value: String = runtime.call_entrypoint(&module_handle, json_args!())?;
     /// assert_eq!("Hello World!", value);
     /// # Ok(())
     /// # }
     /// ```
     ///
     pub fn new(options: RuntimeOptions) -> Result<Self, Error> {
-        Ok(Self {
-            inner_runtime: InnerRuntime::new(options.extensions),
-            options: RuntimeOptions {
-                default_entrypoint: options.default_entrypoint.clone(),
-                timeout: options.timeout,
-                ..Default::default()
-            },
-        })
+        Ok(Self(InnerRuntime::new(options)))
     }
 
     /// Access the underlying deno runtime instance directly
     pub fn deno_runtime(&mut self) -> &mut deno_core::JsRuntime {
-        self.inner_runtime.deno_runtime()
+        self.0.deno_runtime()
     }
 
     /// Access the options used to create this runtime
     pub fn options(&self) -> &RuntimeOptions {
-        &self.options
+        &self.0.options
     }
 
     /// Encode an argument as a json value for use as a function argument
@@ -120,6 +99,27 @@ impl Runtime {
         serde_json::Value::from(value)
     }
 
+    /// Calls a stored JavaScript function and deserializes its return value.
+    ///
+    /// # Arguments
+    /// * `function` - A The function object
+    ///
+    /// # Returns
+    /// A `Result` containing the deserialized result of the function call (`T`)
+    /// or an error (`Error`) if the function cannot be found, if there are issues with
+    /// calling the function, or if the result cannot be deserialized.
+    pub fn call_stored_function<T>(
+        &mut self,
+        module_context: &ModuleHandle,
+        function: &JsFunction,
+        args: &[serde_json::Value],
+    ) -> Result<T, Error>
+    where
+        T: deno_core::serde::de::DeserializeOwned,
+    {
+        self.0.call_stored_function(module_context, function, args)
+    }
+
     /// Calls a JavaScript function within the Deno runtime by its name and deserializes its return value.
     ///
     /// # Arguments
@@ -133,13 +133,13 @@ impl Runtime {
     /// # Example
     ///
     /// ```rust
-    /// use js_playground::{ Runtime, Script, Error };
+    /// use js_playground::{ json_args, Runtime, Script, Error };
     ///
     /// # fn main() -> Result<(), Error> {
     /// let mut runtime = Runtime::new(Default::default())?;
     /// let script = Script::new("/path/to/module.js", "export function f() { return 2; };");
     /// let module = runtime.load_module(&script)?;
-    /// let value: usize = runtime.call_function(&module, "f", Runtime::EMPTY_ARGS)?;
+    /// let value: usize = runtime.call_function(&module, "f", json_args!())?;
     /// # Ok(())
     /// # }
     /// ```
@@ -152,7 +152,7 @@ impl Runtime {
     where
         T: deno_core::serde::de::DeserializeOwned,
     {
-        self.inner_runtime.call_function(module_context, name, args)
+        self.0.call_function(module_context, name, args)
     }
 
     /// Get a value from a runtime instance
@@ -180,9 +180,9 @@ impl Runtime {
     /// ```
     pub fn get_value<T>(&mut self, module_context: &ModuleHandle, name: &str) -> Result<T, Error>
     where
-        T: deno_core::serde::de::DeserializeOwned,
+        T: deno_core::serde::de::DeserializeOwned + 'static,
     {
-        self.inner_runtime.get_value(module_context, name)
+        self.0.get_value(module_context, name)
     }
 
     /// Executes the given script, and returns a handle allowing you to extract values
@@ -210,12 +210,7 @@ impl Runtime {
     /// # }
     /// ```
     pub fn load_module(&mut self, module: &Script) -> Result<ModuleHandle, Error> {
-        self.inner_runtime.load_modules(
-            None,
-            vec![module],
-            self.options.timeout,
-            self.options.default_entrypoint.clone(),
-        )
+        self.0.load_modules(None, vec![module])
     }
 
     /// Executes the given script, and returns a handle allowing you to extract values
@@ -252,12 +247,7 @@ impl Runtime {
         module: &Script,
         side_modules: Vec<&Script>,
     ) -> Result<ModuleHandle, Error> {
-        self.inner_runtime.load_modules(
-            Some(&module),
-            side_modules,
-            self.options.timeout,
-            self.options.default_entrypoint.clone(),
-        )
+        self.0.load_modules(Some(&module), side_modules)
     }
 
     /// Executes the entrypoint function of a script within the Deno runtime.
@@ -273,7 +263,7 @@ impl Runtime {
     /// # Example
     ///
     /// ```rust
-    /// use js_playground::{Runtime, Script, Error};
+    /// use js_playground::{json_args, Runtime, Script, Error};
     ///
     /// # fn main() -> Result<(), Error> {
     /// let mut runtime = Runtime::new(Default::default())?;
@@ -281,7 +271,7 @@ impl Runtime {
     /// let module = runtime.load_module(&script)?;
     ///
     /// // Run the entrypoint and handle the result
-    /// let value: String = runtime.call_entrypoint(&module, Runtime::EMPTY_ARGS)?;
+    /// let value: String = runtime.call_entrypoint(&module, json_args!())?;
     /// # Ok(())
     /// # }
     /// ```
@@ -294,11 +284,9 @@ impl Runtime {
         T: deno_core::serde::de::DeserializeOwned,
     {
         if let Some(entrypoint) = module_context.entrypoint() {
-            let value: serde_json::Value = self.inner_runtime.call_function_by_ref(
-                module_context,
-                entrypoint.clone(),
-                args,
-            )?;
+            let value: serde_json::Value =
+                self.0
+                    .call_function_by_ref_async(module_context, entrypoint.clone(), args)?;
             Ok(serde_json::from_value(value)?)
         } else {
             Err(Error::MissingEntrypoint(module_context.module().clone()))
@@ -323,11 +311,11 @@ impl Runtime {
     ///
     /// ```rust
     /// // Create a script with filename and contents
-    /// use js_playground::{Runtime, Script, Error};
+    /// use js_playground::{json_args, Runtime, Script, Error};
     ///
     /// # fn main() -> Result<(), Error> {
     /// let script = Script::new("test.js", "js_playground.register_entrypoint(() => 2)");
-    /// let value: usize = Runtime::execute_module(&script, vec![], Default::default(), Runtime::EMPTY_ARGS)?;
+    /// let value: usize = Runtime::execute_module(&script, vec![], Default::default(), json_args!())?;
     /// # Ok(())
     /// # }
     /// ```
@@ -352,7 +340,7 @@ impl Runtime {
     /// Use this function if you need to clear the sandbox between runs, to prevent
     /// interop side-effects
     pub fn reset(&mut self) {
-        self.inner_runtime.clear_modules();
+        self.0.clear_modules();
         self.call_function::<Undefined>(
             &ModuleHandle::default(),
             "js_playground_reset",
@@ -364,6 +352,9 @@ impl Runtime {
 
 #[cfg(test)]
 mod test_runtime {
+    use crate::json_args;
+    use std::time::Duration;
+
     use super::*;
     use deno_core::extension;
 
@@ -457,12 +448,12 @@ mod test_runtime {
             .load_module(&script2)
             .expect("Could not load modules");
         let value: usize = runtime
-            .call_entrypoint(&module, Runtime::EMPTY_ARGS)
+            .call_entrypoint(&module, json_args!())
             .expect("Could not call exported fn");
         assert_eq!(2, value);
 
         let mut runtime = Runtime::new(RuntimeOptions {
-            timeout: Some(Duration::from_millis(50)),
+            timeout: Duration::from_millis(50),
             ..Default::default()
         })
         .expect("Could not create the runtime");
@@ -509,19 +500,19 @@ mod test_runtime {
             .load_modules(&script2, vec![&script1])
             .expect("Could not load modules");
         let value: usize = runtime
-            .call_entrypoint(&module, Runtime::EMPTY_ARGS)
+            .call_entrypoint(&module, json_args!())
             .expect("Could not call exported fn");
         assert_eq!(2, value);
 
         let mut runtime = Runtime::new(RuntimeOptions {
-            timeout: Some(Duration::from_millis(50)),
+            timeout: Duration::from_millis(50),
             ..Default::default()
         })
         .expect("Could not create the runtime");
         let script = Script::new(
             "test.js",
             "
-            await new Promise(r => setTimeout(r, 2000));
+            await new Promise(r => setTimeout(r, 5000));
         ",
         );
         runtime
@@ -542,7 +533,7 @@ mod test_runtime {
             .load_modules(&script, vec![])
             .expect("Could not load module");
         let value: usize = runtime
-            .call_entrypoint(&module, Runtime::EMPTY_ARGS)
+            .call_entrypoint(&module, json_args!())
             .expect("Could not call registered fn");
         assert_eq!(2, value);
 
@@ -561,7 +552,7 @@ mod test_runtime {
             .load_modules(&script, vec![])
             .expect("Could not load module");
         let value: usize = runtime
-            .call_entrypoint(&module, Runtime::EMPTY_ARGS)
+            .call_entrypoint(&module, json_args!())
             .expect("Could not call exported fn");
         assert_eq!(2, value);
 
@@ -576,7 +567,7 @@ mod test_runtime {
             .load_modules(&script, vec![])
             .expect("Could not load module");
         runtime
-            .call_entrypoint::<Undefined>(&module, Runtime::EMPTY_ARGS)
+            .call_entrypoint::<Undefined>(&module, json_args!())
             .expect_err("Did not detect no entrypoint");
     }
 
@@ -589,7 +580,7 @@ mod test_runtime {
         ",
         );
         let value: usize =
-            Runtime::execute_module(&script, vec![], Default::default(), Runtime::EMPTY_ARGS)
+            Runtime::execute_module(&script, vec![], Default::default(), json_args!())
                 .expect("Could not exec module");
         assert_eq!(2, value);
 
@@ -599,13 +590,8 @@ mod test_runtime {
             function load() { return 2; }
         ",
         );
-        Runtime::execute_module::<Undefined>(
-            &script,
-            vec![],
-            Default::default(),
-            Runtime::EMPTY_ARGS,
-        )
-        .expect_err("Could not detect no entrypoint");
+        Runtime::execute_module::<Undefined>(&script, vec![], Default::default(), json_args!())
+            .expect_err("Could not detect no entrypoint");
     }
 
     #[test]
@@ -623,19 +609,19 @@ mod test_runtime {
             .load_modules(&script, vec![])
             .expect("Could not load module");
         runtime
-            .call_entrypoint::<Undefined>(&module, Runtime::EMPTY_ARGS)
+            .call_entrypoint::<Undefined>(&module, json_args!())
             .expect("Could not call entrypoint");
 
         assert_eq!(
             "bar",
             runtime
-                .call_function::<String>(&module, "getFoo", Runtime::EMPTY_ARGS)
+                .call_function::<String>(&module, "getFoo", json_args!())
                 .expect("Error getting value")
         );
 
         runtime.reset();
         runtime
-            .call_function::<String>(&module, "getFoo", Runtime::EMPTY_ARGS)
+            .call_function::<String>(&module, "getFoo", json_args!())
             .expect_err("Global was not cleared");
     }
 
@@ -662,18 +648,18 @@ mod test_runtime {
         assert_eq!(2, result);
 
         let result: String = runtime
-            .call_function(&module, "fnb", Runtime::EMPTY_ARGS)
+            .call_function(&module, "fnb", json_args!())
             .expect("Could not call export");
         assert_eq!("test", result);
 
         runtime
-            .call_function::<Undefined>(&module, "fnc", Runtime::EMPTY_ARGS)
+            .call_function::<Undefined>(&module, "fnc", json_args!())
             .expect_err("Did not detect non-function");
         runtime
-            .call_function::<Undefined>(&module, "fnd", Runtime::EMPTY_ARGS)
+            .call_function::<Undefined>(&module, "fnd", json_args!())
             .expect_err("Did not detect undefined");
         runtime
-            .call_function::<Undefined>(&module, "fne", Runtime::EMPTY_ARGS)
+            .call_function::<Undefined>(&module, "fne", json_args!())
             .expect("Did not allow undefined return");
     }
 }

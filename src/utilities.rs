@@ -101,3 +101,43 @@ mod test_runtime {
             .ends_with("test.js"));
     }
 }
+
+#[macro_use]
+mod runtime_macros {
+    /// Map a series of values to a slice of serde_json::Value objects
+    /// that javascript functions can understand
+    /// # Example
+    /// ```rust
+    /// use js_playground::{ Runtime, RuntimeOptions, Script, json_args };
+    /// use std::time::Duration;
+    ///
+    /// # fn main() -> Result<(), js_playground::Error> {
+    /// let script = Script::new("test.js", "
+    ///     function load(a, b) {
+    ///         console.log(`Hello world: a=${a}, b=${b}`);
+    ///     }
+    ///     js_playground.register_entrypoint(load);
+    /// ");
+    ///
+    /// Runtime::execute_module(
+    ///     &script, vec![],
+    ///     Default::default(),
+    ///     json_args!("test", 5)
+    /// )?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    ///
+    #[macro_export]
+    macro_rules! json_args {
+        ($($arg:expr),+) => {
+            &[
+                $($crate::Runtime::arg($arg)),+
+            ]
+        };
+
+        () => {
+            $crate::Runtime::EMPTY_ARGS
+        };
+    }
+}

@@ -8,7 +8,7 @@
 /// They are most useful in the context of Runtime::execute_module, which can be seen
 /// in the 'hello_world' example.
 ///
-use js_playground::{Error, Runtime, RuntimeOptions, Script, Undefined};
+use js_playground::{json_args, Error, Runtime, RuntimeOptions, Script, Undefined};
 
 fn main() -> Result<(), Error> {
     let script = Script::new(
@@ -30,8 +30,7 @@ fn main() -> Result<(), Error> {
 
     runtime.call_entrypoint::<Undefined>(&module_handle, &[Runtime::arg(2)])?;
 
-    let internal_value: usize =
-        runtime.call_function(&module_handle, "getValue", Runtime::EMPTY_ARGS)?;
+    let internal_value: usize = runtime.call_function(&module_handle, "getValue", json_args!())?;
     assert_eq!(4, internal_value);
     Ok(())
 }

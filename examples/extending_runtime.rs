@@ -35,7 +35,7 @@ impl MyRuntime {
     pub fn new() -> Result<Self, Error> {
         let mut runtime = Self(Runtime::new(RuntimeOptions {
             extensions: vec![example_extension::example_extension::init_ops_and_esm()],
-            timeout: Some(Duration::from_millis(500)),
+            timeout: Duration::from_millis(500),
             ..Default::default()
         })?);
 
@@ -65,7 +65,7 @@ impl MyRuntime {
     /// * `name` - A string representing the name of the value to find
     pub fn get_value<T>(&mut self, module_context: &ModuleHandle, name: &str) -> Result<T, Error>
     where
-        T: deno_core::serde::de::DeserializeOwned,
+        T: deno_core::serde::de::DeserializeOwned + 'static,
     {
         self.0.get_value(module_context, name)
     }
