@@ -22,6 +22,7 @@ function deepClone(obj, hash = new WeakMap()) {
         key => ({ [key]: deepClone(obj[key], hash) }) ));
 }
 
+// Loaders used by other extensions
 const ObjectProperties = {
     'nonEnumerable': {writable: true, enumerable: false, configurable: true},
     'readOnly': {writable: true, enumerable: false, configurable: true},
@@ -47,6 +48,7 @@ const getterOnly = (getter) => {
 }
 const applyToGlobal = (properties) => Object.defineProperties(globalThis, properties);
 
+// Set us up for platform resets
 globalThis.js_playground_reset = () => {
     let backup = deepClone(globalThis.js_playground.global_backup);
     for (const key of Object.keys(globalThis)) {
@@ -58,6 +60,8 @@ globalThis.js_playground_reset = () => {
         globalThis[key] = backup[key];
     }
 }
+
+// Populate the global object
 globalThis.js_playground = {
     'register_entrypoint': (f) => Deno.core.ops.op_register_entrypoint(f),
     'bail': (msg) => { throw new Error(msg) },

@@ -8,10 +8,10 @@
 /// They are most useful in the context of Runtime::execute_module, which can be seen
 /// in the 'hello_world' example.
 ///
-use js_playground::{json_args, Error, Runtime, RuntimeOptions, Script, Undefined};
+use js_playground::{json_args, Error, Module, Runtime, RuntimeOptions, Undefined};
 
 fn main() -> Result<(), Error> {
-    let script = Script::new(
+    let module = Module::new(
         "test.js",
         "
         let internalValue = 0;
@@ -26,7 +26,7 @@ fn main() -> Result<(), Error> {
         default_entrypoint: Some("setUp".to_string()),
         ..Default::default()
     })?;
-    let module_handle = runtime.load_module(&script)?;
+    let module_handle = runtime.load_module(&module)?;
 
     runtime.call_entrypoint::<Undefined>(&module_handle, &[Runtime::arg(2)])?;
 

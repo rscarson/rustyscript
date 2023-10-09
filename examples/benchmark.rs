@@ -8,7 +8,7 @@
 /// They are most useful in the context of Runtime::execute_module, which can be seen
 /// in the 'hello_world' example.
 ///
-use js_playground::{json_args, Error, ModuleHandle, Runtime, Script};
+use js_playground::{json_args, Error, Module, ModuleHandle, Runtime};
 use std::time::{Duration, Instant};
 
 #[macro_use]
@@ -26,7 +26,7 @@ mod error_macro {
 fn main() -> Result<(), Error> {
     let mut now: Instant;
     let mut elapsed: Duration;
-    let script = Script::new(
+    let module = Module::new(
         "test.js",
         "
         let i = 0;
@@ -39,7 +39,7 @@ fn main() -> Result<(), Error> {
     );
 
     let mut runtime: Runtime;
-    let module: ModuleHandle;
+    let module_handle: ModuleHandle;
     let value: i64;
 
     benchmark!(
@@ -53,8 +53,8 @@ fn main() -> Result<(), Error> {
 
     benchmark!(
         {
-            module = runtime
-                .load_modules(&script, vec![])
+            module_handle = runtime
+                .load_modules(&module, vec![])
                 .expect("Could not load module");
         },
         now,
@@ -65,7 +65,7 @@ fn main() -> Result<(), Error> {
     benchmark!(
         {
             value = runtime
-                .call_function::<i64>(&module, "getValue", json_args!())
+                .call_function::<i64>(&module_handle, "getValue", json_args!())
                 .expect("Could not call function");
         },
         now,
@@ -85,7 +85,7 @@ fn main() -> Result<(), Error> {
     benchmark!(
         {
             runtime
-                .load_modules(&script, vec![])
+                .load_modules(&module, vec![])
                 .expect("Could not load module");
         },
         now,

@@ -1,26 +1,51 @@
 use deno_core::Extension;
 
-#[cfg(feature = "console")]
-pub mod init_console;
-
-#[cfg(feature = "url")]
-pub mod init_url;
-
-#[cfg(feature = "web")]
-pub mod init_web;
-
 pub mod js_playground;
 
-#[cfg(feature = "web")]
+#[macro_use]
+mod mod_macros {
+    macro_rules! import_mod {
+        ($extensions_vec:ident, $mod:ident, $mod_path:literal, $feature:literal, $includes:expr) => {
+            #[cfg(feature = $feature)]
+            #[path = $mod_path]
+            pub mod $mod;
+
+            #[cfg(feature = $feature)]
+            $extensions_vec.extend($includes);
+        };
+    }
+}
+
 #[derive(Clone)]
+#[cfg(feature = "web")]
 struct Permissions;
+
 #[cfg(feature = "web")]
 impl deno_web::TimersPermission for Permissions {
     fn allow_hrtime(&mut self) -> bool {
-        false
+        true
     }
     fn check_unstable(&self, _state: &deno_core::OpState, _api_name: &'static str) {
         unreachable!()
+    }
+}
+
+#[cfg(feature = "web")]
+impl deno_fetch::FetchPermissions for Permissions {
+    fn check_net_url(
+        &mut self,
+        _url: &deno_core::url::Url,
+        _api_name: &str,
+    ) -> Result<(), deno_core::error::AnyError> {
+        Ok(())
+    }
+
+    fn check_read(
+        &mut self,
+        _p: &std::path::Path,
+        _api_name: &str,
+    ) -> Result<(), deno_core::error::AnyError> {
+        Ok(())
     }
 }
 
@@ -31,24 +56,71 @@ impl deno_web::TimersPermission for Permissions {
 pub fn all_extensions(mut user_extensions: Vec<Extension>) -> Vec<Extension> {
     user_extensions.extend(vec![js_playground::js_playground::init_ops_and_esm()]);
 
-    #[cfg(feature = "console")]
-    user_extensions.extend(vec![
-        deno_console::deno_console::init_ops_and_esm(),
-        crate::ext::init_console::init_console::init_ops_and_esm(),
-    ]);
+    import_mod!(
+        user_extensions,
+        init_console,
+        "init_console.rs",
+        "console",
+        vec![
+            deno_console::deno_console::init_ops_and_esm(),
+            init_console::init_console::init_ops_and_esm(),
+        ]
+    );
 
-    #[cfg(feature = "url")]
-    user_extensions.extend(vec![
-        deno_webidl::deno_webidl::init_ops_and_esm(),
-        deno_url::deno_url::init_ops_and_esm(),
-        crate::ext::init_url::init_url::init_ops_and_esm(),
-    ]);
+    import_mod!(
+        user_extensions,
+        init_webidl,
+        "init_webidl.rs",
+        "webidl",
+        vec![
+            deno_webidl::deno_webidl::init_ops_and_esm(),
+            init_webidl::init_webidl::init_ops_and_esm(),
+        ]
+    );
 
-    #[cfg(feature = "web")]
-    user_extensions.extend(vec![
-        deno_web::deno_web::init_ops_and_esm::<Permissions>(Default::default(), None),
-        crate::ext::init_web::init_web::init_ops_and_esm(),
-    ]);
+    import_mod!(
+        user_extensions,
+        init_url,
+        "init_url.rs",
+        "url",
+        vec![
+            deno_url::deno_url::init_ops_and_esm(),
+            init_url::init_url::init_ops_and_esm(),
+        ]
+    );
+
+    import_mod!(
+        user_extensions,
+        init_web,
+        "init_web.rs",
+        "web",
+        vec![
+            deno_web::deno_web::init_ops_and_esm::<Permissions>(Default::default(), None),
+            init_web::init_web::init_ops_and_esm(),
+        ]
+    );
+
+    import_mod!(
+        user_extensions,
+        init_crypto,
+        "init_crypto.rs",
+        "web",
+        vec![
+            deno_crypto::deno_crypto::init_ops_and_esm(Default::default()),
+            init_crypto::init_crypto::init_ops_and_esm(),
+        ]
+    );
+
+    import_mod!(
+        user_extensions,
+        init_fetch,
+        "init_fetch.rs",
+        "web",
+        vec![
+            deno_fetch::deno_fetch::init_ops_and_esm::<Permissions>(Default::default()),
+            init_fetch::init_fetch::init_ops_and_esm(),
+        ]
+    );
 
     user_extensions
 }

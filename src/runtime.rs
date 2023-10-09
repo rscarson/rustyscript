@@ -2,7 +2,7 @@ use deno_core::serde_json;
 
 use crate::{
     inner_runtime::{InnerRuntime, InnerRuntimeOptions},
-    Error, JsFunction, ModuleHandle, Script,
+    Error, JsFunction, Module, ModuleHandle,
 };
 
 /// Represents the set of options accepted by the runtime constructor
@@ -29,7 +29,7 @@ impl Runtime {
     ///
     /// # Example
     /// ```rust
-    /// use js_playground::{ json_args, Runtime, RuntimeOptions, Script };
+    /// use js_playground::{ json_args, Runtime, RuntimeOptions, Module };
     /// use std::time::Duration;
     ///
     /// # fn main() -> Result<(), js_playground::Error> {
@@ -41,13 +41,13 @@ impl Runtime {
     ///     ..Default::default()
     /// })?;
     ///
-    /// let script = Script::new("test.js", "
+    /// let module = Module::new("test.js", "
     ///     export const load = () => {
     ///         return 'Hello World!';
     ///     }
     /// ");
     ///
-    /// let module_handle = runtime.load_module(&script)?;
+    /// let module_handle = runtime.load_module(&module)?;
     /// let value: String = runtime.call_entrypoint(&module_handle, json_args!())?;
     /// assert_eq!("Hello World!", value);
     /// # Ok(())
@@ -70,11 +70,11 @@ impl Runtime {
 
     /// Encode an argument as a json value for use as a function argument
     /// ```rust
-    /// use js_playground::{ Runtime, RuntimeOptions, Script };
+    /// use js_playground::{ Runtime, RuntimeOptions, Module };
     /// use std::time::Duration;
     ///
     /// # fn main() -> Result<(), js_playground::Error> {
-    /// let script = Script::new("test.js", "
+    /// let module = Module::new("test.js", "
     ///     function load(a, b) {
     ///         console.log(`Hello world: a=${a}, b=${b}`);
     ///     }
@@ -82,7 +82,7 @@ impl Runtime {
     /// ");
     ///
     /// Runtime::execute_module(
-    ///     &script, vec![],
+    ///     &module, vec![],
     ///     Default::default(),
     ///     &[
     ///         Runtime::arg("test"),
@@ -99,7 +99,7 @@ impl Runtime {
         serde_json::Value::from(value)
     }
 
-    /// Calls a stored JavaScript function and deserializes its return value.
+    /// Calls a stored JavaModule function and deserializes its return value.
     ///
     /// # Arguments
     /// * `function` - A The function object
@@ -120,10 +120,10 @@ impl Runtime {
         self.0.call_stored_function(module_context, function, args)
     }
 
-    /// Calls a JavaScript function within the Deno runtime by its name and deserializes its return value.
+    /// Calls a JavaModule function within the Deno runtime by its name and deserializes its return value.
     ///
     /// # Arguments
-    /// * `name` - A string representing the name of the JavaScript function to call.
+    /// * `name` - A string representing the name of the JavaModule function to call.
     ///
     /// # Returns
     /// A `Result` containing the deserialized result of the function call (`T`)
@@ -133,12 +133,12 @@ impl Runtime {
     /// # Example
     ///
     /// ```rust
-    /// use js_playground::{ json_args, Runtime, Script, Error };
+    /// use js_playground::{ json_args, Runtime, Module, Error };
     ///
     /// # fn main() -> Result<(), Error> {
     /// let mut runtime = Runtime::new(Default::default())?;
-    /// let script = Script::new("/path/to/module.js", "export function f() { return 2; };");
-    /// let module = runtime.load_module(&script)?;
+    /// let module = Module::new("/path/to/module.js", "export function f() { return 2; };");
+    /// let module = runtime.load_module(&module)?;
     /// let value: usize = runtime.call_function(&module, "f", json_args!())?;
     /// # Ok(())
     /// # }
@@ -168,52 +168,52 @@ impl Runtime {
     /// # Example
     ///
     /// ```rust
-    /// use js_playground::{ Runtime, Script, Error };
+    /// use js_playground::{ Runtime, Module, Error };
     ///
     /// # fn main() -> Result<(), Error> {
     /// let mut runtime = Runtime::new(Default::default())?;
-    /// let script = Script::new("/path/to/module.js", "globalThis.my_value = 2;");
-    /// let module = runtime.load_module(&script)?;
+    /// let module = Module::new("/path/to/module.js", "globalThis.my_value = 2;");
+    /// let module = runtime.load_module(&module)?;
     /// let value: usize = runtime.get_value(&module, "my_value")?;
     /// # Ok(())
     /// # }
     /// ```
     pub fn get_value<T>(&mut self, module_context: &ModuleHandle, name: &str) -> Result<T, Error>
     where
-        T: deno_core::serde::de::DeserializeOwned + 'static,
+        T: serde::de::DeserializeOwned,
     {
         self.0.get_value(module_context, name)
     }
 
-    /// Executes the given script, and returns a handle allowing you to extract values
+    /// Executes the given module, and returns a handle allowing you to extract values
     /// And call functions
     ///
     /// # Arguments
-    /// * `module` - A `Script` object containing the module's filename and contents.
+    /// * `module` - A `Module` object containing the module's filename and contents.
     ///
     /// # Returns
     /// A `Result` containing a handle for the loaded module
     /// or an error (`Error`) if there are issues with loading modules, executing the
-    /// script, or if the result cannot be deserialized.
+    /// module, or if the result cannot be deserialized.
     ///
     /// # Example
     ///
     /// ```rust
-    /// // Create a script with filename and contents
-    /// use js_playground::{Runtime, Script, Error};
+    /// // Create a module with filename and contents
+    /// use js_playground::{Runtime, Module, Error};
     ///
     /// # fn main() -> Result<(), Error> {
     /// let mut runtime = Runtime::new(Default::default())?;
-    /// let script = Script::new("test.js", "js_playground.register_entrypoint(() => 'test')");
-    /// runtime.load_module(&script);
+    /// let module = Module::new("test.js", "js_playground.register_entrypoint(() => 'test')");
+    /// runtime.load_module(&module);
     /// # Ok(())
     /// # }
     /// ```
-    pub fn load_module(&mut self, module: &Script) -> Result<ModuleHandle, Error> {
+    pub fn load_module(&mut self, module: &Module) -> Result<ModuleHandle, Error> {
         self.0.load_modules(None, vec![module])
     }
 
-    /// Executes the given script, and returns a handle allowing you to extract values
+    /// Executes the given module, and returns a handle allowing you to extract values
     /// And call functions.
     ///
     /// This will load 'module' as the main module, and the others as side-modules.
@@ -221,36 +221,36 @@ impl Runtime {
     /// to load a different main module.
     ///
     /// # Arguments
-    /// * `module` - A `Script` object containing the module's filename and contents.
+    /// * `module` - A `Module` object containing the module's filename and contents.
     /// * `side_modules` - A set of additional modules to be loaded into memory for use
     ///
     /// # Returns
     /// A `Result` containing a handle for the loaded module
     /// or an error (`Error`) if there are issues with loading modules, executing the
-    /// script, or if the result cannot be deserialized.
+    /// module, or if the result cannot be deserialized.
     ///
     /// # Example
     ///
     /// ```rust
-    /// // Create a script with filename and contents
-    /// use js_playground::{Runtime, Script, Error};
+    /// // Create a module with filename and contents
+    /// use js_playground::{Runtime, Module, Error};
     ///
     /// # fn main() -> Result<(), Error> {
     /// let mut runtime = Runtime::new(Default::default())?;
-    /// let script = Script::new("test.js", "js_playground.register_entrypoint(() => 'test')");
-    /// runtime.load_modules(&script, vec![]);
+    /// let module = Module::new("test.js", "js_playground.register_entrypoint(() => 'test')");
+    /// runtime.load_modules(&module, vec![]);
     /// # Ok(())
     /// # }
     /// ```
     pub fn load_modules(
         &mut self,
-        module: &Script,
-        side_modules: Vec<&Script>,
+        module: &Module,
+        side_modules: Vec<&Module>,
     ) -> Result<ModuleHandle, Error> {
         self.0.load_modules(Some(&module), side_modules)
     }
 
-    /// Executes the entrypoint function of a script within the Deno runtime.
+    /// Executes the entrypoint function of a module within the Deno runtime.
     ///
     /// # Arguments
     /// * `module_context` - A handle returned by loading a module into the runtime
@@ -263,12 +263,12 @@ impl Runtime {
     /// # Example
     ///
     /// ```rust
-    /// use js_playground::{json_args, Runtime, Script, Error};
+    /// use js_playground::{json_args, Runtime, Module, Error};
     ///
     /// # fn main() -> Result<(), Error> {
     /// let mut runtime = Runtime::new(Default::default())?;
-    /// let script = Script::new("test.js", "js_playground.register_entrypoint(() => 'test')");
-    /// let module = runtime.load_module(&script)?;
+    /// let module = Module::new("test.js", "js_playground.register_entrypoint(() => 'test')");
+    /// let module = runtime.load_module(&module)?;
     ///
     /// // Run the entrypoint and handle the result
     /// let value: String = runtime.call_entrypoint(&module, json_args!())?;
@@ -294,10 +294,10 @@ impl Runtime {
     }
 
     /// Loads a module into a new runtime, executes the entry function and returns the
-    /// result of the script's execution, deserialized into the specified Rust type (`T`).
+    /// result of the module's execution, deserialized into the specified Rust type (`T`).
     ///
     /// # Arguments
-    /// * `module` - A `Script` object containing the module's filename and contents.
+    /// * `module` - A `Module` object containing the module's filename and contents.
     /// * `side_modules` - A set of additional modules to be loaded into memory for use
     /// * `runtime_options` - Options for the creation of the runtime
     /// * `entrypoint_args` - Arguments to pass to the entrypoint function
@@ -310,18 +310,18 @@ impl Runtime {
     /// # Example
     ///
     /// ```rust
-    /// // Create a script with filename and contents
-    /// use js_playground::{json_args, Runtime, Script, Error};
+    /// // Create a module with filename and contents
+    /// use js_playground::{json_args, Runtime, Module, Error};
     ///
     /// # fn main() -> Result<(), Error> {
-    /// let script = Script::new("test.js", "js_playground.register_entrypoint(() => 2)");
-    /// let value: usize = Runtime::execute_module(&script, vec![], Default::default(), json_args!())?;
+    /// let module = Module::new("test.js", "js_playground.register_entrypoint(() => 2)");
+    /// let value: usize = Runtime::execute_module(&module, vec![], Default::default(), json_args!())?;
     /// # Ok(())
     /// # }
     /// ```
     pub fn execute_module<T>(
-        module: &Script,
-        side_modules: Vec<&Script>,
+        module: &Module,
+        side_modules: Vec<&Module>,
         runtime_options: RuntimeOptions,
         entrypoint_args: &[serde_json::Value],
     ) -> Result<T, Error>
@@ -379,7 +379,7 @@ mod test_runtime {
 
     #[test]
     fn test_get_value() {
-        let script = Script::new(
+        let module = Module::new(
             "test.js",
             "
             globalThis.a = 2;
@@ -390,7 +390,7 @@ mod test_runtime {
 
         let mut runtime = Runtime::new(Default::default()).expect("Could not create the runtime");
         let module = runtime
-            .load_modules(&script, vec![])
+            .load_modules(&module, vec![])
             .expect("Could not load module");
 
         assert_eq!(
@@ -416,25 +416,25 @@ mod test_runtime {
     #[test]
     fn test_load_module() {
         let mut runtime = Runtime::new(Default::default()).expect("Could not create the runtime");
-        let script = Script::new(
+        let module = Module::new(
             "test.js",
             "
             js_playground.register_entrypoint(() => 2);
         ",
         );
         let module = runtime
-            .load_modules(&script, vec![])
+            .load_modules(&module, vec![])
             .expect("Could not load module");
         assert_ne!(0, module.id());
 
         let mut runtime = Runtime::new(Default::default()).expect("Could not create the runtime");
-        let script1 = Script::new(
+        let module1 = Module::new(
             "importme.js",
             "
             export const value = 2;
         ",
         );
-        let script2 = Script::new(
+        let module2 = Module::new(
             "test.js",
             "
             import { value } from './importme.js';
@@ -442,10 +442,10 @@ mod test_runtime {
         ",
         );
         runtime
-            .load_module(&script1)
+            .load_module(&module1)
             .expect("Could not load modules");
         let module = runtime
-            .load_module(&script2)
+            .load_module(&module2)
             .expect("Could not load modules");
         let value: usize = runtime
             .call_entrypoint(&module, json_args!())
@@ -457,39 +457,39 @@ mod test_runtime {
             ..Default::default()
         })
         .expect("Could not create the runtime");
-        let script = Script::new(
+        let module = Module::new(
             "test.js",
             "
             await new Promise(r => setTimeout(r, 2000));
         ",
         );
         runtime
-            .load_modules(&script, vec![])
+            .load_modules(&module, vec![])
             .expect_err("Did not interupt after timeout");
     }
 
     #[test]
     fn test_load_modules() {
         let mut runtime = Runtime::new(Default::default()).expect("Could not create the runtime");
-        let script = Script::new(
+        let module = Module::new(
             "test.js",
             "
             js_playground.register_entrypoint(() => 2);
         ",
         );
         let module = runtime
-            .load_modules(&script, vec![])
+            .load_modules(&module, vec![])
             .expect("Could not load module");
         assert_ne!(0, module.id());
 
         let mut runtime = Runtime::new(Default::default()).expect("Could not create the runtime");
-        let script1 = Script::new(
+        let module1 = Module::new(
             "importme.js",
             "
             export const value = 2;
         ",
         );
-        let script2 = Script::new(
+        let module2 = Module::new(
             "test.js",
             "
             import { value } from './importme.js';
@@ -497,7 +497,7 @@ mod test_runtime {
         ",
         );
         let module = runtime
-            .load_modules(&script2, vec![&script1])
+            .load_modules(&module2, vec![&module1])
             .expect("Could not load modules");
         let value: usize = runtime
             .call_entrypoint(&module, json_args!())
@@ -509,28 +509,28 @@ mod test_runtime {
             ..Default::default()
         })
         .expect("Could not create the runtime");
-        let script = Script::new(
+        let module = Module::new(
             "test.js",
             "
             await new Promise(r => setTimeout(r, 5000));
         ",
         );
         runtime
-            .load_modules(&script, vec![])
+            .load_modules(&module, vec![])
             .expect_err("Did not interupt after timeout");
     }
 
     #[test]
     fn test_call_entrypoint() {
         let mut runtime = Runtime::new(Default::default()).expect("Could not create the runtime");
-        let script = Script::new(
+        let module = Module::new(
             "test.js",
             "
             js_playground.register_entrypoint(() => 2);
         ",
         );
         let module = runtime
-            .load_modules(&script, vec![])
+            .load_modules(&module, vec![])
             .expect("Could not load module");
         let value: usize = runtime
             .call_entrypoint(&module, json_args!())
@@ -542,14 +542,14 @@ mod test_runtime {
             ..Default::default()
         })
         .expect("Could not create the runtime");
-        let script = Script::new(
+        let module = Module::new(
             "test.js",
             "
             export const load = () => 2;
         ",
         );
         let module = runtime
-            .load_modules(&script, vec![])
+            .load_modules(&module, vec![])
             .expect("Could not load module");
         let value: usize = runtime
             .call_entrypoint(&module, json_args!())
@@ -557,14 +557,14 @@ mod test_runtime {
         assert_eq!(2, value);
 
         let mut runtime = Runtime::new(Default::default()).expect("Could not create the runtime");
-        let script = Script::new(
+        let module = Module::new(
             "test.js",
             "
             export const load = () => 2;
         ",
         );
         let module = runtime
-            .load_modules(&script, vec![])
+            .load_modules(&module, vec![])
             .expect("Could not load module");
         runtime
             .call_entrypoint::<Undefined>(&module, json_args!())
@@ -573,30 +573,30 @@ mod test_runtime {
 
     #[test]
     fn test_execute_module() {
-        let script = Script::new(
+        let module = Module::new(
             "test.js",
             "
             js_playground.register_entrypoint(() => 2);
         ",
         );
         let value: usize =
-            Runtime::execute_module(&script, vec![], Default::default(), json_args!())
+            Runtime::execute_module(&module, vec![], Default::default(), json_args!())
                 .expect("Could not exec module");
         assert_eq!(2, value);
 
-        let script = Script::new(
+        let module = Module::new(
             "test.js",
             "
             function load() { return 2; }
         ",
         );
-        Runtime::execute_module::<Undefined>(&script, vec![], Default::default(), json_args!())
+        Runtime::execute_module::<Undefined>(&module, vec![], Default::default(), json_args!())
             .expect_err("Could not detect no entrypoint");
     }
 
     #[test]
     fn test_reset() {
-        let script = Script::new(
+        let module = Module::new(
             "test.js",
             "
             js_playground.register_entrypoint(() => globalThis.foo = 'bar');
@@ -606,7 +606,7 @@ mod test_runtime {
 
         let mut runtime = Runtime::new(Default::default()).expect("Could not create the runtime");
         let module = runtime
-            .load_modules(&script, vec![])
+            .load_modules(&module, vec![])
             .expect("Could not load module");
         runtime
             .call_entrypoint::<Undefined>(&module, json_args!())
@@ -627,7 +627,7 @@ mod test_runtime {
 
     #[test]
     fn call_function() {
-        let script = Script::new(
+        let module = Module::new(
             "test.js",
             "
             globalThis.fna = (i) => i;
@@ -639,7 +639,7 @@ mod test_runtime {
 
         let mut runtime = Runtime::new(Default::default()).expect("Could not create the runtime");
         let module = runtime
-            .load_modules(&script, vec![])
+            .load_modules(&module, vec![])
             .expect("Could not load module");
 
         let result: usize = runtime

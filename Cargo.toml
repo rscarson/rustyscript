@@ -5,11 +5,12 @@ edition = "2021"
 
 [features]
 default = ["console", "url"]
-no_extensions = ["console", "url"]
+no_extensions = []
 all = ["console", "url", "web"]
-url = ["deno_url", "deno_webidl"]
+url = ["deno_url", "webidl"]
+webidl = ["deno_webidl"]
 console = ["deno_console"]
-web = ["deno_web"]
+web = ["console", "url", "webidl", "deno_web", "deno_crypto", "deno_fetch"]
 
 [dev-dependencies]
 version-sync = "0.9.4"
@@ -22,6 +23,8 @@ serde = "1.0.188"
 tokio = "1.32.0"
 
 # Feature deps
+deno_fetch = { version = "0.144.0", optional = true }
+deno_crypto = { version = "0.134.0", optional = true }
 deno_webidl = { version = "0.120.0", optional = true }
 deno_url = { version = "0.120.0", optional = true }
 deno_console = { version = "0.120.0", optional = true }

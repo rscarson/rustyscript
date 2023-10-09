@@ -5,7 +5,7 @@
 /// The sample below extracts a value which is deserialized to a custom struct
 /// as well as calling a function in JS from rust
 ///
-use js_playground::{deno_core::serde::Deserialize, Error, Runtime, Script};
+use js_playground::{deno_core::serde::Deserialize, Error, Module, Runtime};
 
 #[derive(PartialEq, Debug, Deserialize)]
 struct MyStruct {
@@ -14,7 +14,7 @@ struct MyStruct {
 }
 
 fn main() -> Result<(), Error> {
-    let script = Script::new(
+    let module = Module::new(
         "test.js",
         "
         export function test(value) {
@@ -29,7 +29,7 @@ fn main() -> Result<(), Error> {
     );
 
     let mut runtime = Runtime::new(Default::default())?;
-    let module_handle = runtime.load_module(&script)?;
+    let module_handle = runtime.load_module(&module)?;
 
     let function_value: String =
         runtime.call_function(&module_handle, "test", &[Runtime::arg("A")])?;

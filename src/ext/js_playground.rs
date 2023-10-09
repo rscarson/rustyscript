@@ -2,7 +2,7 @@ use crate::error::Error;
 use deno_core::{extension, op2, v8, OpState};
 
 #[op2]
-/// Registers a JS function with the runtime as being the entrypoint for the script
+/// Registers a JS function with the runtime as being the entrypoint for the module
 ///
 /// # Arguments
 /// * `state` - The runtime's state, into which the function will be put

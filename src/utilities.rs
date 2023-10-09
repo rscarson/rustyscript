@@ -1,5 +1,5 @@
 use crate::traits::ToModuleSpecifier;
-use crate::{Error, Runtime, Script};
+use crate::{Error, Module, ModuleWrapper, Runtime};
 
 /// Execute a single JS expression
 ///
@@ -20,7 +20,7 @@ pub fn evaluate<T>(javascript: &str) -> Result<T, Error>
 where
     T: deno_core::serde::de::DeserializeOwned,
 {
-    let script = Script::new(
+    let module = Module::new(
         "js_eval.js",
         &format!(
             "
@@ -31,7 +31,7 @@ where
         ),
     );
     let mut runtime = Runtime::new(Default::default())?;
-    let module = runtime.load_modules(&script, vec![])?;
+    let module = runtime.load_modules(&module, vec![])?;
     runtime.call_function(&module, "js_playground_evaluate", Runtime::EMPTY_ARGS)
 }
 
@@ -50,13 +50,31 @@ where
 /// assert!(js_playground::validate("5 + 5").expect("Something went wrong!"));
 /// ```
 pub fn validate(javascript: &str) -> Result<bool, Error> {
-    let script = Script::new("test.js", javascript);
+    let module = Module::new("test.js", javascript);
     let mut runtime = Runtime::new(Default::default())?;
-    match runtime.load_modules(&script, vec![]) {
+    match runtime.load_modules(&module, vec![]) {
         Ok(_) => Ok(true),
         Err(e) if matches!(e, Error::Runtime(_)) => Ok(false),
         Err(e) => Err(e),
     }
+}
+
+/// Imports a JS module into a new runtime
+///
+/// # Arguments
+/// * `path` - Path to the JS module to import
+///
+/// # Returns
+/// A `Result` containing a handle to the imported module,
+/// or an error if something went wrong.
+///
+/// # Example
+///
+/// ```no_run
+/// let mut module = js_playground::import("js/my_module.js").expect("Something went wrong!");
+/// ```
+pub fn import(path: &str) -> Result<ModuleWrapper, Error> {
+    ModuleWrapper::new_from_file(path, Default::default())
 }
 
 /// Validates the syntax of some JS
@@ -76,6 +94,46 @@ pub fn validate(javascript: &str) -> Result<bool, Error> {
 /// ```
 pub fn resolve_path(path: &str) -> Result<String, Error> {
     Ok(path.to_module_specifier()?.to_string())
+}
+
+#[macro_use]
+mod runtime_macros {
+    /// Map a series of values to a slice of serde_json::Value objects
+    /// that javascript functions can understand
+    /// # Example
+    /// ```rust
+    /// use js_playground::{ Runtime, RuntimeOptions, Module, json_args };
+    /// use std::time::Duration;
+    ///
+    /// # fn main() -> Result<(), js_playground::Error> {
+    /// let module = Module::new("test.js", "
+    ///     function load(a, b) {
+    ///         console.log(`Hello world: a=${a}, b=${b}`);
+    ///     }
+    ///     js_playground.register_entrypoint(load);
+    /// ");
+    ///
+    /// Runtime::execute_module(
+    ///     &module, vec![],
+    ///     Default::default(),
+    ///     json_args!("test", 5)
+    /// )?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    ///
+    #[macro_export]
+    macro_rules! json_args {
+        ($($arg:expr),+) => {
+            &[
+                $($crate::Runtime::arg($arg)),+
+            ]
+        };
+
+        () => {
+            $crate::Runtime::EMPTY_ARGS
+        };
+    }
 }
 
 #[cfg(test)]
@@ -99,45 +157,5 @@ mod test_runtime {
         assert!(resolve_path("test.js")
             .expect("invalid path")
             .ends_with("test.js"));
-    }
-}
-
-#[macro_use]
-mod runtime_macros {
-    /// Map a series of values to a slice of serde_json::Value objects
-    /// that javascript functions can understand
-    /// # Example
-    /// ```rust
-    /// use js_playground::{ Runtime, RuntimeOptions, Script, json_args };
-    /// use std::time::Duration;
-    ///
-    /// # fn main() -> Result<(), js_playground::Error> {
-    /// let script = Script::new("test.js", "
-    ///     function load(a, b) {
-    ///         console.log(`Hello world: a=${a}, b=${b}`);
-    ///     }
-    ///     js_playground.register_entrypoint(load);
-    /// ");
-    ///
-    /// Runtime::execute_module(
-    ///     &script, vec![],
-    ///     Default::default(),
-    ///     json_args!("test", 5)
-    /// )?;
-    /// # Ok(())
-    /// # }
-    /// ```
-    ///
-    #[macro_export]
-    macro_rules! json_args {
-        ($($arg:expr),+) => {
-            &[
-                $($crate::Runtime::arg($arg)),+
-            ]
-        };
-
-        () => {
-            $crate::Runtime::EMPTY_ARGS
-        };
     }
 }

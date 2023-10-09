@@ -12,15 +12,15 @@
 /// and one or more optional JS modules.
 ///
 use js_playground::{
-    script, serde_json, Error, ModuleHandle, Runtime, RuntimeOptions, Script, StaticScript,
+    module, serde_json, Error, Module, ModuleHandle, Runtime, RuntimeOptions, StaticModule,
 };
 use std::time::Duration;
 
 mod ext;
 use ext::example_extension;
 
-// A script that will always be loaded into the custom runtime
-const MY_MODULE: StaticScript = script!(
+// A module that will always be loaded into the custom runtime
+const MY_MODULE: StaticModule = module!(
     "my_module.js",
     "export function importantFunction() {
         return 42;
@@ -43,10 +43,10 @@ impl MyRuntime {
         Ok(runtime)
     }
 
-    /// Calls a JavaScript function within the Deno runtime by its name and deserializes its return value.
+    /// Calls a JavaModule function within the Deno runtime by its name and deserializes its return value.
     ///
     /// # Arguments
-    /// * `name` - A string representing the name of the JavaScript function to call.
+    /// * `name` - A string representing the name of the JavaModule function to call.
     pub fn call_function<T>(
         &mut self,
         module_context: &ModuleHandle,
@@ -65,24 +65,24 @@ impl MyRuntime {
     /// * `name` - A string representing the name of the value to find
     pub fn get_value<T>(&mut self, module_context: &ModuleHandle, name: &str) -> Result<T, Error>
     where
-        T: deno_core::serde::de::DeserializeOwned + 'static,
+        T: serde::de::DeserializeOwned,
     {
         self.0.get_value(module_context, name)
     }
 
-    /// Executes the given script, and returns a handle allowing you to extract values
+    /// Executes the given module, and returns a handle allowing you to extract values
     /// And call functions
     ///
     /// # Arguments
-    /// * `module` - A `Script` object containing the module's filename and contents.
-    pub fn load_module(&mut self, module: &Script) -> Result<ModuleHandle, Error> {
+    /// * `module` - A `Module` object containing the module's filename and contents.
+    pub fn load_module(&mut self, module: &Module) -> Result<ModuleHandle, Error> {
         self.0.load_module(module)
     }
 
     /// Reset the runtime
     /// This clears any side-effects in global, and unloads any running modules
     pub fn reset(&mut self) {
-        let important_module = Script::new(
+        let important_module = Module::new(
             "my_module.js",
             "
             export function importantFunction() {
@@ -100,7 +100,7 @@ impl MyRuntime {
 fn main() {
     let mut runtime = MyRuntime::new().expect("Could not create the runtime");
     let module_handle = runtime
-        .load_module(&MY_MODULE.to_script())
+        .load_module(&MY_MODULE.to_module())
         .expect("Error loading the module");
     assert_eq!(
         42,

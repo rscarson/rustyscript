@@ -1,26 +1,29 @@
 # js_playground
 
-## Simple deno wrapper for module execution
+## Easy to use JS runtime API wrapper for deno
+### Simplifies integrating JS modules into rust
 
 [![Crates.io](https://img.shields.io/crates/v/js-playground.svg)](https://crates.io/crates/js-playground)
 [![Build Status](https://github.com/rscarson/js-playground/workflows/Rust/badge.svg)](https://github.com/rscarson/js-playground/actions?workflow=Rust)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](https://raw.githubusercontent.com/rscarson/js-playground/master/LICENSE)
 
-This crate is meant to provide a quick and simple way to execute javascript or typescript code from within rust.
+This crate is meant to provide a quick and simple way to integrate a runtime JS or TS component from within rust.
 By default, the code being run is entirely sandboxed from the host, having no filesystem or network access.
 
-It can be extended to include those capabilities and more if desired - please see the `runtime_extensions` example
+Typescript is supported by default
+
+It can be extended to include the capabilities and more if desired - please see the `runtime_extensions` example
 
 Asynchronous code is supported - I suggest using the timeout option when creating your runtime to avoid infinite hangs.
 
 Modules loaded can be imported by other code, and `reset()` can be called to unload modules and reset the global object.
 
-Here is a very basic use of this crate to execute a JS module. It will create a basic runtime, load the script,
+Here is a very basic use of this crate to execute a JS module. It will create a basic runtime, load the module,
 call the registered entrypoint function with the given arguments, and return the resulting value:
 ```rust
-use js_playground::{Runtime, Script, Error};
+use js_playground::{json_args, Runtime, Module, Error};
 
-let script = Script::new(
+let module = Module::new(
     "test.js",
     "
     js_playground.register_entrypoint(
@@ -33,32 +36,36 @@ let script = Script::new(
 );
 
 let value: usize = Runtime::execute_module(
-    &script, vec![],
+    &module, vec![],
     Default::default(),
-    &[
-        Runtime::arg("test"),
-        Runtime::arg(5),
-    ]
+    json_args!("test", 5)
 )?;
 
 assert_eq!(value, 2);
 ```
 
-Scripts can also be loaded from the filesystem with `Script::load` or `Script::load_dir` if you want to collect all modules in a given directory.
+Modules can also be loaded from the filesystem with `Module::load` or `Module::load_dir` if you want to collect all modules in a given directory.
 
 If all you need is the result of a single javascript expression, you can use:
 ```rust
 let result: i64 = js_playground::evaluate("5 + 5").expect("The expression was invalid!");
 ```
 
+Or to just import a single module for use:
+```rust
+use js_playground::{json_args, import};
+let mut module = import("js/my_module.js").expect("Something went wrong!");
+let value: String = module.call("exported_function_name", json_args!()).expect("Could not get a value!");
+```
+
 There are a few other utilities included, such as `js_playground::validate` and `js_playground::resolve_path`
 
 A more detailed version of the crate's usage can be seen below, which breaks down the steps instead of using the one-liner `Runtime::execute_module`:
 ```rust
-use js_playground::{Runtime, RuntimeOptions, Script, Error, Undefined};
+use js_playground::{json_args, Runtime, RuntimeOptions, Module, Error, Undefined};
 use std::time::Duration;
 
-let script = Script::new(
+let module = Module::new(
     "test.js",
     "
     let internalValue = 0;
@@ -76,13 +83,28 @@ let mut runtime = Runtime::new(RuntimeOptions {
 
 // The handle returned is used to get exported functions and values from that module.
 // We then call the entrypoint function, but do not need a return value.
-//Load can be called multiple times, and scripts can import other loaded scripts
+//Load can be called multiple times, and modules can import other loaded modules
 // Using `import './filename.js'`
-let module_handle = runtime.load_module(&script)?;
-runtime.call_entrypoint::<Undefined>(&module_handle, &[ Runtime::arg(2) ])?;
+let module_handle = runtime.load_module(&module)?;
+runtime.call_entrypoint::<Undefined>(&module_handle, json_args!(2))?;
 
 let internal_value: i64 = runtime.call_function(&module_handle, "getValue", json_args!())?;
 ```
+
+### Utility Functions
+These functions provide simple one-liner access to common features of this crate:
+- evaluate; Evaluate a single JS expression and return the resulting value
+- import; Get a handle to a JS module from which you can get exported values and functions
+- resolve_path; Resolve a relative path to the current working dir
+- validate; Validate the syntax of a JS expression
+
+### Crate features
+- console (deno_console); Add the deno_console crate, providing `console.*` functionality from JS
+- url (deno_url, deno_webidl); Provides the WebIDL, URL, and URLPattern APIs from within JS
+- web = (deno_webidl, deno_web, deno_crypto, deno_fetch); Provides the Event, TextEncoder, TextDecoder, File, Web Cryptography, and fetch APIs from within JS
+- default (console, url); Provides only those extensions that preserve sandboxing between the host and runtime
+- no_extensions; Disable all optional extensions to the runtime
+- all (console, url, web)
 
 Please also check out [@Bromeon/js_sandbox](https://github.com/Bromeon/js-sandbox), another great crate in this niche
 

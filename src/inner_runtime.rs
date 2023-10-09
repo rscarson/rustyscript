@@ -1,7 +1,7 @@
 use crate::{
     js_function::JsFunction,
     traits::{ToDefinedValue, ToModuleSpecifier, ToV8String},
-    Error, ModuleHandle, Script,
+    Error, Module, ModuleHandle,
 };
 use deno_core::{serde_json, v8, FsModuleLoader, JsRuntime, RuntimeOptions};
 use std::{rc::Rc, time::Duration};
@@ -11,7 +11,7 @@ pub struct InnerRuntimeOptions {
     /// A set of deno_core extensions to add to the runtime
     pub extensions: Vec<deno_core::Extension>,
 
-    /// Function to use as entrypoint if the script does not provide one
+    /// Function to use as entrypoint if the module does not provide one
     pub default_entrypoint: Option<String>,
 
     /// Amount of time to run for before killing the thread
@@ -71,7 +71,7 @@ impl InnerRuntime {
     /// deserialized.
     pub fn get_value<T>(&mut self, module_context: &ModuleHandle, name: &str) -> Result<T, Error>
     where
-        T: deno_core::serde::de::DeserializeOwned + 'static,
+        T: serde::de::DeserializeOwned,
     {
         let value = self.get_value_ref_async(module_context, name)?;
         let mut scope = self.deno_runtime.handle_scope();
@@ -79,7 +79,7 @@ impl InnerRuntime {
         Ok(deno_core::serde_v8::from_v8(&mut scope, value)?)
     }
 
-    /// Calls a stored JavaScript function and deserializes its return value.
+    /// Calls a stored JavaModule function and deserializes its return value.
     ///
     /// # Arguments
     /// * `module_context` - A module handle to use for context, to find exports
@@ -102,11 +102,11 @@ impl InnerRuntime {
         self.call_function_by_ref_async(module_context, function, args)
     }
 
-    /// Calls a JavaScript function within the Deno runtime by its name and deserializes its return value.
+    /// Calls a JavaModule function within the Deno runtime by its name and deserializes its return value.
     ///
     /// # Arguments
     /// * `module_context` - A module handle to use for context, to find exports
-    /// * `name` - A string representing the name of the JavaScript function to call.
+    /// * `name` - A string representing the name of the JavaModule function to call.
     ///
     /// # Returns
     /// A `Result` containing the deserialized result of the function call (`T`)
@@ -156,10 +156,12 @@ impl InnerRuntime {
     /// A `Result` containing the non-null value extracted or an error (`Error`)
     pub fn get_module_export_value(
         &mut self,
-        module: &ModuleHandle,
+        module_context: &ModuleHandle,
         name: &str,
     ) -> Result<v8::Global<v8::Value>, Error> {
-        let module_namespace = self.deno_runtime.get_module_namespace(module.id())?;
+        let module_namespace = self
+            .deno_runtime
+            .get_module_namespace(module_context.id())?;
         let mut scope = self.deno_runtime.handle_scope();
         let module_namespace = module_namespace.open(&mut scope);
         assert!(module_namespace.is_module_namespace_object());
@@ -223,13 +225,13 @@ impl InnerRuntime {
         )
     }
 
-    /// This method takes a JavaScript function and invokes it within the Deno runtime.
+    /// This method takes a JavaModule function and invokes it within the Deno runtime.
     /// It then serializes the return value of the function into a JSON string and
     /// deserializes it into the specified Rust type (`T`).
     ///
     /// # Arguments
     /// * `module_context` - A module handle to use for context, to find exports
-    /// * `function` - A reference to a JavaScript function (`v8::Function`)
+    /// * `function` - A reference to a JavaModule function (`v8::Function`)
     ///
     /// # Returns
     /// A `Result` containing the deserialized result of the function call (`T`)
@@ -266,16 +268,16 @@ impl InnerRuntime {
         Ok(result)
     }
 
-    /// Retrieves a JavaScript function by its name from the Deno runtime's global context.
+    /// Retrieves a JavaModule function by its name from the Deno runtime's global context.
     ///
     /// # Arguments
     /// * `module_context` - A module handle to use for context, to find exports
-    /// * `name` - A string representing the name of the JavaScript function to retrieve.
+    /// * `name` - A string representing the name of the JavaModule function to retrieve.
     ///
     /// # Returns
     /// A `Result` containing a `v8::Global<v8::Function>` if
     /// the function is found, or an error (`Error`) if the function cannot be found or
-    /// if it is not a valid JavaScript function.
+    /// if it is not a valid JavaModule function.
     pub fn get_function_by_name(
         &mut self,
         module_context: &ModuleHandle,
@@ -349,8 +351,8 @@ impl InnerRuntime {
     /// side-module
     pub fn load_modules(
         &mut self,
-        main_module: Option<&Script>,
-        side_modules: Vec<&Script>,
+        main_module: Option<&Module>,
+        side_modules: Vec<&Module>,
     ) -> Result<ModuleHandle, Error> {
         let timeout = self.options.timeout.clone();
         let default_entrypoint = self.options.default_entrypoint.clone();
@@ -429,7 +431,7 @@ mod test_inner_runtime {
 
     #[test]
     fn test_get_value() {
-        let script = Script::new(
+        let module = Module::new(
             "test.js",
             "
             globalThis.a = 2;
@@ -440,7 +442,7 @@ mod test_inner_runtime {
 
         let mut runtime = InnerRuntime::new(Default::default());
         let module = runtime
-            .load_modules(Some(&script), vec![])
+            .load_modules(Some(&module), vec![])
             .expect("Could not load module");
 
         assert_eq!(
@@ -465,7 +467,7 @@ mod test_inner_runtime {
 
     #[test]
     fn test_get_value_by_ref() {
-        let script = Script::new(
+        let module = Module::new(
             "test.js",
             "
             globalThis.a = 2;
@@ -476,7 +478,7 @@ mod test_inner_runtime {
 
         let mut runtime = InnerRuntime::new(Default::default());
         let module = runtime
-            .load_modules(Some(&script), vec![])
+            .load_modules(Some(&module), vec![])
             .expect("Could not load module");
 
         runtime
@@ -495,7 +497,7 @@ mod test_inner_runtime {
 
     #[test]
     fn call_function() {
-        let script = Script::new(
+        let module = Module::new(
             "test.js",
             "
             globalThis.fna = (i) => i;
@@ -507,7 +509,7 @@ mod test_inner_runtime {
 
         let mut runtime = InnerRuntime::new(Default::default());
         let module = runtime
-            .load_modules(Some(&script), vec![])
+            .load_modules(Some(&module), vec![])
             .expect("Could not load module");
 
         let result: usize = runtime
@@ -533,7 +535,7 @@ mod test_inner_runtime {
 
     #[test]
     fn test_get_function_by_name() {
-        let script = Script::new(
+        let module = Module::new(
             "test.js",
             "
             globalThis.fna = () => {};
@@ -544,7 +546,7 @@ mod test_inner_runtime {
 
         let mut runtime = InnerRuntime::new(Default::default());
         let module = runtime
-            .load_modules(Some(&script), vec![])
+            .load_modules(Some(&module), vec![])
             .expect("Could not load module");
 
         runtime
@@ -564,7 +566,7 @@ mod test_inner_runtime {
     #[cfg(feature = "web")]
     #[test]
     fn test_tla() {
-        let script = Script::new(
+        let module = Module::new(
             "test.js",
             "
             const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -577,7 +579,7 @@ mod test_inner_runtime {
 
         let mut runtime = InnerRuntime::new(Default::default());
         let module = runtime
-            .load_modules(Some(&script), vec![])
+            .load_modules(Some(&module), vec![])
             .expect("Could not load module");
 
         let value: usize = runtime
@@ -589,7 +591,7 @@ mod test_inner_runtime {
     #[cfg(feature = "web")]
     #[test]
     fn test_promise() {
-        let script = Script::new(
+        let module = Module::new(
             "test.js",
             "
             export const test = () => {
@@ -604,7 +606,7 @@ mod test_inner_runtime {
 
         let mut runtime = InnerRuntime::new(Default::default());
         let module = runtime
-            .load_modules(Some(&script), vec![])
+            .load_modules(Some(&module), vec![])
             .expect("Could not load module");
 
         let value: usize = runtime
@@ -616,7 +618,7 @@ mod test_inner_runtime {
     #[cfg(feature = "web")]
     #[test]
     fn test_async_fn() {
-        let script = Script::new(
+        let module = Module::new(
             "test.js",
             "
             const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -629,7 +631,7 @@ mod test_inner_runtime {
 
         let mut runtime = InnerRuntime::new(Default::default());
         let module = runtime
-            .load_modules(Some(&script), vec![])
+            .load_modules(Some(&module), vec![])
             .expect("Could not load module");
 
         let value: usize = runtime
@@ -640,7 +642,7 @@ mod test_inner_runtime {
 
     #[test]
     fn test_serialize_deep_fn() {
-        let script = Script::new(
+        let module = Module::new(
             "test.js",
             "
             export const test = {
@@ -652,7 +654,7 @@ mod test_inner_runtime {
 
         let mut runtime = InnerRuntime::new(Default::default());
         let module = runtime
-            .load_modules(Some(&script), vec![])
+            .load_modules(Some(&module), vec![])
             .expect("Could not load module");
 
         #[derive(serde::Deserialize)]
@@ -673,7 +675,7 @@ mod test_inner_runtime {
 
     #[test]
     fn test_serialize_fn() {
-        let script = Script::new(
+        let module = Module::new(
             "test.js",
             "
             export const test = (x) => 2*x;
@@ -682,7 +684,7 @@ mod test_inner_runtime {
 
         let mut runtime = InnerRuntime::new(Default::default());
         let module = runtime
-            .load_modules(Some(&script), vec![])
+            .load_modules(Some(&module), vec![])
             .expect("Could not load module");
 
         let function: JsFunction = runtime

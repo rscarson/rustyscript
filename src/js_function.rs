@@ -33,7 +33,9 @@ impl<'de> Deserialize<'de> for JsFunction<'_> {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
         let value = deno_core::serde_v8::Value::deserialize(deserializer)?;
         let value = value.v8_value;
-        let function: v8::Local<v8::Function> = value.try_into().unwrap();
+        let function: v8::Local<v8::Function> = value
+            .try_into()
+            .or(Err(serde::de::Error::custom("value was not a function")))?;
         Ok(Self(function))
     }
 }

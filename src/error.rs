@@ -1,13 +1,13 @@
 use thiserror::Error;
 
-use crate::Script;
+use crate::Module;
 
 /// Represents the errors that can occur during execution of a module
 #[derive(Error, Debug)]
 pub enum Error {
     /// Triggers when a module has no stated entrypoint (default or registered at runtime)
     #[error("{0} has no entrypoint. Register one, or add a default to the runtime")]
-    MissingEntrypoint(Script),
+    MissingEntrypoint(Module),
 
     /// Triggers when an attempt to find a value by name fails
     #[error("{0} could not be found in global, or module exports")]
@@ -25,7 +25,7 @@ pub enum Error {
     #[error("value could not be deserialized: {0}")]
     JsonDecode(String),
 
-    /// Triggers on runtime issues during execution of a script
+    /// Triggers on runtime issues during execution of a module
     #[error("{0}")]
     Runtime(String),
 
