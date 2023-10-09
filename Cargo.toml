@@ -17,7 +17,7 @@ version-sync = "0.9.4"
 cargo-readme = "3.2.0"
 
 [dependencies]
-deno_core = "0.218.0"
+deno_core = "0.221.0"
 thiserror = "1.0.40"
 serde = "1.0.188"
 tokio = "1.32.0"
