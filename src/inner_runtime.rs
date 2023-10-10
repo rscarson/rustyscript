@@ -79,7 +79,7 @@ impl InnerRuntime {
         Ok(deno_core::serde_v8::from_v8(&mut scope, value)?)
     }
 
-    /// Calls a stored JavaModule function and deserializes its return value.
+    /// Calls a stored javascript function and deserializes its return value.
     ///
     /// # Arguments
     /// * `module_context` - A module handle to use for context, to find exports
@@ -102,11 +102,11 @@ impl InnerRuntime {
         self.call_function_by_ref_async(module_context, function, args)
     }
 
-    /// Calls a JavaModule function within the Deno runtime by its name and deserializes its return value.
+    /// Calls a javascript function within the Deno runtime by its name and deserializes its return value.
     ///
     /// # Arguments
     /// * `module_context` - A module handle to use for context, to find exports
-    /// * `name` - A string representing the name of the JavaModule function to call.
+    /// * `name` - A string representing the name of the javascript function to call.
     ///
     /// # Returns
     /// A `Result` containing the deserialized result of the function call (`T`)
@@ -225,13 +225,13 @@ impl InnerRuntime {
         )
     }
 
-    /// This method takes a JavaModule function and invokes it within the Deno runtime.
+    /// This method takes a javascript function and invokes it within the Deno runtime.
     /// It then serializes the return value of the function into a JSON string and
     /// deserializes it into the specified Rust type (`T`).
     ///
     /// # Arguments
     /// * `module_context` - A module handle to use for context, to find exports
-    /// * `function` - A reference to a JavaModule function (`v8::Function`)
+    /// * `function` - A reference to a javascript function (`v8::Function`)
     ///
     /// # Returns
     /// A `Result` containing the deserialized result of the function call (`T`)
@@ -268,16 +268,16 @@ impl InnerRuntime {
         Ok(result)
     }
 
-    /// Retrieves a JavaModule function by its name from the Deno runtime's global context.
+    /// Retrieves a javascript function by its name from the Deno runtime's global context.
     ///
     /// # Arguments
     /// * `module_context` - A module handle to use for context, to find exports
-    /// * `name` - A string representing the name of the JavaModule function to retrieve.
+    /// * `name` - A string representing the name of the javascript function to retrieve.
     ///
     /// # Returns
     /// A `Result` containing a `v8::Global<v8::Function>` if
     /// the function is found, or an error (`Error`) if the function cannot be found or
-    /// if it is not a valid JavaModule function.
+    /// if it is not a valid javascript function.
     pub fn get_function_by_name(
         &mut self,
         module_context: &ModuleHandle,

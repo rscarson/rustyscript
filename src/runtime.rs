@@ -99,7 +99,7 @@ impl Runtime {
         serde_json::Value::from(value)
     }
 
-    /// Calls a stored JavaModule function and deserializes its return value.
+    /// Calls a stored javascript function and deserializes its return value.
     ///
     /// # Arguments
     /// * `function` - A The function object
@@ -120,10 +120,10 @@ impl Runtime {
         self.0.call_stored_function(module_context, function, args)
     }
 
-    /// Calls a JavaModule function within the Deno runtime by its name and deserializes its return value.
+    /// Calls a javascript function within the Deno runtime by its name and deserializes its return value.
     ///
     /// # Arguments
-    /// * `name` - A string representing the name of the JavaModule function to call.
+    /// * `name` - A string representing the name of the javascript function to call.
     ///
     /// # Returns
     /// A `Result` containing the deserialized result of the function call (`T`)

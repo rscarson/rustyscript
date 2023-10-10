@@ -43,10 +43,10 @@ impl MyRuntime {
         Ok(runtime)
     }
 
-    /// Calls a JavaModule function within the Deno runtime by its name and deserializes its return value.
+    /// Calls a javascript function within the Deno runtime by its name and deserializes its return value.
     ///
     /// # Arguments
-    /// * `name` - A string representing the name of the JavaModule function to call.
+    /// * `name` - A string representing the name of the javascript function to call.
     pub fn call_function<T>(
         &mut self,
         module_context: &ModuleHandle,
