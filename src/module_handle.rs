@@ -4,7 +4,7 @@ use deno_core::ModuleId;
 use crate::Module;
 
 /// Represents a loaded instance of a module within a runtime
-#[derive(Debug, Default)]
+#[derive(Clone, Debug, Eq, PartialEq, Default)]
 pub struct ModuleHandle {
     entrypoint: Option<v8::Global<v8::Function>>,
     module_id: ModuleId,
