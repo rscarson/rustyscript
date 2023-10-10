@@ -335,18 +335,27 @@ impl Runtime {
     }
 
     /// Reset the runtime
-    /// This clears any side-effects in global, and unloads any running modules
+    /// This clears any side-effects in global, but leaves modules in place
     ///
     /// Use this function if you need to clear the sandbox between runs, to prevent
     /// interop side-effects
-    pub fn reset(&mut self) {
-        self.0.clear_modules();
+    pub fn soft_reset(&mut self) {
         self.call_function::<Undefined>(
             &ModuleHandle::default(),
             "js_playground_reset",
             Runtime::EMPTY_ARGS,
         )
         .expect("Could not reset the runtime");
+    }
+
+    /// Reset the runtime
+    /// This clears any side-effects in global, and unloads any running modules
+    ///
+    /// Use this function if you need to clear the sandbox between runs, to prevent
+    /// interop side-effects
+    pub fn reset(&mut self) {
+        self.0.clear_modules();
+        self.soft_reset();
     }
 }
 
