@@ -6,6 +6,9 @@ use crate::{
 use deno_core::{serde_json, v8, FsModuleLoader, JsRuntime, RuntimeOptions};
 use std::{rc::Rc, time::Duration};
 
+/// Type required to pass arguments to JsFunctions
+pub type FunctionArguments = [serde_json::Value];
+
 /// Represents the set of options accepted by the runtime constructor
 pub struct InnerRuntimeOptions {
     /// A set of deno_core extensions to add to the runtime
@@ -93,7 +96,7 @@ impl InnerRuntime {
         &mut self,
         module_context: &ModuleHandle,
         function: &JsFunction,
-        args: &[serde_json::Value],
+        args: &FunctionArguments,
     ) -> Result<T, Error>
     where
         T: deno_core::serde::de::DeserializeOwned,
@@ -116,7 +119,7 @@ impl InnerRuntime {
         &mut self,
         module_context: &ModuleHandle,
         name: &str,
-        args: &[serde_json::Value],
+        args: &FunctionArguments,
     ) -> Result<T, Error>
     where
         T: deno_core::serde::de::DeserializeOwned,
@@ -241,7 +244,7 @@ impl InnerRuntime {
         &mut self,
         module_context: &ModuleHandle,
         function: v8::Global<v8::Function>,
-        args: &[serde_json::Value],
+        args: &FunctionArguments,
     ) -> Result<v8::Global<v8::Value>, Error> {
         let module_namespace = self
             .deno_runtime
@@ -301,7 +304,7 @@ impl InnerRuntime {
         &mut self,
         module_context: &ModuleHandle,
         function: v8::Global<v8::Function>,
-        args: &[serde_json::Value],
+        args: &FunctionArguments,
     ) -> Result<T, Error>
     where
         T: deno_core::serde::de::DeserializeOwned,

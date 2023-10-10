@@ -2,7 +2,7 @@ use deno_core::serde_json;
 
 use crate::{
     inner_runtime::{InnerRuntime, InnerRuntimeOptions},
-    Error, JsFunction, Module, ModuleHandle,
+    Error, FunctionArguments, JsFunction, Module, ModuleHandle,
 };
 
 /// Represents the set of options accepted by the runtime constructor
@@ -17,7 +17,7 @@ pub struct Runtime(InnerRuntime);
 impl Runtime {
     /// The lack of any arguments - used to simplify calling functions
     /// Prevents you from needing to specify the type using ::<serde_json::Value>
-    pub const EMPTY_ARGS: &'static [serde_json::Value] = &[];
+    pub const EMPTY_ARGS: &'static FunctionArguments = &[];
 
     /// Creates a new instance of the runtime with the provided options.
     ///
@@ -112,7 +112,7 @@ impl Runtime {
         &mut self,
         module_context: &ModuleHandle,
         function: &JsFunction,
-        args: &[serde_json::Value],
+        args: &FunctionArguments,
     ) -> Result<T, Error>
     where
         T: deno_core::serde::de::DeserializeOwned,
@@ -147,7 +147,7 @@ impl Runtime {
         &mut self,
         module_context: &ModuleHandle,
         name: &str,
-        args: &[serde_json::Value],
+        args: &FunctionArguments,
     ) -> Result<T, Error>
     where
         T: deno_core::serde::de::DeserializeOwned,
@@ -278,7 +278,7 @@ impl Runtime {
     pub fn call_entrypoint<T>(
         &mut self,
         module_context: &ModuleHandle,
-        args: &[serde_json::Value],
+        args: &FunctionArguments,
     ) -> Result<T, Error>
     where
         T: deno_core::serde::de::DeserializeOwned,
@@ -323,7 +323,7 @@ impl Runtime {
         module: &Module,
         side_modules: Vec<&Module>,
         runtime_options: RuntimeOptions,
-        entrypoint_args: &[serde_json::Value],
+        entrypoint_args: &FunctionArguments,
     ) -> Result<T, Error>
     where
         T: deno_core::serde::de::DeserializeOwned,
