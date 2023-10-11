@@ -69,6 +69,7 @@ impl Runtime {
     }
 
     /// Encode an argument as a json value for use as a function argument
+    /// Only for types with Into<Value>. For other types, use `serde_json::to_value`
     /// ```rust
     /// use js_playground::{ Runtime, RuntimeOptions, Module };
     /// use std::time::Duration;

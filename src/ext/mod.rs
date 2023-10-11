@@ -53,11 +53,11 @@ impl deno_fetch::FetchPermissions for Permissions {
 ///
 /// # Arguments
 /// * `user_extensions` - A set of deno_core::Extension objects provided by the user
-pub fn all_extensions(mut user_extensions: Vec<Extension>) -> Vec<Extension> {
-    user_extensions.extend(vec![js_playground::js_playground::init_ops_and_esm()]);
+pub fn all_extensions(user_extensions: Vec<Extension>) -> Vec<Extension> {
+    let mut extensions: Vec<Extension> = vec![js_playground::js_playground::init_ops_and_esm()];
 
     import_mod!(
-        user_extensions,
+        extensions,
         init_console,
         "init_console.rs",
         "console",
@@ -68,7 +68,7 @@ pub fn all_extensions(mut user_extensions: Vec<Extension>) -> Vec<Extension> {
     );
 
     import_mod!(
-        user_extensions,
+        extensions,
         init_webidl,
         "init_webidl.rs",
         "webidl",
@@ -79,7 +79,7 @@ pub fn all_extensions(mut user_extensions: Vec<Extension>) -> Vec<Extension> {
     );
 
     import_mod!(
-        user_extensions,
+        extensions,
         init_url,
         "init_url.rs",
         "url",
@@ -90,7 +90,7 @@ pub fn all_extensions(mut user_extensions: Vec<Extension>) -> Vec<Extension> {
     );
 
     import_mod!(
-        user_extensions,
+        extensions,
         init_web,
         "init_web.rs",
         "web",
@@ -101,7 +101,7 @@ pub fn all_extensions(mut user_extensions: Vec<Extension>) -> Vec<Extension> {
     );
 
     import_mod!(
-        user_extensions,
+        extensions,
         init_crypto,
         "init_crypto.rs",
         "web",
@@ -112,7 +112,7 @@ pub fn all_extensions(mut user_extensions: Vec<Extension>) -> Vec<Extension> {
     );
 
     import_mod!(
-        user_extensions,
+        extensions,
         init_fetch,
         "init_fetch.rs",
         "web",
@@ -122,5 +122,6 @@ pub fn all_extensions(mut user_extensions: Vec<Extension>) -> Vec<Extension> {
         ]
     );
 
-    user_extensions
+    extensions.extend(user_extensions);
+    extensions
 }
