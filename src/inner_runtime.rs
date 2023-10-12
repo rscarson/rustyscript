@@ -1,7 +1,7 @@
 use crate::{
     js_function::JsFunction,
     traits::{ToDefinedValue, ToModuleSpecifier, ToV8String},
-    Error, Module, ModuleHandle,
+    transpiler, Error, Module, ModuleHandle,
 };
 use deno_core::{serde_json, v8, FsModuleLoader, JsRuntime, RuntimeOptions};
 use std::{rc::Rc, time::Duration};
@@ -41,8 +41,8 @@ impl InnerRuntime {
     pub fn new(options: InnerRuntimeOptions) -> Self {
         Self {
             deno_runtime: JsRuntime::new(RuntimeOptions {
-                module_loader: Some(Rc::new(FsModuleLoader)),
                 extensions: crate::ext::all_extensions(options.extensions),
+                module_loader: Some(Rc::new(FsModuleLoader)),
                 ..Default::default()
             }),
             options: InnerRuntimeOptions {
@@ -373,12 +373,13 @@ impl InnerRuntime {
 
                 // Get additional modules first
                 for side_module in side_modules {
+                    let module_specifier = side_module.filename().to_module_specifier()?;
+                    let code = transpiler::transpile(&module_specifier, side_module.contents())?;
+
                     let s_modid = deno_runtime
                         .load_side_module(
                             &side_module.filename().to_module_specifier()?,
-                            Some(deno_core::FastString::from(
-                                side_module.contents().to_string(),
-                            )),
+                            Some(deno_core::FastString::from(code)),
                         )
                         .await?;
                     let result = deno_runtime.mod_evaluate(s_modid);
@@ -389,10 +390,13 @@ impl InnerRuntime {
 
                 // Load main module
                 if let Some(module) = main_module {
+                    let module_specifier = module.filename().to_module_specifier()?;
+                    let code = transpiler::transpile(&module_specifier, module.contents())?;
+
                     let module_id = deno_runtime
                         .load_main_module(
                             &module.filename().to_module_specifier()?,
-                            Some(deno_core::FastString::from(module.contents().to_string())),
+                            Some(deno_core::FastString::from(code)),
                         )
                         .await?;
 
@@ -534,6 +538,28 @@ mod test_inner_runtime {
         runtime
             .call_function::<Undefined>(&module, "fne", json_args!())
             .expect("Did not allow undefined return");
+    }
+
+    #[test]
+    fn test_ts_loader() {
+        let module = Module::new(
+            "test.ts",
+            "
+            export function test(left:number, right:number): number {
+                return left + right;
+            }
+        ",
+        );
+
+        let mut runtime = InnerRuntime::new(Default::default());
+        let module = runtime
+            .load_modules(Some(&module), vec![])
+            .expect("Could not load module");
+
+        let result: usize = runtime
+            .call_function(&module, "test", json_args!(2, 3))
+            .expect("Could not call global");
+        assert_eq!(5, result);
     }
 
     #[test]

@@ -123,6 +123,7 @@ mod module_handle;
 mod module_wrapper;
 mod runtime;
 mod traits;
+mod transpiler;
 mod utilities;
 
 // Expose a few dependencies that could be useful

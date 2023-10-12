@@ -130,7 +130,8 @@ impl Module {
     /// ```
     pub fn load_dir(directory: &str) -> Result<Vec<Self>, std::io::Error> {
         let mut files: Vec<Self> = Vec::new();
-        for file in read_dir(directory)?.flatten() {
+        for file in read_dir(directory)? {
+            let file = file?;
             if let Some(filename) = file.path().to_str() {
                 // Skip non-js files
                 let extension = Path::new(&filename)
