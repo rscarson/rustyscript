@@ -11,7 +11,7 @@
 ///
 use js_playground::deno_core::{extension, op2};
 
-#[op2]
+#[op2(fast)]
 #[bigint]
 fn op_add_example(#[bigint] a: i64, #[bigint] b: i64) -> i64 {
     a + b

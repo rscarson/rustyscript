@@ -18,15 +18,15 @@ cargo-readme = "3.2.0"
 
 [dependencies]
 deno_ast = { version = "0.29.5", features = ["transpiling"]}
-deno_core = "0.218.0"
+deno_core = "0.222.0"
 thiserror = "1.0.40"
 serde = "1.0.188"
 tokio = "1.32.0"
 
 # Feature deps
-deno_fetch = { version = "0.144.0", optional = true }
-deno_crypto = { version = "0.134.0", optional = true }
-deno_webidl = { version = "0.120.0", optional = true }
-deno_url = { version = "0.120.0", optional = true }
-deno_console = { version = "0.120.0", optional = true }
-deno_web = { version = "0.151.0", optional = true }
+deno_fetch = { version = "0.145.0", optional = true }
+deno_crypto = { version = "0.135.0", optional = true }
+deno_webidl = { version = "0.121.0", optional = true }
+deno_url = { version = "0.121.0", optional = true }
+deno_console = { version = "0.121.0", optional = true }
+deno_web = { version = "0.152.0", optional = true }
