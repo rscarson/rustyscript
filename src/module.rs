@@ -138,7 +138,7 @@ impl Module {
                     .extension()
                     .and_then(OsStr::to_str)
                     .unwrap_or_default();
-                if ["js", "ts"].contains(&extension) {
+                if !["js", "ts"].contains(&extension) {
                     continue;
                 }
 

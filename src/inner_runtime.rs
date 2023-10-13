@@ -262,10 +262,7 @@ impl InnerRuntime {
 
         let result = function_instance
             .call(&mut scope, module_namespace.into(), &final_args)
-            .unwrap_or(deno_core::serde_v8::to_v8(
-                &mut scope,
-                serde_json::Value::Null,
-            )?);
+            .unwrap_or(deno_core::serde_v8::to_v8(&mut scope, ())?);
 
         let result = v8::Global::new(&mut scope, result);
         Ok(result)
