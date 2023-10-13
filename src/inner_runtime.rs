@@ -60,7 +60,9 @@ impl InnerRuntime {
 
     /// Destroy the module cache in the underlying runtime
     /// May leak memory!
-    pub fn clear_modules(&mut self) {}
+    pub fn clear_modules(&mut self) {
+        self.deno_runtime().clear_modules()
+    }
 
     /// Get a value from a runtime instance
     ///
