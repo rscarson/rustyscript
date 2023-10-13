@@ -356,7 +356,6 @@ impl Runtime {
     /// interop side-effects
     pub fn reset(&mut self) {
         self.0.clear_modules();
-        self.soft_reset();
     }
 }
 
