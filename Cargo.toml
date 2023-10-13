@@ -24,7 +24,7 @@ serde = "1.0.188"
 tokio = "1.32.0"
 
 # Feature deps
-deno_fetch = { version = "0.144.0", optional = true }
+deno_fetch = { version = "0.145.0", optional = true }
 deno_crypto = { version = "0.134.0", optional = true }
 deno_webidl = { version = "0.120.0", optional = true }
 deno_url = { version = "0.120.0", optional = true }
