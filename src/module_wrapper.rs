@@ -21,7 +21,7 @@ impl ModuleWrapper {
     /// A `Result` containing `Self` on success or an `Error` on failure.
     pub fn new_from_module(module: &Module, options: RuntimeOptions) -> Result<Self, Error> {
         let mut runtime = Runtime::new(options)?;
-        let module_context = runtime.load_module(&module)?;
+        let module_context = runtime.load_module(module)?;
         Ok(Self {
             module_context,
             runtime,
@@ -39,7 +39,7 @@ impl ModuleWrapper {
     ///
     /// A `Result` containing `Self` on success or an `Error` on failure.
     pub fn new_from_file(path: &str, options: RuntimeOptions) -> Result<Self, Error> {
-        let module = Module::load(&path)?;
+        let module = Module::load(path)?;
         Self::new_from_module(&module, options)
     }
 

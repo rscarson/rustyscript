@@ -363,7 +363,7 @@ impl InnerRuntime {
         main_module: Option<&Module>,
         side_modules: Vec<&Module>,
     ) -> Result<ModuleHandle, Error> {
-        let timeout = self.options.timeout.clone();
+        let timeout = self.options.timeout;
         let default_entrypoint = self.options.default_entrypoint.clone();
 
         if main_module.is_none() && side_modules.is_empty() {
@@ -391,7 +391,7 @@ impl InnerRuntime {
                     let result = deno_runtime.mod_evaluate(s_modid);
                     deno_runtime.run_event_loop(false).await?;
                     result.await??;
-                    module_handle_stub = ModuleHandle::new(&side_module, s_modid, None);
+                    module_handle_stub = ModuleHandle::new(side_module, s_modid, None);
                 }
 
                 // Load main module
@@ -410,7 +410,7 @@ impl InnerRuntime {
                     let result = deno_runtime.mod_evaluate(module_id);
                     deno_runtime.run_event_loop(false).await?;
                     result.await??;
-                    module_handle_stub = ModuleHandle::new(&module, module_id, None);
+                    module_handle_stub = ModuleHandle::new(module, module_id, None);
                 }
 
                 Ok::<ModuleHandle, Error>(module_handle_stub)

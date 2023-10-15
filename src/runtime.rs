@@ -248,7 +248,7 @@ impl Runtime {
         module: &Module,
         side_modules: Vec<&Module>,
     ) -> Result<ModuleHandle, Error> {
-        self.0.load_modules(Some(&module), side_modules)
+        self.0.load_modules(Some(module), side_modules)
     }
 
     /// Executes the entrypoint function of a module within the Deno runtime.
