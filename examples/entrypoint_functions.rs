@@ -8,7 +8,7 @@
 /// They are most useful in the context of Runtime::execute_module, which can be seen
 /// in the 'hello_world' example.
 ///
-use js_playground::{json_args, Error, Module, Runtime, RuntimeOptions, Undefined};
+use rustyscript::{json_args, Error, Module, Runtime, RuntimeOptions, Undefined};
 
 fn main() -> Result<(), Error> {
     let module = Module::new(

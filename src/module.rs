@@ -29,7 +29,7 @@ impl StaticModule {
 /// # Example
 ///
 /// ```rust
-/// use js_playground::{ module, StaticModule };
+/// use rustyscript::{ module, StaticModule };
 ///
 /// const MY_SCRIPT: StaticModule = module!(
 ///     "filename.js",
@@ -73,7 +73,7 @@ impl Module {
     /// # Example
     ///
     /// ```rust
-    /// use js_playground::Module;
+    /// use rustyscript::Module;
     ///
     /// let module = Module::new("module.js", "console.log('Hello, World!');");
     /// ```
@@ -96,10 +96,10 @@ impl Module {
     /// # Example
     ///
     /// ```rust
-    /// use js_playground::Module;
+    /// use rustyscript::Module;
     ///
-    /// # fn main() -> Result<(), js_playground::Error> {
-    /// let module = Module::load("src/ext/js_playground.js")?;
+    /// # fn main() -> Result<(), rustyscript::Error> {
+    /// let module = Module::load("src/ext/rustyscript.js")?;
     /// # Ok(())
     /// # }
     /// ```
@@ -121,9 +121,9 @@ impl Module {
     /// # Example
     ///
     /// ```rust
-    /// use js_playground::Module;
+    /// use rustyscript::Module;
     ///
-    /// # fn main() -> Result<(), js_playground::Error> {
+    /// # fn main() -> Result<(), rustyscript::Error> {
     /// let all_modules = Module::load_dir("src/ext")?;
     /// # Ok(())
     /// # }
@@ -157,7 +157,7 @@ impl Module {
     /// # Example
     ///
     /// ```rust
-    /// use js_playground::Module;
+    /// use rustyscript::Module;
     ///
     /// let module = Module::new("module.js", "console.log('Hello, World!');");
     /// println!("Filename: {}", module.filename());
@@ -174,7 +174,7 @@ impl Module {
     /// # Example
     ///
     /// ```rust
-    /// use js_playground::Module;
+    /// use rustyscript::Module;
     ///
     /// let module = Module::new("module.js", "console.log('Hello, World!');");
     /// println!("Module Contents: {}", module.contents());
@@ -197,8 +197,8 @@ mod test_module {
 
     #[test]
     fn test_load_module() {
-        let module = Module::load("src/ext/js_playground.js").expect("Failed to load module");
-        assert_eq!(module.filename(), "src/ext/js_playground.js");
+        let module = Module::load("src/ext/rustyscript.js").expect("Failed to load module");
+        assert_eq!(module.filename(), "src/ext/rustyscript.js");
     }
 
     #[test]

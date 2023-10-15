@@ -1,6 +1,6 @@
 use deno_core::Extension;
 
-pub mod js_playground;
+pub mod rustyscript;
 
 #[macro_use]
 mod mod_macros {
@@ -54,7 +54,7 @@ impl deno_fetch::FetchPermissions for Permissions {
 /// # Arguments
 /// * `user_extensions` - A set of deno_core::Extension objects provided by the user
 pub fn all_extensions(user_extensions: Vec<Extension>) -> Vec<Extension> {
-    let mut extensions: Vec<Extension> = vec![js_playground::js_playground::init_ops_and_esm()];
+    let mut extensions: Vec<Extension> = vec![rustyscript::rustyscript::init_ops_and_esm()];
 
     import_mod!(
         extensions,

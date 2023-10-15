@@ -7,7 +7,7 @@
 /// Extensions consist of a set of #[op2] functions, an extension! macro,
 /// and one or more optional JS modules.
 ///
-use js_playground::{Error, Module, Runtime, RuntimeOptions};
+use rustyscript::{Error, Module, Runtime, RuntimeOptions};
 
 mod ext;
 use ext::example_extension;

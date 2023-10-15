@@ -18,7 +18,7 @@ import * as performance from 'ext:deno_web/15_performance.js';
 
 Deno.core.setMacrotaskCallback(timers.handleTimerMacrotask);
 
-import { applyToGlobal, nonEnumerable, writeable } from 'ext:js_playground/js_playground.js';
+import { applyToGlobal, nonEnumerable, writeable } from 'ext:rustyscript/rustyscript.js';
 applyToGlobal({
     AbortController: nonEnumerable(abortSignal.AbortController),
     AbortSignal: nonEnumerable(abortSignal.AbortSignal),

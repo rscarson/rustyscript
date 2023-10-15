@@ -6,19 +6,19 @@
 /// - Loads the modules passed in
 /// - Calls the module's entrypoint function
 ///     - Either a default passed as an option
-///     - Or a call in JS to js_playground.register_entrypoint
+///     - Or a call in JS to rustyscript.register_entrypoint
 /// - Returns the result
 ///
 /// Instead of just vec![], one could pass in other JS modules
 /// which could be imported using `import './filename.js';`
 ///
-use js_playground::{Error, Module, Runtime};
+use rustyscript::{Error, Module, Runtime};
 
 fn main() -> Result<(), Error> {
     let module = Module::new(
         "test.js",
         "
-        js_playground.register_entrypoint(
+        rustyscript.register_entrypoint(
             (string, integer) => {
                 console.log(`Hello world: string=${string}, integer=${integer}`);
                 return 2;

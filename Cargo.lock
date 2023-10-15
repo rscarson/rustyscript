@@ -1407,25 +1407,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "js_playground"
-version = "0.5.0"
-dependencies = [
- "cargo-readme",
- "deno_ast",
- "deno_console",
- "deno_core",
- "deno_crypto",
- "deno_fetch",
- "deno_url",
- "deno_web",
- "deno_webidl",
- "serde",
- "thiserror",
- "tokio",
- "version-sync",
-]
-
-[[package]]
 name = "lazy-regex"
 version = "3.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2161,6 +2142,25 @@ name = "rustversion"
 version = "1.0.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7ffc183a10b4478d04cbbbfc96d0873219d962dd5accaff2ffbd4ceb7df837f4"
+
+[[package]]
+name = "rustyscript"
+version = "1.0.0"
+dependencies = [
+ "cargo-readme",
+ "deno_ast",
+ "deno_console",
+ "deno_core",
+ "deno_crypto",
+ "deno_fetch",
+ "deno_url",
+ "deno_web",
+ "deno_webidl",
+ "serde",
+ "thiserror",
+ "tokio",
+ "version-sync",
+]
 
 [[package]]
 name = "ryu"

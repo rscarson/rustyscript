@@ -16,8 +16,8 @@ fn op_register_entrypoint(
 }
 
 extension!(
-    js_playground,
+    rustyscript,
     ops = [op_register_entrypoint],
-    esm_entry_point = "ext:js_playground/js_playground.js",
-    esm = [ dir "src/ext", "js_playground.js" ],
+    esm_entry_point = "ext:rustyscript/rustyscript.js",
+    esm = [ dir "src/ext", "rustyscript.js" ],
 );

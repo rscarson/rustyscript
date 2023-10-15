@@ -1,4 +1,4 @@
-# js_playground
+# rustyscript
 
 ## Easy to use JS runtime API wrapper for deno
 ### Simplifies integrating JS modules into rust
@@ -21,12 +21,12 @@ Modules loaded can be imported by other code, and `reset()` can be called to unl
 Here is a very basic use of this crate to execute a JS module. It will create a basic runtime, load the module,
 call the registered entrypoint function with the given arguments, and return the resulting value:
 ```rust
-use js_playground::{json_args, Runtime, Module, Error};
+use rustyscript::{json_args, Runtime, Module, Error};
 
 let module = Module::new(
     "test.js",
     "
-    js_playground.register_entrypoint(
+    rustyscript.register_entrypoint(
         (string, integer) => {
             console.log(`Hello world: string=${string}, integer=${integer}`);
             return 2;
@@ -48,21 +48,21 @@ Modules can also be loaded from the filesystem with `Module::load` or `Module::l
 
 If all you need is the result of a single javascript expression, you can use:
 ```rust
-let result: i64 = js_playground::evaluate("5 + 5").expect("The expression was invalid!");
+let result: i64 = rustyscript::evaluate("5 + 5").expect("The expression was invalid!");
 ```
 
 Or to just import a single module for use:
 ```rust
-use js_playground::{json_args, import};
+use rustyscript::{json_args, import};
 let mut module = import("js/my_module.js").expect("Something went wrong!");
 let value: String = module.call("exported_function_name", json_args!()).expect("Could not get a value!");
 ```
 
-There are a few other utilities included, such as `js_playground::validate` and `js_playground::resolve_path`
+There are a few other utilities included, such as `rustyscript::validate` and `rustyscript::resolve_path`
 
 A more detailed version of the crate's usage can be seen below, which breaks down the steps instead of using the one-liner `Runtime::execute_module`:
 ```rust
-use js_playground::{json_args, Runtime, RuntimeOptions, Module, Error, Undefined};
+use rustyscript::{json_args, Runtime, RuntimeOptions, Module, Error, Undefined};
 use std::time::Duration;
 
 let module = Module::new(

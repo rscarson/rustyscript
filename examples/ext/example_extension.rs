@@ -9,7 +9,7 @@
 /// and one or more optional JS modules.
 ///
 ///
-use js_playground::deno_core::{extension, op2};
+use rustyscript::deno_core::{extension, op2};
 
 #[op2(fast)]
 #[bigint]

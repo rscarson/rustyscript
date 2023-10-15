@@ -1,6 +1,6 @@
 import * as crypto from "ext:deno_crypto/00_crypto.js";
 
-import { applyToGlobal, nonEnumerable, readOnly } from 'ext:js_playground/js_playground.js';
+import { applyToGlobal, nonEnumerable, readOnly } from 'ext:rustyscript/rustyscript.js';
 applyToGlobal({
     CryptoKey: nonEnumerable(crypto.CryptoKey),
     crypto: readOnly(crypto.crypto),

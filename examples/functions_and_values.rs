@@ -5,7 +5,7 @@
 /// The sample below extracts a value which is deserialized to a custom struct
 /// as well as calling a function in JS from rust
 ///
-use js_playground::{deno_core::serde::Deserialize, Error, Module, Runtime};
+use rustyscript::{deno_core::serde::Deserialize, Error, Module, Runtime};
 
 #[derive(PartialEq, Debug, Deserialize)]
 struct MyStruct {

@@ -11,7 +11,7 @@
 /// Extensions consist of a set of #[op2] functions, an extension! macro,
 /// and one or more optional JS modules.
 ///
-use js_playground::{
+use rustyscript::{
     module, serde_json, Error, Module, ModuleHandle, Runtime, RuntimeOptions, StaticModule,
 };
 use std::time::Duration;

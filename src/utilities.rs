@@ -13,7 +13,7 @@ use crate::{Error, Module, ModuleWrapper, Runtime};
 /// # Example
 ///
 /// ```rust
-/// let result: i64 = js_playground::evaluate("5 + 5").expect("The expression was invalid!");
+/// let result: i64 = rustyscript::evaluate("5 + 5").expect("The expression was invalid!");
 /// assert_eq!(10, result);
 /// ```
 pub fn evaluate<T>(javascript: &str) -> Result<T, Error>
@@ -24,7 +24,7 @@ where
         "js_eval.js",
         &format!(
             "
-        export function js_playground_evaluate(){{
+        export function rustyscript_evaluate(){{
             return ({javascript});
         }}
     "
@@ -32,7 +32,7 @@ where
     );
     let mut runtime = Runtime::new(Default::default())?;
     let module = runtime.load_modules(&module, vec![])?;
-    runtime.call_function(&module, "js_playground_evaluate", Runtime::EMPTY_ARGS)
+    runtime.call_function(&module, "rustyscript_evaluate", Runtime::EMPTY_ARGS)
 }
 
 /// Validates the syntax of some JS
@@ -47,7 +47,7 @@ where
 /// # Example
 ///
 /// ```rust
-/// assert!(js_playground::validate("5 + 5").expect("Something went wrong!"));
+/// assert!(rustyscript::validate("5 + 5").expect("Something went wrong!"));
 /// ```
 pub fn validate(javascript: &str) -> Result<bool, Error> {
     let module = Module::new("test.js", javascript);
@@ -71,7 +71,7 @@ pub fn validate(javascript: &str) -> Result<bool, Error> {
 /// # Example
 ///
 /// ```no_run
-/// let mut module = js_playground::import("js/my_module.js").expect("Something went wrong!");
+/// let mut module = rustyscript::import("js/my_module.js").expect("Something went wrong!");
 /// ```
 pub fn import(path: &str) -> Result<ModuleWrapper, Error> {
     ModuleWrapper::new_from_file(path, Default::default())
@@ -89,7 +89,7 @@ pub fn import(path: &str) -> Result<ModuleWrapper, Error> {
 /// # Example
 ///
 /// ```rust
-/// let full_path = js_playground::resolve_path("test.js").expect("Something went wrong!");
+/// let full_path = rustyscript::resolve_path("test.js").expect("Something went wrong!");
 /// assert!(full_path.ends_with("test.js"));
 /// ```
 pub fn resolve_path(path: &str) -> Result<String, Error> {
@@ -102,15 +102,15 @@ mod runtime_macros {
     /// that javascript functions can understand
     /// # Example
     /// ```rust
-    /// use js_playground::{ Runtime, RuntimeOptions, Module, json_args };
+    /// use rustyscript::{ Runtime, RuntimeOptions, Module, json_args };
     /// use std::time::Duration;
     ///
-    /// # fn main() -> Result<(), js_playground::Error> {
+    /// # fn main() -> Result<(), rustyscript::Error> {
     /// let module = Module::new("test.js", "
     ///     function load(a, b) {
     ///         console.log(`Hello world: a=${a}, b=${b}`);
     ///     }
-    ///     js_playground.register_entrypoint(load);
+    ///     rustyscript.register_entrypoint(load);
     /// ");
     ///
     /// Runtime::execute_module(

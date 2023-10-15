@@ -49,8 +49,8 @@ const getterOnly = (getter) => {
 const applyToGlobal = (properties) => Object.defineProperties(globalThis, properties);
 
 // Set us up for platform resets
-globalThis.js_playground_reset = () => {
-    let backup = deepClone(globalThis.js_playground.global_backup);
+globalThis.rustyscript_reset = () => {
+    let backup = deepClone(globalThis.rustyscript.global_backup);
     for (const key of Object.keys(globalThis)) {
         if (backup[key]) continue;
         globalThis[key] = undefined;
@@ -62,13 +62,13 @@ globalThis.js_playground_reset = () => {
 }
 
 // Populate the global object
-globalThis.js_playground = {
+globalThis.rustyscript = {
     'register_entrypoint': (f) => Deno.core.ops.op_register_entrypoint(f),
     'bail': (msg) => { throw new Error(msg) },
     
     'global_backup': deepClone(globalThis),
 };
-Object.freeze(globalThis.js_playground);
+Object.freeze(globalThis.rustyscript);
 
 export {
     nonEnumerable, readOnly, writeable, getterOnly, applyToGlobal

@@ -29,10 +29,10 @@ impl Runtime {
     ///
     /// # Example
     /// ```rust
-    /// use js_playground::{ json_args, Runtime, RuntimeOptions, Module };
+    /// use rustyscript::{ json_args, Runtime, RuntimeOptions, Module };
     /// use std::time::Duration;
     ///
-    /// # fn main() -> Result<(), js_playground::Error> {
+    /// # fn main() -> Result<(), rustyscript::Error> {
     /// // Creates a runtime that will attempt to run function load() on start
     /// // And which will time-out after 50ms
     /// let mut runtime = Runtime::new(RuntimeOptions {
@@ -71,15 +71,15 @@ impl Runtime {
     /// Encode an argument as a json value for use as a function argument
     /// Only for types with Into<Value>. For other types, use `serde_json::to_value`
     /// ```rust
-    /// use js_playground::{ Runtime, RuntimeOptions, Module };
+    /// use rustyscript::{ Runtime, RuntimeOptions, Module };
     /// use std::time::Duration;
     ///
-    /// # fn main() -> Result<(), js_playground::Error> {
+    /// # fn main() -> Result<(), rustyscript::Error> {
     /// let module = Module::new("test.js", "
     ///     function load(a, b) {
     ///         console.log(`Hello world: a=${a}, b=${b}`);
     ///     }
-    ///     js_playground.register_entrypoint(load);
+    ///     rustyscript.register_entrypoint(load);
     /// ");
     ///
     /// Runtime::execute_module(
@@ -134,7 +134,7 @@ impl Runtime {
     /// # Example
     ///
     /// ```rust
-    /// use js_playground::{ json_args, Runtime, Module, Error };
+    /// use rustyscript::{ json_args, Runtime, Module, Error };
     ///
     /// # fn main() -> Result<(), Error> {
     /// let mut runtime = Runtime::new(Default::default())?;
@@ -169,7 +169,7 @@ impl Runtime {
     /// # Example
     ///
     /// ```rust
-    /// use js_playground::{ Runtime, Module, Error };
+    /// use rustyscript::{ Runtime, Module, Error };
     ///
     /// # fn main() -> Result<(), Error> {
     /// let mut runtime = Runtime::new(Default::default())?;
@@ -201,11 +201,11 @@ impl Runtime {
     ///
     /// ```rust
     /// // Create a module with filename and contents
-    /// use js_playground::{Runtime, Module, Error};
+    /// use rustyscript::{Runtime, Module, Error};
     ///
     /// # fn main() -> Result<(), Error> {
     /// let mut runtime = Runtime::new(Default::default())?;
-    /// let module = Module::new("test.js", "js_playground.register_entrypoint(() => 'test')");
+    /// let module = Module::new("test.js", "rustyscript.register_entrypoint(() => 'test')");
     /// runtime.load_module(&module);
     /// # Ok(())
     /// # }
@@ -234,11 +234,11 @@ impl Runtime {
     ///
     /// ```rust
     /// // Create a module with filename and contents
-    /// use js_playground::{Runtime, Module, Error};
+    /// use rustyscript::{Runtime, Module, Error};
     ///
     /// # fn main() -> Result<(), Error> {
     /// let mut runtime = Runtime::new(Default::default())?;
-    /// let module = Module::new("test.js", "js_playground.register_entrypoint(() => 'test')");
+    /// let module = Module::new("test.js", "rustyscript.register_entrypoint(() => 'test')");
     /// runtime.load_modules(&module, vec![]);
     /// # Ok(())
     /// # }
@@ -264,11 +264,11 @@ impl Runtime {
     /// # Example
     ///
     /// ```rust
-    /// use js_playground::{json_args, Runtime, Module, Error};
+    /// use rustyscript::{json_args, Runtime, Module, Error};
     ///
     /// # fn main() -> Result<(), Error> {
     /// let mut runtime = Runtime::new(Default::default())?;
-    /// let module = Module::new("test.js", "js_playground.register_entrypoint(() => 'test')");
+    /// let module = Module::new("test.js", "rustyscript.register_entrypoint(() => 'test')");
     /// let module = runtime.load_module(&module)?;
     ///
     /// // Run the entrypoint and handle the result
@@ -312,10 +312,10 @@ impl Runtime {
     ///
     /// ```rust
     /// // Create a module with filename and contents
-    /// use js_playground::{json_args, Runtime, Module, Error};
+    /// use rustyscript::{json_args, Runtime, Module, Error};
     ///
     /// # fn main() -> Result<(), Error> {
-    /// let module = Module::new("test.js", "js_playground.register_entrypoint(() => 2)");
+    /// let module = Module::new("test.js", "rustyscript.register_entrypoint(() => 2)");
     /// let value: usize = Runtime::execute_module(&module, vec![], Default::default(), json_args!())?;
     /// # Ok(())
     /// # }
@@ -343,7 +343,7 @@ impl Runtime {
     pub fn soft_reset(&mut self) {
         self.call_function::<Undefined>(
             &ModuleHandle::default(),
-            "js_playground_reset",
+            "rustyscript_reset",
             Runtime::EMPTY_ARGS,
         )
         .expect("Could not reset the runtime");
@@ -428,7 +428,7 @@ mod test_runtime {
         let module = Module::new(
             "test.js",
             "
-            js_playground.register_entrypoint(() => 2);
+            rustyscript.register_entrypoint(() => 2);
         ",
         );
         let module = runtime
@@ -447,7 +447,7 @@ mod test_runtime {
             "test.js",
             "
             import { value } from './importme.js';
-            js_playground.register_entrypoint(() => value);
+            rustyscript.register_entrypoint(() => value);
         ",
         );
         runtime
@@ -483,7 +483,7 @@ mod test_runtime {
         let module = Module::new(
             "test.js",
             "
-            js_playground.register_entrypoint(() => 2);
+            rustyscript.register_entrypoint(() => 2);
         ",
         );
         let module = runtime
@@ -502,7 +502,7 @@ mod test_runtime {
             "test.js",
             "
             import { value } from './importme.js';
-            js_playground.register_entrypoint(() => value);
+            rustyscript.register_entrypoint(() => value);
         ",
         );
         let module = runtime
@@ -535,7 +535,7 @@ mod test_runtime {
         let module = Module::new(
             "test.js",
             "
-            js_playground.register_entrypoint(() => 2);
+            rustyscript.register_entrypoint(() => 2);
         ",
         );
         let module = runtime
@@ -585,7 +585,7 @@ mod test_runtime {
         let module = Module::new(
             "test.js",
             "
-            js_playground.register_entrypoint(() => 2);
+            rustyscript.register_entrypoint(() => 2);
         ",
         );
         let value: usize =
@@ -609,7 +609,7 @@ mod test_runtime {
         let module = Module::new(
             "test.js",
             "
-            js_playground.register_entrypoint(() => globalThis.foo = 'bar');
+            rustyscript.register_entrypoint(() => globalThis.foo = 'bar');
             export const getFoo = () => globalThis.foo;
         ",
         );
