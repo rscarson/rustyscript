@@ -271,9 +271,20 @@ impl InnerRuntime {
                 Ok(value)
             }
             None if scope.has_caught() => {
-                let e = scope.exception().unwrap();
-                let e = e.to_rust_string_lossy(&mut scope);
-                Err(Error::Runtime(e))
+                let e = scope.message().unwrap();
+
+                let filename = e.get_script_resource_name(&mut scope);
+                let filename = if let Some(v) = filename {
+                    v.to_rust_string_lossy(&mut scope)
+                } else {
+                    module_context.module().filename().to_string()
+                };
+
+                let linenumber = e.get_line_number(&mut scope).unwrap_or_default();
+                let msg = e.get(&mut scope).to_rust_string_lossy(&mut scope);
+
+                let s = format!("{filename}:{linenumber}: {msg}");
+                Err(Error::Runtime(s))
             }
             None => Err(Error::Runtime(
                 "Unknown error during function execution".to_string(),
@@ -548,6 +559,26 @@ mod test_inner_runtime {
         runtime
             .call_function::<Undefined>(&module, "fne", json_args!())
             .expect("Did not allow undefined return");
+    }
+
+    #[test]
+    fn call_errorfunction() {
+        let module = Module::new(
+            "test.js",
+            "
+            export const fn = () => { throw new Error('msg') };
+        ",
+        );
+
+        let mut runtime = InnerRuntime::new(Default::default());
+        let module = runtime
+            .load_modules(Some(&module), vec![])
+            .expect("Could not load module");
+
+        let e = runtime
+            .call_function::<usize>(&module, "fn", &[Runtime::arg(1)])
+            .unwrap_err();
+        assert!(e.to_string().ends_with("test.js:2: Uncaught Error: msg"));
     }
 
     #[test]

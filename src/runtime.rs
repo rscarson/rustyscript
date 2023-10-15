@@ -604,6 +604,7 @@ mod test_runtime {
     }
 
     #[test]
+    #[should_panic]
     fn test_reset() {
         let module = Module::new(
             "test.js",
