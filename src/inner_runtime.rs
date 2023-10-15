@@ -252,6 +252,8 @@ impl InnerRuntime {
             .deno_runtime
             .get_module_namespace(module_context.id())?;
         let mut scope = self.deno_runtime.handle_scope();
+        let mut scope = v8::TryCatch::new(&mut scope);
+
         let module_namespace = v8::Local::<v8::Object>::new(&mut scope, module_namespace);
         let function_instance = function.open(&mut scope);
 
@@ -262,12 +264,21 @@ impl InnerRuntime {
             .collect();
         let final_args = f_args?;
 
-        let result = function_instance
-            .call(&mut scope, module_namespace.into(), &final_args)
-            .unwrap_or(deno_core::serde_v8::to_v8(&mut scope, ())?);
-
-        let result = v8::Global::new(&mut scope, result);
-        Ok(result)
+        let result = function_instance.call(&mut scope, module_namespace.into(), &final_args);
+        match result {
+            Some(value) => {
+                let value = v8::Global::new(&mut scope, value);
+                Ok(value)
+            }
+            None if scope.has_caught() => {
+                let e = scope.exception().unwrap();
+                let e = e.to_rust_string_lossy(&mut scope);
+                Err(Error::Runtime(e))
+            }
+            None => Err(Error::Runtime(
+                "Unknown error during function execution".to_string(),
+            )),
+        }
     }
 
     /// Retrieves a javascript function by its name from the Deno runtime's global context.
