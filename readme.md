@@ -1,22 +1,21 @@
 # rustyscript
 
-## Easy to use JS runtime API wrapper for deno
-### Simplifies integrating JS modules into rust
+### Effortless JS Integration for Rust
+#### deno_core API wrapper that provides an easier way to call JS from rust, by abstracting away the v8 engine details
 
 [![Crates.io](https://img.shields.io/crates/v/js-playground.svg)](https://crates.io/crates/js-playground)
 [![Build Status](https://github.com/rscarson/js-playground/workflows/Rust/badge.svg)](https://github.com/rscarson/js-playground/actions?workflow=Rust)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](https://raw.githubusercontent.com/rscarson/js-playground/master/LICENSE)
 
-This crate is meant to provide a quick and simple way to integrate a runtime JS or TS component from within rust.
-By default, the code being run is entirely sandboxed from the host, having no filesystem or network access.
+This crate is meant to provide a quick and simple way to integrate a runtime javacript or typescript component from within rust.
 
-Typescript is supported by default
+**By default, the code being run is entirely sandboxed from the host, having no filesystem or network access.**
+It can be extended to include those capabilities and more if desired - please see the `runtime_extensions` example
 
-It can be extended to include the capabilities and more if desired - please see the `runtime_extensions` example
+Asynchronous code is supported (I suggest using the timeout option when creating your runtime)
+Loaded JS modules can import other modules
 
-Asynchronous code is supported - I suggest using the timeout option when creating your runtime to avoid infinite hangs.
-
-Modules loaded can be imported by other code, and `reset()` can be called to unload modules and reset the global object.
+----
 
 Here is a very basic use of this crate to execute a JS module. It will create a basic runtime, load the module,
 call the registered entrypoint function with the given arguments, and return the resulting value:
@@ -46,6 +45,8 @@ assert_eq!(value, 2);
 
 Modules can also be loaded from the filesystem with `Module::load` or `Module::load_dir` if you want to collect all modules in a given directory.
 
+----
+
 If all you need is the result of a single javascript expression, you can use:
 ```rust
 let result: i64 = rustyscript::evaluate("5 + 5").expect("The expression was invalid!");
@@ -59,6 +60,8 @@ let value: String = module.call("exported_function_name", json_args!()).expect("
 ```
 
 There are a few other utilities included, such as `rustyscript::validate` and `rustyscript::resolve_path`
+
+----
 
 A more detailed version of the crate's usage can be seen below, which breaks down the steps instead of using the one-liner `Runtime::execute_module`:
 ```rust
@@ -91,6 +94,8 @@ runtime.call_entrypoint::<Undefined>(&module_handle, json_args!(2))?;
 let internal_value: i64 = runtime.call_function(&module_handle, "getValue", json_args!())?;
 ```
 
+----
+
 ### Utility Functions
 These functions provide simple one-liner access to common features of this crate:
 - evaluate; Evaluate a single JS expression and return the resulting value
@@ -108,3 +113,7 @@ These functions provide simple one-liner access to common features of this crate
 
 Please also check out [@Bromeon/js_sandbox](https://github.com/Bromeon/js-sandbox), another great crate in this niche
 
+For an example of this crate in use, please check out [lavendeux-parser](https://github.com/rscarson/lavendeux-parser)
+
+
+License: MIT OR Apache-2.0
