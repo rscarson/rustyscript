@@ -205,22 +205,14 @@ impl InnerRuntime {
         module_context: &ModuleHandle,
         name: &str,
     ) -> Result<v8::Global<v8::Value>, Error> {
-        let timeout = self.options.timeout.clone();
+        let timeout = self.options.timeout;
         Self::run_async_task(
             async move {
                 let result = self.get_value_ref_sync(module_context, name)?;
                 let result = self.deno_runtime.resolve_value(result).await?;
-                //   self.deno_runtime.run_event_loop(false).await?;
 
                 let mut scope = self.deno_runtime.handle_scope();
-                let mut result = v8::Local::new(&mut scope, result);
-                if false && result.is_promise() {
-                    let promise: v8::Local<v8::Promise> = result.try_into()?;
-                    if promise.state() == v8::PromiseState::Pending {
-                        return Err(Error::Runtime("A promise was still pending".to_string()));
-                    }
-                    result = promise.result(&mut scope);
-                }
+                let result = v8::Local::new(&mut scope, result);
 
                 // Decode value
                 let value = v8::Global::new(&mut scope, result);
@@ -330,21 +322,14 @@ impl InnerRuntime {
     where
         T: deno_core::serde::de::DeserializeOwned,
     {
-        let timeout = self.options.timeout.clone();
+        let timeout = self.options.timeout;
         Self::run_async_task(
             async move {
                 let result = self.call_function_by_ref_sync(module_context, function, args)?;
                 let result = self.deno_runtime.resolve_value(result).await?;
 
                 let mut scope = self.deno_runtime.handle_scope();
-                let mut result = v8::Local::new(&mut scope, result);
-                if false && result.is_promise() {
-                    let promise: v8::Local<v8::Promise> = result.try_into()?;
-                    if promise.state() == v8::PromiseState::Pending {
-                        return Err(Error::Runtime("A promise was still pending".to_string()));
-                    }
-                    result = promise.result(&mut scope);
-                }
+                let result = v8::Local::new(&mut scope, result);
 
                 // Decode value
                 let value: T = deno_core::serde_v8::from_v8(&mut scope, result)?;
