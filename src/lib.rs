@@ -1,5 +1,4 @@
 //! ## Effortless JS Integration for Rust
-//! ### deno_core API wrapper that provides an easier way to call JS from rust, by abstracting away the v8 engine details
 //!
 //! [![Crates.io](https://img.shields.io/crates/v/js-playground.svg)](https://crates.io/crates/js-playground)
 //! [![Build Status](https://github.com/rscarson/js-playground/workflows/Rust/badge.svg)](https://github.com/rscarson/js-playground/actions?workflow=Rust)
@@ -7,16 +6,19 @@
 //!
 //! This crate is meant to provide a quick and simple way to integrate a runtime javacript or typescript component from within rust.
 //!
-//! **By default, the code being run is entirely sandboxed from the host, having no filesystem or network access.**
-//! It can be extended to include those capabilities and more if desired - please see the `runtime_extensions` example
-//!
-//! Asynchronous code is supported (I suggest using the timeout option when creating your runtime)
-//! Loaded JS modules can import other modules
+//! - **By default, the code being run is entirely sandboxed from the host, having no filesystem or network access.**
+//!     - It can be extended to include those capabilities and more if desired - please see the `runtime_extensions` example
+//! - Asynchronous JS code is supported (I suggest using the timeout option when creating your runtime)
+//! - Loaded JS modules can import other modules
+//! - Typescript is supported by default, and will be transpiled into JS for execution
 //!
 //! ----
 //!
-//! Here is a very basic use of this crate to execute a JS module. It will create a basic runtime, load the module,
-//! call the registered entrypoint function with the given arguments, and return the resulting value:
+//! Here is a very basic use of this crate to execute a JS module. It will:
+//! - Create a basic runtime
+//! - Load a javascript module,
+//! - Call a function registered as the entrypoint
+//! - Return the resulting value
 //! ```rust
 //! use rustyscript::{json_args, Runtime, Module, Error};
 //!
@@ -93,6 +95,7 @@
 //! let module_handle = runtime.load_module(&module)?;
 //! runtime.call_entrypoint::<Undefined>(&module_handle, json_args!(2))?;
 //!
+//! // Functions don't need to be the entrypoint to be callable!
 //! let internal_value: i64 = runtime.call_function(&module_handle, "getValue", json_args!())?;
 //! # Ok(())
 //! # }
