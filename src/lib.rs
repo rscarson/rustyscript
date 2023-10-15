@@ -7,7 +7,7 @@
 //! This crate is meant to provide a quick and simple way to integrate a runtime javacript or typescript component from within rust.
 //!
 //! - **By default, the code being run is entirely sandboxed from the host, having no filesystem or network access.**
-//!     - It can be extended to include those capabilities and more if desired - please see the `runtime_extensions` example
+//!     - It can be extended to include those capabilities and more if desired - please see the 'web' feature, and the `runtime_extensions` example
 //! - Asynchronous JS code is supported (I suggest using the timeout option when creating your runtime)
 //! - Loaded JS modules can import other modules
 //! - Typescript is supported by default, and will be transpiled into JS for execution
