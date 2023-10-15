@@ -439,8 +439,9 @@ impl InnerRuntime {
 
 #[cfg(test)]
 mod test_inner_runtime {
+
     use super::*;
-    use crate::{json_args, Runtime, Undefined};
+    use crate::{json_args, Undefined};
 
     #[test]
     fn test_get_value() {
@@ -526,7 +527,7 @@ mod test_inner_runtime {
             .expect("Could not load module");
 
         let result: usize = runtime
-            .call_function(&module, "fna", &[Runtime::arg(2)])
+            .call_function(&module, "fna", json_args!(2))
             .expect("Could not call global");
         assert_eq!(2, result);
 
@@ -561,7 +562,7 @@ mod test_inner_runtime {
             .expect("Could not load module");
 
         let e = runtime
-            .call_function::<usize>(&module, "fn", &[Runtime::arg(1)])
+            .call_function::<usize>(&module, "fn", json_args!(1))
             .unwrap_err();
         assert!(e.to_string().ends_with("test.js:2: Uncaught Error: msg"));
     }
@@ -723,7 +724,7 @@ mod test_inner_runtime {
             .expect("Could not get object");
 
         let value: usize = runtime
-            .call_stored_function(&module, &value.func, &[Runtime::arg(2)])
+            .call_stored_function(&module, &value.func, json_args!(2))
             .expect("could not call function");
         assert_eq!(7, value);
     }
@@ -748,7 +749,7 @@ mod test_inner_runtime {
 
         println!("Deserialized");
         let value: usize = runtime
-            .call_stored_function(&module, &function, &[Runtime::arg(2)])
+            .call_stored_function(&module, &function, json_args!(2))
             .expect("could not call function");
         assert_eq!(4, value);
     }

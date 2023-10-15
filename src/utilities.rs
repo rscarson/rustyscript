@@ -126,7 +126,7 @@ mod runtime_macros {
     macro_rules! json_args {
         ($($arg:expr),+) => {
             &[
-                $($crate::Runtime::arg($arg)),+
+                $($crate::Runtime::into_arg($arg)),+
             ]
         };
 

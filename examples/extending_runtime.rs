@@ -16,6 +16,8 @@ use rustyscript::{
 };
 use std::time::Duration;
 
+// See ext/example_extension for a demonstration
+// of creating a deno_core extension for the runtime
 mod ext;
 use ext::example_extension;
 
@@ -80,19 +82,11 @@ impl MyRuntime {
     }
 
     /// Reset the runtime
-    /// This clears any side-effects in global, and unloads any running modules
+    /// This clears any running modules
+    /// We do make sure our important thing stays loaded
     pub fn reset(&mut self) {
-        let important_module = Module::new(
-            "my_module.js",
-            "
-            export function importantFunction() {
-                return 42;
-            }
-        ",
-        );
-
         self.0.reset();
-        self.load_module(&important_module)
+        self.load_module(&MY_MODULE.to_module())
             .expect("Could not load default module!");
     }
 }

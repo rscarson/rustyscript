@@ -22,14 +22,19 @@ fn main() -> Result<(), Error> {
         ",
     );
 
+    // Let's get a new runtime that defaults to the setUp function as the entrypoint
+    // and load our ES module into it
     let mut runtime = Runtime::new(RuntimeOptions {
         default_entrypoint: Some("setUp".to_string()),
         ..Default::default()
     })?;
     let module_handle = runtime.load_module(&module)?;
 
-    runtime.call_entrypoint::<Undefined>(&module_handle, &[Runtime::arg(2)])?;
+    // We call the entrypoint - Undefined just means we don't care about
+    // the return type here
+    runtime.call_entrypoint::<Undefined>(&module_handle, json_args!(2))?;
 
+    // Now the setUp is done, and the internal value is ready for use
     let internal_value: usize = runtime.call_function(&module_handle, "getValue", json_args!())?;
     assert_eq!(4, internal_value);
     Ok(())

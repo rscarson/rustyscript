@@ -100,6 +100,29 @@ impl ModuleWrapper {
         self.runtime.call_function(&self.module_context, name, args)
     }
 
+    /// Calls a function using the module's runtime that was previously stored
+    /// as a JsFunction object
+    ///
+    /// # Arguments
+    ///
+    /// * `function` - The JsFunction to call.
+    /// * `args` - The arguments to pass to the function.
+    ///
+    /// # Returns
+    ///
+    /// A `Result` containing the deserialized result of type `T` on success or an `Error` on failure.
+    pub fn call_stored<T>(
+        &mut self,
+        function: &JsFunction,
+        args: &[serde_json::Value],
+    ) -> Result<T, Error>
+    where
+        T: serde::de::DeserializeOwned,
+    {
+        self.runtime
+            .call_stored_function(&self.module_context, function, args)
+    }
+
     /// Retrieves the names of the module's exports.
     ///
     /// # Returns

@@ -5,7 +5,7 @@
 /// The sample below extracts a value which is deserialized to a custom struct
 /// as well as calling a function in JS from rust
 ///
-use rustyscript::{deno_core::serde::Deserialize, Error, Module, Runtime};
+use rustyscript::{deno_core::serde::Deserialize, json_args, Error, Module, Runtime};
 
 #[derive(PartialEq, Debug, Deserialize)]
 struct MyStruct {
@@ -28,13 +28,20 @@ fn main() -> Result<(), Error> {
         ",
     );
 
+    // Creation of a new runtime, using the default options
     let mut runtime = Runtime::new(Default::default())?;
+
+    // Import the module
+    // This returns a handle which is used to contextualize future calls
+    // This ensures you get access to the exports for the module
     let module_handle = runtime.load_module(&module)?;
 
-    let function_value: String =
-        runtime.call_function(&module_handle, "test", &[Runtime::arg("A")])?;
+    // Calling an exported function
+    // This will also work with anything in the global scope (eg: globalThis)
+    let function_value: String = runtime.call_function(&module_handle, "test", json_args!("A"))?;
     assert_eq!(function_value, "foo: A");
 
+    // Custom types can be exported from JS easily!
     let value: MyStruct = runtime.get_value(&module_handle, "bar")?;
     assert_eq!(
         MyStruct {

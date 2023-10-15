@@ -69,7 +69,41 @@ impl Runtime {
     }
 
     /// Encode an argument as a json value for use as a function argument
-    /// Only for types with `Into<Value>`. For other types, use `serde_json::to_value`
+    /// ```rust
+    /// use rustyscript::{ Runtime, RuntimeOptions, Module };
+    /// use serde::Serialize;
+    /// use std::time::Duration;
+    ///
+    /// # fn main() -> Result<(), rustyscript::Error> {
+    /// let module = Module::new("test.js", "
+    ///     function load(obj) {
+    ///         console.log(`Hello world: a=${obj.a}, b=${obj.b}`);
+    ///     }
+    ///     rustyscript.register_entrypoint(load);
+    /// ");
+    ///
+    /// #[derive(Serialize)]
+    /// struct MyStruct {a: usize, b: usize}
+    ///
+    /// Runtime::execute_module(
+    ///     &module, vec![],
+    ///     Default::default(),
+    ///     &[
+    ///         Runtime::arg(MyStruct{a: 1, b: 2})?,
+    ///     ]
+    /// )?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub fn arg<A>(value: A) -> Result<serde_json::Value, Error>
+    where
+        A: serde::Serialize,
+    {
+        Ok(serde_json::to_value(value)?)
+    }
+
+    /// Encode a primitive as a json value for use as a function argument
+    /// Only for types with `Into<Value>`. For other types, use `Runtime::arg`
     /// ```rust
     /// use rustyscript::{ Runtime, RuntimeOptions, Module };
     /// use std::time::Duration;
@@ -86,14 +120,14 @@ impl Runtime {
     ///     &module, vec![],
     ///     Default::default(),
     ///     &[
-    ///         Runtime::arg("test"),
-    ///         Runtime::arg(5),
+    ///         Runtime::into_arg("test"),
+    ///         Runtime::into_arg(5),
     ///     ]
     /// )?;
     /// # Ok(())
     /// # }
     /// ```
-    pub fn arg<A>(value: A) -> serde_json::Value
+    pub fn into_arg<A>(value: A) -> serde_json::Value
     where
         serde_json::Value: From<A>,
     {
@@ -380,10 +414,10 @@ mod test_runtime {
     }
 
     #[test]
-    fn test_arg() {
-        assert_eq!(2, Runtime::arg(2));
-        assert_eq!("test", Runtime::arg("test"));
-        assert_ne!("test", Runtime::arg(2));
+    fn test_into_arg() {
+        assert_eq!(2, Runtime::into_arg(2));
+        assert_eq!("test", Runtime::into_arg("test"));
+        assert_ne!("test", Runtime::into_arg(2));
     }
 
     #[test]
@@ -653,7 +687,7 @@ mod test_runtime {
             .expect("Could not load module");
 
         let result: usize = runtime
-            .call_function(&module, "fna", &[Runtime::arg(2)])
+            .call_function(&module, "fna", json_args!(2))
             .expect("Could not call global");
         assert_eq!(2, result);
 

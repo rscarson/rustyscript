@@ -12,7 +12,7 @@
 /// Instead of just vec![], one could pass in other JS modules
 /// which could be imported using `import './filename.js';`
 ///
-use rustyscript::{Error, Module, Runtime};
+use rustyscript::{json_args, Error, Module, Runtime};
 
 fn main() -> Result<(), Error> {
     let module = Module::new(
@@ -30,14 +30,10 @@ fn main() -> Result<(), Error> {
     // Execute the module above as an ES module
     // Do not side-load any additional modules
     // Use the default Runtime options
-    // Pass no args into the entrypoint function
+    // Pass 2 args into the entrypoint function
     // And expect a usize back from it
-    let value: usize = Runtime::execute_module(
-        &module,
-        vec![],
-        Default::default(),
-        &[Runtime::arg("test"), Runtime::arg(5)],
-    )?;
+    let value: usize =
+        Runtime::execute_module(&module, vec![], Default::default(), json_args!("test", 5))?;
 
     assert_eq!(value, 2);
     Ok(())
