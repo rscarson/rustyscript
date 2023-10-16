@@ -25,6 +25,10 @@ pub enum Error {
     #[error("value could not be deserialized: {0}")]
     JsonDecode(String),
 
+    /// Triggers when a module could not be loaded from the filesystem
+    #[error("{0}")]
+    ModuleNotFound(String),
+
     /// Triggers on runtime issues during execution of a module
     #[error("{0}")]
     Runtime(String),
@@ -50,7 +54,7 @@ mod error_macro {
 }
 
 map_error!(std::cell::BorrowMutError, |e| Error::Runtime(e.to_string()));
-map_error!(std::io::Error, |e| Error::Runtime(e.to_string()));
+map_error!(std::io::Error, |e| Error::ModuleNotFound(e.to_string()));
 map_error!(deno_core::v8::DataError, |e| Error::Runtime(e.to_string()));
 map_error!(deno_core::ModuleResolutionError, |e| Error::Runtime(
     e.to_string()
