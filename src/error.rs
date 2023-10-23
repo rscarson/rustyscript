@@ -3,7 +3,7 @@ use thiserror::Error;
 use crate::Module;
 
 /// Represents the errors that can occur during execution of a module
-#[derive(Error, Debug)]
+#[derive(Error, Debug, Clone)]
 pub enum Error {
     /// Triggers when a module has no stated entrypoint (default or registered at runtime)
     #[error("{0} has no entrypoint. Register one, or add a default to the runtime")]
