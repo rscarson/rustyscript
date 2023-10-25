@@ -4,7 +4,7 @@ use std::time::Duration;
 /// This example shows features requiring the 'web' feature to work
 /// Stuff like setTimeout, atob/btoa, file reads and fetch are all examples
 ///
-/// We will focus on timers here
+/// We will focus on timers and fetch here
 ///
 use rustyscript::{json_args, Error, Module, Runtime, RuntimeOptions};
 
@@ -21,6 +21,19 @@ fn main() -> Result<(), Error> {
             await sleep(100);
             return 2;
         }
+
+        export async function fetch_example() {
+            return new Promise((accept, reject) => {
+                fetch('https://api.github.com/users/mralexgray/repos', {
+                    method: 'GET',
+                    headers: {
+                      Accept: 'application/json',
+                    },
+                  }).then(response => response.json())
+                  .then(json => accept(json))
+                  .catch(e => reject(e));
+            });
+        }
         ",
     );
 
@@ -34,5 +47,10 @@ fn main() -> Result<(), Error> {
     let module_handle = runtime.load_module(&module)?;
     let value: usize = runtime.call_function(&module_handle, "test", json_args!())?;
     assert_eq!(value, 2);
+
+    // Fetch example
+    let data: rustyscript::serde_json::Value =
+        runtime.call_function(&module_handle, "fetch_example", json_args!())?;
+    println!("{:?}", data);
     Ok(())
 }
