@@ -27,7 +27,7 @@ cargo-readme = "3.2.0"
 
 [dependencies]
 deno_ast = { version = "0.31.1", features = ["transpiling"]}
-deno_core = "0.222.0"
+deno_core = "0.223.0"
 thiserror = "1.0.50"
 serde = "1.0.189"
 tokio = "1.33.0"
