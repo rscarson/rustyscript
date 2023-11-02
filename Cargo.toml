@@ -42,7 +42,7 @@ deno_console = { version = "0.122.0", optional = true }
 # Web feature
 deno_fetch = { version = "0.146.0", optional = true }
 deno_crypto = { version = "0.135.0", optional = true }
-deno_web = { version = "0.152.0", optional = true }
+deno_web = { version = "0.153.0", optional = true }
 
 [[example]]
 name = "web_features"
