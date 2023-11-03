@@ -13,7 +13,7 @@ readme = "readme.md"
 edition = "2021"
 
 [features]
-default = ["console", "url", "crypto"]
+default = ["console", "url"]
 no_extensions = []
 all = ["console", "url", "web"]
 url = ["deno_url", "webidl"]
