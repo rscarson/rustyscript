@@ -13,13 +13,14 @@ readme = "readme.md"
 edition = "2021"
 
 [features]
-default = ["console", "url"]
+default = ["console", "url", "crypto"]
 no_extensions = []
 all = ["console", "url", "web"]
 url = ["deno_url", "webidl"]
 webidl = ["deno_webidl"]
 console = ["deno_console"]
-web = ["console", "url", "webidl", "deno_web", "deno_crypto", "deno_fetch"]
+crypto = ["deno_crypto", "webidl"]
+web = ["console", "url", "webidl", "crypto", "deno_web", "deno_fetch"]
 
 [dev-dependencies]
 version-sync = "0.9.4"

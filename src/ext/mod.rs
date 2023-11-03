@@ -82,6 +82,15 @@ pub fn all_extensions(user_extensions: Vec<Extension>) -> Vec<Extension> {
         ]
     );
 
+    #[cfg(feature = "crypto")]
+    #[cfg(not(feature = "web"))]
+    import_mod!(
+        extensions,
+        deno_web_stub,
+        "deno_web_stub.rs",
+        vec![deno_web_stub::deno_web::init_ops_and_esm(),]
+    );
+
     #[cfg(feature = "web")]
     import_mod!(
         extensions,
@@ -93,7 +102,7 @@ pub fn all_extensions(user_extensions: Vec<Extension>) -> Vec<Extension> {
         ]
     );
 
-    #[cfg(feature = "web")]
+    #[cfg(feature = "crypto")]
     import_mod!(
         extensions,
         init_crypto,
@@ -117,4 +126,27 @@ pub fn all_extensions(user_extensions: Vec<Extension>) -> Vec<Extension> {
 
     extensions.extend(user_extensions);
     extensions
+}
+
+#[cfg(test)]
+mod test_mods {
+    use crate::{Module, Runtime};
+
+    #[cfg(feature = "crypto")]
+    #[test]
+    fn test_crypto() {
+        let module = Module::new(
+            "test.js",
+            "
+            export const digest = crypto.getRandomValues(new Uint32Array(10)).toString();
+            ",
+        );
+
+        let mut runtime = Runtime::new(Default::default()).expect("could not create runtime");
+        let module_handle = runtime.load_module(&module).expect("could not load module");
+        let value: String = runtime
+            .get_value(&module_handle, "digest")
+            .expect("could not get value");
+        assert_eq!(value.split(",").collect::<Vec<&str>>().len(), 10);
+    }
 }
