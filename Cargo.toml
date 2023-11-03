@@ -2,7 +2,7 @@
 name = "rustyscript"
 description = "Effortless JS Integration for Rust"
 license = "MIT OR Apache-2.0"
-version = "0.1.3"
+version = "0.1.4"
 
 keywords = ["rust", "javascript", "deno", "runtime", "embedding"]
 categories = ["web-programming", "network-programming", "api-bindings", "compilers", "development-tools::ffi"]

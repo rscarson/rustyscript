@@ -112,6 +112,7 @@
 //!
 //! ## Crate features
 //! - console (deno_console); Add the deno_console crate, providing `console.*` functionality from JS
+//! - crypto (deno_crypto, deno_webidl); Add the deno_crypto crate, providing `crypto.*` functionality from JS
 //! - url (deno_url, deno_webidl); Provides the WebIDL, URL, and URLPattern APIs from within JS
 //! - web = (deno_webidl, deno_web, deno_crypto, deno_fetch); Provides the Event, TextEncoder, TextDecoder, File, Web Cryptography, and fetch APIs from within JS
 //! - default (console, url); Provides only those extensions that preserve sandboxing between the host and runtime

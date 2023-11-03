@@ -3,7 +3,7 @@
 ### Effortless JS Integration for Rust
 
 [![Crates.io](https://img.shields.io/crates/v/rustyscript.svg)](https://crates.io/crates/rustyscript)
-[![Build Status](https://github.com/rscarson/rustyscript/workflows/Rust/badge.svg)](https://github.com/rscarson/rustyscript/actions/workflows/rust.yml?query=branch%3Amaster)
+[![Build Status](https://github.com/rscarson/rustyscript/workflows/Rust/badge.svg)](https://github.com/rscarson/rustyscript/actions?workflow=Rust)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](https://raw.githubusercontent.com/rscarson/rustyscript/master/LICENSE)
 
 This crate is meant to provide a quick and simple way to integrate a runtime javacript or typescript component from within rust.
@@ -108,6 +108,7 @@ These functions provide simple one-liner access to common features of this crate
 
 ### Crate features
 - console (deno_console); Add the deno_console crate, providing `console.*` functionality from JS
+- crypto (deno_crypto, deno_webidl); Add the deno_crypto crate, providing `crypto.*` functionality from JS
 - url (deno_url, deno_webidl); Provides the WebIDL, URL, and URLPattern APIs from within JS
 - web = (deno_webidl, deno_web, deno_crypto, deno_fetch); Provides the Event, TextEncoder, TextDecoder, File, Web Cryptography, and fetch APIs from within JS
 - default (console, url); Provides only those extensions that preserve sandboxing between the host and runtime
