@@ -119,6 +119,8 @@
 //! # }
 //! ```
 //!
+//! For better performance calling rust code, consider using an extension instead - see the `runtime_extensions` example for details
+//!
 //! The 'state' parameter can be used to persist data - please see the `call_rust_from_js` example for details
 //!
 //! ----
