@@ -1,9 +1,10 @@
 use crate::{
     js_function::JsFunction,
+    rustyext,
     traits::{ToDefinedValue, ToModuleSpecifier, ToV8String},
     transpiler, Error, Module, ModuleHandle,
 };
-use deno_core::{serde_json, v8, FsModuleLoader, JsRuntime, OpState, RuntimeOptions};
+use deno_core::{serde_json, v8, Extension, FsModuleLoader, JsRuntime, OpState, RuntimeOptions};
 use std::{collections::HashMap, rc::Rc, time::Duration};
 
 /// Callback type for rust callback functions
@@ -44,7 +45,7 @@ impl InnerRuntime {
     pub fn new(options: InnerRuntimeOptions) -> Self {
         Self {
             deno_runtime: JsRuntime::new(RuntimeOptions {
-                extensions: crate::ext::all_extensions(options.extensions),
+                extensions: InnerRuntime::all_extensions(options.extensions),
                 module_loader: Some(Rc::new(FsModuleLoader)),
                 ..Default::default()
             }),
@@ -54,6 +55,34 @@ impl InnerRuntime {
                 ..Default::default()
             },
         }
+    }
+
+    ///
+    /// Add up all required extensions
+    fn all_extensions(user_extensions: Vec<Extension>) -> Vec<Extension> {
+        let mut extensions = rustyext::extensions();
+
+        #[cfg(feature = "console")]
+        extensions.extend(ext_console::extensions());
+
+        #[cfg(feature = "webidl")]
+        extensions.extend(ext_webidl::extensions());
+
+        #[cfg(feature = "url")]
+        extensions.extend(ext_url::extensions());
+
+        #[cfg(feature = "crypto")]
+        #[cfg(not(feature = "web"))]
+        extensions.extend(ext_web_stub::extensions());
+
+        #[cfg(feature = "web")]
+        extensions.extend(ext_web::extensions());
+
+        #[cfg(feature = "crypto")]
+        extensions.extend(ext_crypto::extensions());
+
+        extensions.extend(user_extensions);
+        extensions
     }
 
     /// Access the underlying deno runtime instance directly

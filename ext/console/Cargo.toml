@@ -1,0 +1,14 @@
+[package]
+name = "ext_console"
+description = "Module loader for deno_console"
+edition.workspace = true
+license.workspace = true
+version.workspace = true
+repository.workspace = true
+
+[lib]
+path = "lib.rs"
+
+[dependencies]
+deno_console = "0.122.0"
+deno_core = { workspace = true }

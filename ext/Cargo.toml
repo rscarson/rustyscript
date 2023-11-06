@@ -1,0 +1,6 @@
+[workspace]
+resolver = "2"
+members = ["console", "crypto", "url", "web", "webidl", "web_stub"]
+
+[workspace.dependencies]
+deno_core = { workspace = true }

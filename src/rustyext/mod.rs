@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use crate::{error::Error, FunctionArguments, RsFunction};
-use deno_core::{extension, op2, serde_json, v8, OpState};
+use deno_core::{extension, op2, serde_json, v8, Extension, OpState};
 
 fn call_rs_fn(
     name: &str,
@@ -49,6 +49,9 @@ extension!(
     rustyscript,
     ops = [op_register_entrypoint, call_registered_function],
     esm_entry_point = "ext:rustyscript/rustyscript.js",
-    esm = [ dir "src/ext", "rustyscript.js" ],
-    state = |state| state.put(super::Permissions{})
+    esm = [ dir "src/rustyext", "rustyscript.js" ],
 );
+
+pub fn extensions() -> Vec<Extension> {
+    vec![rustyscript::init_ops_and_esm()]
+}

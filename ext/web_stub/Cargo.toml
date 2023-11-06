@@ -1,0 +1,13 @@
+[package]
+name = "ext_web_stub"
+description = "Stub module for deno_web features"
+edition.workspace = true
+license.workspace = true
+version.workspace = true
+repository.workspace = true
+
+[lib]
+path = "lib.rs"
+
+[dependencies]
+deno_core = { workspace = true }

@@ -1,0 +1,14 @@
+[package]
+name = "ext_webidl"
+description = "Module loader for deno_webidl"
+edition.workspace = true
+license.workspace = true
+version.workspace = true
+repository.workspace = true
+
+[lib]
+path = "lib.rs"
+
+[dependencies]
+deno_webidl = "0.122.0"
+deno_core = { workspace = true }

@@ -1,0 +1,15 @@
+[package]
+name = "ext_web"
+description = "Module loader for deno_web"
+edition.workspace = true
+license.workspace = true
+version.workspace = true
+repository.workspace = true
+
+[lib]
+path = "lib.rs"
+
+[dependencies]
+deno_fetch = "0.146.0"
+deno_web = "0.153.0"
+deno_core = { workspace = true }
