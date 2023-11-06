@@ -99,7 +99,7 @@ let internal_value: i64 = runtime.call_function(&module_handle, "getValue", json
 
 Rust functions can also be registered to be called from javascript:
 ```rust
-use rustyscript::{ Runtime };
+use rustyscript::{ Runtime, Module, serde_json::Value };
 
 let module = Module::new("test.js", " rustyscript.functions.foo(); ");
 let mut runtime = Runtime::new(Default::default())?;
@@ -107,6 +107,7 @@ runtime.register_function("foo", |args, _state| {
     if let Some(value) = args.get(0) {
         println!("called with: {}", value);
     }
+    Ok(Value::Null)
 })?;
 runtime.load_module(&module)?;
 ```

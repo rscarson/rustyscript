@@ -103,7 +103,7 @@
 //!
 //! Rust functions can also be registered to be called from javascript:
 //! ```rust
-//! use rustyscript::{ Runtime };
+//! use rustyscript::{ Runtime, Module, serde_json::Value };
 //!
 //! # fn main() -> Result<(), rustyscript::Error> {
 //! let module = Module::new("test.js", " rustyscript.functions.foo(); ");
@@ -112,6 +112,7 @@
 //!     if let Some(value) = args.get(0) {
 //!         println!("called with: {}", value);
 //!     }
+//!     Ok(Value::Null)
 //! })?;
 //! runtime.load_module(&module)?;
 //! # Ok(())

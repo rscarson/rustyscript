@@ -175,15 +175,16 @@ impl Runtime {
 
     /// Register a rust function to be callable from JS
     /// ```rust
-    /// use rustyscript::{ Runtime };
+    /// use rustyscript::{ Runtime, Module, serde_json::Value };
     ///
     /// # fn main() -> Result<(), rustyscript::Error> {
     /// let module = Module::new("test.js", " rustyscript.functions.foo(); ");
     /// let mut runtime = Runtime::new(Default::default())?;
     /// runtime.register_function("foo", |args, _state| {
-    /// if let Some(value) = args.get(0) {
-    ///     println!("called with: {}", value);
-    /// }
+    ///     if let Some(value) = args.get(0) {
+    ///         println!("called with: {}", value);
+    ///     }
+    ///     Ok(Value::Null)
     /// })?;
     ///
     /// # Ok(())
