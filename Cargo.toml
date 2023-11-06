@@ -24,7 +24,7 @@ web = ["console", "url", "webidl", "crypto", "deno_web", "deno_fetch"]
 
 [dev-dependencies]
 version-sync = "0.9.4"
-cargo-readme = "3.2.0"
+cargo-readme = "3.3.1"
 
 [dependencies]
 deno_ast = { version = "0.31.3", features = ["transpiling"]}
