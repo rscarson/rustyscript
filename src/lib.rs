@@ -145,6 +145,8 @@
 //! |no_extensions|Disables all extensions to the JS runtime - you can still add your own extensions in this mode     |yes               |None                                                                  |
 //! |all          |Provides all available functionality                                                               |**NO**            |deno_console, deno_webidl, deno_web, deno_crypto, deno_fetch, deno_url|
 //!
+//! ----
+//!
 //! Please also check out [@Bromeon/js_sandbox](https://github.com/Bromeon/js-sandbox), another great crate in this niche
 //!
 //! For an example of this crate in use, please check out [lavendeux-parser](https://github.com/rscarson/lavendeux-parser)
