@@ -3,8 +3,11 @@ use crate::{
     traits::{ToDefinedValue, ToModuleSpecifier, ToV8String},
     transpiler, Error, Module, ModuleHandle,
 };
-use deno_core::{serde_json, v8, FsModuleLoader, JsRuntime, RuntimeOptions};
-use std::{rc::Rc, time::Duration};
+use deno_core::{serde_json, v8, FsModuleLoader, JsRuntime, OpState, RuntimeOptions};
+use std::{collections::HashMap, rc::Rc, time::Duration};
+
+/// Callback type for rust callback functions
+pub type RsFunction = fn(&FunctionArguments, &mut OpState) -> Result<serde_json::Value, Error>;
 
 /// Type required to pass arguments to JsFunctions
 pub type FunctionArguments = [serde_json::Value];
@@ -62,6 +65,51 @@ impl InnerRuntime {
     /// May leak memory!
     pub fn clear_modules(&mut self) {
         self.deno_runtime().clear_modules()
+    }
+
+    /// Remove and return a value from the state
+    pub fn take<T>(&mut self) -> Option<T>
+    where
+        T: 'static,
+    {
+        let state = self.deno_runtime().op_state();
+        if let Ok(mut state) = state.try_borrow_mut() {
+            if state.has::<T>() {
+                return Some(state.take());
+            }
+        }
+
+        None
+    }
+
+    /// Add a value to the state
+    /// Only one value of each type is stored
+    pub fn put<T>(&mut self, value: T) -> Result<(), Error>
+    where
+        T: 'static,
+    {
+        let state = self.deno_runtime().op_state();
+        let mut state = state.try_borrow_mut()?;
+        state.put(value);
+
+        Ok(())
+    }
+
+    /// Register a rust function
+    pub fn register_function(&mut self, name: &str, callback: RsFunction) -> Result<(), Error> {
+        let state = self.deno_runtime().op_state();
+        let mut state = state.try_borrow_mut()?;
+
+        if !state.has::<HashMap<String, RsFunction>>() {
+            state.put(HashMap::<String, RsFunction>::new());
+        }
+
+        // Insert the callback into the state
+        state
+            .borrow_mut::<HashMap<String, RsFunction>>()
+            .insert(name.to_string(), callback);
+
+        Ok(())
     }
 
     /// Get a value from a runtime instance

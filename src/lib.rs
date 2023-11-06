@@ -101,6 +101,25 @@
 //! # }
 //! ```
 //!
+//! Rust functions can also be registered to be called from javascript:
+//! ```rust
+//! use rustyscript::{ Runtime };
+//!
+//! # fn main() -> Result<(), rustyscript::Error> {
+//! let module = Module::new("test.js", " rustyscript.functions.foo(); ");
+//! let mut runtime = Runtime::new(Default::default())?;
+//! runtime.register_function("foo", |args, _state| {
+//!     if let Some(value) = args.get(0) {
+//!         println!("called with: {}", value);
+//!     }
+//! })?;
+//! runtime.load_module(&module)?;
+//! # Ok(())
+//! # }
+//! ```
+//!
+//! The 'state' parameter can be used to persist data - please see the `call_rust_from_js` example for details
+//!
 //! ----
 //!
 //! ## Utility Functions
@@ -143,7 +162,7 @@ pub use deno_core::serde_json;
 
 // Expose some important stuff from us
 pub use error::Error;
-pub use inner_runtime::FunctionArguments;
+pub use inner_runtime::{FunctionArguments, RsFunction};
 pub use js_function::JsFunction;
 pub use module::{Module, StaticModule};
 pub use module_handle::ModuleHandle;

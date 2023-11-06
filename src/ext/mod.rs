@@ -129,10 +129,10 @@ pub fn all_extensions(user_extensions: Vec<Extension>) -> Vec<Extension> {
 }
 
 #[cfg(test)]
-mod test_mods {
+#[cfg(feature = "crypto")]
+mod test_crypto {
     use crate::{Module, Runtime};
 
-    #[cfg(feature = "crypto")]
     #[test]
     fn test_crypto() {
         let module = Module::new(

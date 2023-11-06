@@ -67,6 +67,11 @@ globalThis.rustyscript = {
     'bail': (msg) => { throw new Error(msg) },
     
     'global_backup': deepClone(globalThis),
+    'functions': new Proxy({}, {
+        get: function(_target, name) {
+            return (...args) => Deno.core.ops.call_registered_function(name, args);
+        }
+    })
 };
 Object.freeze(globalThis.rustyscript);
 

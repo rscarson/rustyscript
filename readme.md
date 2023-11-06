@@ -97,6 +97,22 @@ runtime.call_entrypoint::<Undefined>(&module_handle, json_args!(2))?;
 let internal_value: i64 = runtime.call_function(&module_handle, "getValue", json_args!())?;
 ```
 
+Rust functions can also be registered to be called from javascript:
+```rust
+use rustyscript::{ Runtime };
+
+let module = Module::new("test.js", " rustyscript.functions.foo(); ");
+let mut runtime = Runtime::new(Default::default())?;
+runtime.register_function("foo", |args, _state| {
+    if let Some(value) = args.get(0) {
+        println!("called with: {}", value);
+    }
+})?;
+runtime.load_module(&module)?;
+```
+
+The 'state' parameter can be used to persist data - please see the `call_rust_from_js` example for details
+
 ----
 
 ### Utility Functions

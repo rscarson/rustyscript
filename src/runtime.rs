@@ -1,9 +1,8 @@
-use deno_core::serde_json;
-
 use crate::{
     inner_runtime::{InnerRuntime, InnerRuntimeOptions},
-    Error, FunctionArguments, JsFunction, Module, ModuleHandle,
+    Error, FunctionArguments, JsFunction, Module, ModuleHandle, RsFunction,
 };
+use deno_core::serde_json;
 
 /// Represents the set of options accepted by the runtime constructor
 pub type RuntimeOptions = InnerRuntimeOptions;
@@ -132,6 +131,66 @@ impl Runtime {
         serde_json::Value: From<A>,
     {
         serde_json::Value::from(value)
+    }
+
+    /// Remove and return a value from the state, if one exists
+    /// ```rust
+    /// use rustyscript::{ Runtime };
+    ///
+    /// # fn main() -> Result<(), rustyscript::Error> {
+    /// let mut runtime = Runtime::new(Default::default())?;
+    /// runtime.put("test".to_string())?;
+    /// let value: String = runtime.take().unwrap();
+    /// assert_eq!(value, "test");
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub fn take<T>(&mut self) -> Option<T>
+    where
+        T: 'static,
+    {
+        self.0.take()
+    }
+
+    /// Add a value to the state
+    /// Only one value of each type is stored - additional calls to put overwrite the
+    /// old value
+    /// ```rust
+    /// use rustyscript::{ Runtime };
+    ///
+    /// # fn main() -> Result<(), rustyscript::Error> {
+    /// let mut runtime = Runtime::new(Default::default())?;
+    /// runtime.put("test".to_string())?;
+    /// let value: String = runtime.take().unwrap();
+    /// assert_eq!(value, "test");
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub fn put<T>(&mut self, value: T) -> Result<(), Error>
+    where
+        T: 'static,
+    {
+        self.0.put(value)
+    }
+
+    /// Register a rust function to be callable from JS
+    /// ```rust
+    /// use rustyscript::{ Runtime };
+    ///
+    /// # fn main() -> Result<(), rustyscript::Error> {
+    /// let module = Module::new("test.js", " rustyscript.functions.foo(); ");
+    /// let mut runtime = Runtime::new(Default::default())?;
+    /// runtime.register_function("foo", |args, _state| {
+    /// if let Some(value) = args.get(0) {
+    ///     println!("called with: {}", value);
+    /// }
+    /// })?;
+    ///
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub fn register_function(&mut self, name: &str, callback: RsFunction) -> Result<(), Error> {
+        self.0.register_function(name, callback)
     }
 
     /// Calls a stored javascript function and deserializes its return value.
