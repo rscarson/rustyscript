@@ -131,13 +131,19 @@
 //! - validate; Validate the syntax of a JS expression
 //!
 //! ## Crate features
-//! - console (deno_console); Add the deno_console crate, providing `console.*` functionality from JS
-//! - crypto (deno_crypto, deno_webidl); Add the deno_crypto crate, providing `crypto.*` functionality from JS
-//! - url (deno_url, deno_webidl); Provides the WebIDL, URL, and URLPattern APIs from within JS
-//! - web = (deno_webidl, deno_web, deno_crypto, deno_fetch); Provides the Event, TextEncoder, TextDecoder, File, Web Cryptography, and fetch APIs from within JS
-//! - default (console, url); Provides only those extensions that preserve sandboxing between the host and runtime
-//! - no_extensions; Disable all optional extensions to the runtime
-//! - all (console, url, web)
+//! The table below lists the available features for this crate. Features marked at `Preserves Sandbox: NO` break isolation between loaded JS modules and the host system.
+//! Use with caution.
+//!
+//! | Feature     | Description                                                                                       | Preserves Sandbox | Dependencies                                                         |  
+//! |-------------|---------------------------------------------------------------------------------------------------|------------------|----------------------------------------------------------------------|
+//! |console      |Provides `console.*` functionality from JS                                                         |yes               |deno_console                                                          |
+//! |crypto       |Provides `crypto.*` functionality from JS                                                          |yes               |deno_crypto, deno_webidl                                              |
+//! |url          |Provides the URL, and URLPattern APIs from within JS                                               |yes               |deno_webidl, deno_url                                                 |
+//! |web          |Provides the Event, TextEncoder, TextDecoder, File, Web Cryptography, and fetch APIs from within JS|**NO**            |deno_webidl, deno_web, deno_crypto, deno_fetch, deno_url              |
+//! |             |                                                                                                   |                  |                                                                      |
+//! |default      |Provides only those extensions that preserve sandboxing                                            |yes               |deno_console, deno_crypto, deno_webidl, deno_url                      |
+//! |no_extensions|Disables all extensions to the JS runtime - you can still add your own extensions in this mode     |yes               |None                                                                  |
+//! |all          |Provides all available functionality                                                               |**NO**            |deno_console, deno_webidl, deno_web, deno_crypto, deno_fetch, deno_url|
 //!
 //! Please also check out [@Bromeon/js_sandbox](https://github.com/Bromeon/js-sandbox), another great crate in this niche
 //!
