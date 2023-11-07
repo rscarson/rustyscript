@@ -179,7 +179,7 @@ pub use utilities::{evaluate, import, resolve_path, validate};
 mod test {
     #[test]
     fn test_readme_deps() {
-        version_sync::assert_markdown_deps_updated!("README.md");
+        version_sync::assert_markdown_deps_updated!("readme.md");
     }
 
     #[test]
