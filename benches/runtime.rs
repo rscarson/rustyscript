@@ -1,5 +1,5 @@
 use criterion::{criterion_group, criterion_main, Criterion};
-use rustyscript::{json_args, module, Module, Runtime, RuntimeOptions, StaticModule};
+use rustyscript::{json_args, Module, Runtime, RuntimeOptions};
 
 fn criterion_benchmark(c: &mut Criterion) {
     c.bench_function("init_runtime", |b| {
