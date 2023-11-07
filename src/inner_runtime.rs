@@ -516,6 +516,7 @@ impl InnerRuntime {
 
 #[cfg(test)]
 mod test_inner_runtime {
+    use serde::Deserialize;
 
     use super::*;
     use crate::{json_args, Undefined};
@@ -790,7 +791,7 @@ mod test_inner_runtime {
             .load_modules(Some(&module), vec![])
             .expect("Could not load module");
 
-        #[derive(serde::Deserialize)]
+        #[derive(Deserialize)]
         struct TestStruct<'a> {
             #[allow(dead_code)]
             name: String,

@@ -174,3 +174,16 @@ pub use module_handle::ModuleHandle;
 pub use module_wrapper::ModuleWrapper;
 pub use runtime::{Runtime, RuntimeOptions, Undefined};
 pub use utilities::{evaluate, import, resolve_path, validate};
+
+#[cfg(test)]
+mod test {
+    #[test]
+    fn test_readme_deps() {
+        version_sync::assert_markdown_deps_updated!("README.md");
+    }
+
+    #[test]
+    fn test_html_root_url() {
+        version_sync::assert_html_root_url_updated!("src/lib.rs");
+    }
+}

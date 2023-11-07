@@ -30,6 +30,7 @@ web = ["console", "url", "crypto", "ext_web"]
 
 [dev-dependencies]
 version-sync = "0.9.4"
+criterion = "0.5.1"
 
 [workspace.dependencies]
 deno_core = "0.224.0"
@@ -52,3 +53,7 @@ ext_web = { path = "ext/web", optional = true }
 [[example]]
 name = "web_features"
 required-features = ["web"]
+
+[[bench]]
+name = "runtime"
+harness = false

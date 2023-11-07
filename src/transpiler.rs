@@ -7,7 +7,6 @@ use deno_ast::MediaType;
 use deno_ast::ParseParams;
 use deno_ast::SourceTextInfo;
 use deno_core::anyhow::anyhow;
-use deno_core::anyhow::bail;
 use deno_core::anyhow::Error;
 use deno_core::ModuleSpecifier;
 use deno_core::ModuleType;
@@ -28,7 +27,7 @@ pub fn transpile(module_specifier: &ModuleSpecifier, code: &str) -> Result<Strin
         | MediaType::Dcts
         | MediaType::Tsx => (ModuleType::JavaScript, true),
         MediaType::Json => (ModuleType::Json, false),
-        _ => bail!("Unknown extension {:?}", path.extension()),
+        _ => return Err(anyhow!("Unknown extension {:?}", path.extension())),
     };
 
     let code = if should_transpile {
