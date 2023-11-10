@@ -10,5 +10,5 @@ repository.workspace = true
 path = "lib.rs"
 
 [dependencies]
-deno_console = "0.122.0"
+deno_console = "0.123.0"
 deno_core = { workspace = true }

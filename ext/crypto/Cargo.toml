@@ -10,5 +10,5 @@ repository.workspace = true
 path = "lib.rs"
 
 [dependencies]
-deno_crypto = "0.136.0"
+deno_crypto = "0.137.0"
 deno_core = { workspace = true }

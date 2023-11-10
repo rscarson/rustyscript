@@ -10,6 +10,6 @@ repository.workspace = true
 path = "lib.rs"
 
 [dependencies]
-deno_fetch = "0.146.0"
-deno_web = "0.153.0"
+deno_fetch = "0.147.0"
+deno_web = "0.154.0"
 deno_core = { workspace = true }
