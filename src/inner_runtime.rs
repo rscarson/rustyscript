@@ -83,6 +83,17 @@ impl InnerRuntime {
         extensions.extend(ext_crypto::extensions());
 
         extensions.extend(user_extensions);
+
+        // Transpilation step
+        for extension in &mut extensions {
+            for source in extension.esm_files.to_mut() {
+                transpiler::transpile_extension(source).expect("could not load extension");
+            }
+            for source in extension.js_files.to_mut() {
+                transpiler::transpile_extension(source).expect("could not load extension");
+            }
+        }
+
         extensions
     }
 
