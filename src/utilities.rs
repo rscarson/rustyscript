@@ -77,14 +77,10 @@ pub fn import(path: &str) -> Result<ModuleWrapper, Error> {
     ModuleWrapper::new_from_file(path, Default::default())
 }
 
-/// Validates the syntax of some JS
+/// Resolve a path to absolute path
 ///
 /// # Arguments
-/// * `javascript` - A snippet of JS code
-///
-/// # Returns
-/// A `Result` containing a boolean determining the validity of the JS,
-/// or an error if something went wrong.
+/// * `path` - A path
 ///
 /// # Example
 ///

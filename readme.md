@@ -129,7 +129,7 @@ These functions provide simple one-liner access to common features of this crate
 The table below lists the available features for this crate. Features marked at `Preserves Sandbox: NO` break isolation between loaded JS modules and the host system.
 Use with caution.
 
-| Feature     | Description                                                                                       | Preserves Sandbox | Dependencies                                                         |  
+| Feature     | Description                                                                                       | Preserves Sandbox | Dependencies                                                        |  
 |-------------|---------------------------------------------------------------------------------------------------|------------------|----------------------------------------------------------------------|
 |console      |Provides `console.*` functionality from JS                                                         |yes               |deno_console                                                          |
 |crypto       |Provides `crypto.*` functionality from JS                                                          |yes               |deno_crypto, deno_webidl                                              |
@@ -139,7 +139,9 @@ Use with caution.
 |default      |Provides only those extensions that preserve sandboxing                                            |yes               |deno_console, deno_crypto, deno_webidl, deno_url                      |
 |no_extensions|Disables all extensions to the JS runtime - you can still add your own extensions in this mode     |yes               |None                                                                  |
 |all          |Provides all available functionality                                                               |**NO**            |deno_console, deno_webidl, deno_web, deno_crypto, deno_fetch, deno_url|
-
+|             |                                                                                                   |                  |                                                                      |
+|fs_import    | Enables importing arbitrary code from the filesystem through JS                                   |**NO**            |None                                                                  |
+|url_import   | Enables importing arbitrary code from network locations through JS                                |**NO**            |reqwest                                                               |
 ----
 
 Please also check out [@Bromeon/js_sandbox](https://github.com/Bromeon/js-sandbox), another great crate in this niche

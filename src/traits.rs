@@ -1,10 +1,8 @@
+use crate::Error;
 use deno_core::resolve_path;
 use deno_core::v8::{self, HandleScope};
 use deno_core::ModuleSpecifier;
-
 use std::env::current_dir;
-
-use crate::Error;
 
 pub trait ToModuleSpecifier {
     fn to_module_specifier(&self) -> Result<ModuleSpecifier, Error>;
@@ -12,10 +10,7 @@ pub trait ToModuleSpecifier {
 
 impl ToModuleSpecifier for str {
     fn to_module_specifier(&self) -> Result<ModuleSpecifier, Error> {
-        match resolve_path(self, &current_dir()?) {
-            Ok(v) => Ok(v),
-            Err(e) => Err(e.into()),
-        }
+        resolve_path(self, &current_dir()?).map_err(|e| Error::from(e))
     }
 }
 

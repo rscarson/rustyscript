@@ -59,6 +59,9 @@ map_error!(deno_core::v8::DataError, |e| Error::Runtime(e.to_string()));
 map_error!(deno_core::ModuleResolutionError, |e| Error::Runtime(
     e.to_string()
 ));
+map_error!(deno_core::url::ParseError, |e| Error::Runtime(
+    e.to_string()
+));
 map_error!(deno_core::serde_json::Error, |e| Error::JsonDecode(
     e.to_string()
 ));

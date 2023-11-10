@@ -18,7 +18,7 @@ fn main() -> Result<(), Error> {
         "
         const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
         export async function test() {
-            await sleep(100);
+            await sleep(10);
             return 2;
         }
 
@@ -39,7 +39,7 @@ fn main() -> Result<(), Error> {
 
     // We add a timeout to the runtime anytime async might be used
     let mut runtime = Runtime::new(RuntimeOptions {
-        timeout: Duration::from_millis(500),
+        timeout: Duration::from_millis(1000),
         ..Default::default()
     })?;
 

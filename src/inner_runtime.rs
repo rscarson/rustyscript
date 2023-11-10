@@ -1,10 +1,11 @@
 use crate::{
     js_function::JsFunction,
+    module_loader::RustyLoader,
     rustyext,
     traits::{ToDefinedValue, ToModuleSpecifier, ToV8String},
     transpiler, Error, Module, ModuleHandle,
 };
-use deno_core::{serde_json, v8, Extension, FsModuleLoader, JsRuntime, OpState, RuntimeOptions};
+use deno_core::{serde_json, v8, Extension, JsRuntime, OpState, RuntimeOptions};
 use std::{collections::HashMap, rc::Rc, time::Duration};
 
 /// Callback type for rust callback functions
@@ -46,7 +47,7 @@ impl InnerRuntime {
         Self {
             deno_runtime: JsRuntime::new(RuntimeOptions {
                 extensions: InnerRuntime::all_extensions(options.extensions),
-                module_loader: Some(Rc::new(FsModuleLoader)),
+                module_loader: Some(Rc::new(RustyLoader::new())),
                 ..Default::default()
             }),
             options: InnerRuntimeOptions {
@@ -461,7 +462,7 @@ impl InnerRuntime {
 
                     let s_modid = deno_runtime
                         .load_side_module(
-                            &side_module.filename().to_module_specifier()?,
+                            &module_specifier,
                             Some(deno_core::FastString::from(code)),
                         )
                         .await?;
@@ -478,7 +479,7 @@ impl InnerRuntime {
 
                     let module_id = deno_runtime
                         .load_main_module(
-                            &module.filename().to_module_specifier()?,
+                            &module_specifier,
                             Some(deno_core::FastString::from(code)),
                         )
                         .await?;

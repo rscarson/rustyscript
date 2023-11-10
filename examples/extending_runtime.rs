@@ -91,15 +91,19 @@ impl MyRuntime {
     }
 }
 
-fn main() {
-    let mut runtime = MyRuntime::new().expect("Could not create the runtime");
-    let module_handle = runtime
-        .load_module(&MY_MODULE.to_module())
-        .expect("Error loading the module");
-    assert_eq!(
-        42,
-        runtime
-            .get_value::<i64>(&module_handle, "result")
-            .expect("Could not get value from the module")
+fn main() -> Result<(), Error> {
+    let module = Module::new(
+        "test.js",
+        "
+        import * as myModule from './my_module.js';
+        export const value = myModule.importantFunction();
+        ",
     );
+
+    let mut runtime = MyRuntime::new()?;
+    let module_context = runtime.load_module(&module)?;
+    let value: i32 = runtime.get_value(&module_context, "value")?;
+    assert_eq!(42, value);
+
+    Ok(())
 }

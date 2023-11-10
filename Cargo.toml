@@ -26,7 +26,10 @@ webidl = ["ext_webidl"]
 url = ["ext_url", "webidl"]
 console = ["ext_console"]
 crypto = ["ext_crypto", "ext_web_stub", "webidl"]
-web = ["console", "url", "crypto", "ext_web"]
+web = ["console", "url", "crypto", "ext_web", "url_import", "fs_import"]
+
+fs_import = []
+url_import = ["reqwest"]
 
 [dev-dependencies]
 version-sync = "0.9.4"
@@ -42,6 +45,9 @@ thiserror = "1.0.50"
 serde = "1.0.190"
 tokio = "1.33.0"
 
+# For URL imports
+reqwest = { version = "0.11.22", optional = true, features = ["blocking"] }
+
 # Extension features
 ext_url = { path = "ext/url", optional = true }
 ext_webidl = { path = "ext/webidl", optional = true }
@@ -53,6 +59,10 @@ ext_web = { path = "ext/web", optional = true }
 [[example]]
 name = "web_features"
 required-features = ["web"]
+
+[[example]]
+name = "url_import"
+required-features = ["fs_import", "url_import"]
 
 [[bench]]
 name = "runtime"

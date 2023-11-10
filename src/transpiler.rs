@@ -12,11 +12,8 @@ use deno_core::ModuleSpecifier;
 use deno_core::ModuleType;
 
 pub fn transpile(module_specifier: &ModuleSpecifier, code: &str) -> Result<String, Error> {
-    let path = module_specifier
-        .to_file_path()
-        .map_err(|_| anyhow!("Only file:// URLs are supported."))?;
-    let media_type = MediaType::from_path(&path);
-    let (_module_type, should_transpile) = match MediaType::from_path(&path) {
+    let media_type = MediaType::from_specifier(module_specifier);
+    let (_module_type, should_transpile) = match media_type {
         MediaType::JavaScript | MediaType::Mjs | MediaType::Cjs => (ModuleType::JavaScript, false),
         MediaType::Jsx => (ModuleType::JavaScript, true),
         MediaType::TypeScript
@@ -27,7 +24,7 @@ pub fn transpile(module_specifier: &ModuleSpecifier, code: &str) -> Result<Strin
         | MediaType::Dcts
         | MediaType::Tsx => (ModuleType::JavaScript, true),
         MediaType::Json => (ModuleType::Json, false),
-        _ => return Err(anyhow!("Unknown extension {:?}", path.extension())),
+        _ => return Err(anyhow!("Unknown extension {:?}", module_specifier.path())),
     };
 
     let code = if should_transpile {
