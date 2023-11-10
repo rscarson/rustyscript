@@ -969,7 +969,7 @@ dependencies = [
 
 [[package]]
 name = "ext_console"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "deno_console",
  "deno_core",
@@ -977,7 +977,7 @@ dependencies = [
 
 [[package]]
 name = "ext_crypto"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "deno_core",
  "deno_crypto",
@@ -985,7 +985,7 @@ dependencies = [
 
 [[package]]
 name = "ext_url"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "deno_core",
  "deno_url",
@@ -993,7 +993,7 @@ dependencies = [
 
 [[package]]
 name = "ext_web"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "deno_core",
  "deno_fetch",
@@ -1002,14 +1002,14 @@ dependencies = [
 
 [[package]]
 name = "ext_web_stub"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "deno_core",
 ]
 
 [[package]]
 name = "ext_webidl"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "deno_core",
  "deno_webidl",
@@ -2354,7 +2354,7 @@ checksum = "7ffc183a10b4478d04cbbbfc96d0873219d962dd5accaff2ffbd4ceb7df837f4"
 
 [[package]]
 name = "rustyscript"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "criterion",
  "deno_ast",
