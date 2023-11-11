@@ -99,7 +99,7 @@ impl Module {
     /// use rustyscript::Module;
     ///
     /// # fn main() -> Result<(), rustyscript::Error> {
-    /// let module = Module::load("src/rustyext/rustyscript.js")?;
+    /// let module = Module::load("src/ext/rustyscript/rustyscript.js")?;
     /// # Ok(())
     /// # }
     /// ```
@@ -124,7 +124,7 @@ impl Module {
     /// use rustyscript::Module;
     ///
     /// # fn main() -> Result<(), rustyscript::Error> {
-    /// let all_modules = Module::load_dir("src/rustyext")?;
+    /// let all_modules = Module::load_dir("src/ext/rustyscript")?;
     /// # Ok(())
     /// # }
     /// ```
@@ -197,14 +197,15 @@ mod test_module {
 
     #[test]
     fn test_load_module() {
-        let module = Module::load("src/rustyext/rustyscript.js").expect("Failed to load module");
-        assert_eq!(module.filename(), "src/rustyext/rustyscript.js");
+        let module =
+            Module::load("src/ext/rustyscript/rustyscript.js").expect("Failed to load module");
+        assert_eq!(module.filename(), "src/ext/rustyscript/rustyscript.js");
     }
 
     #[test]
     fn test_load_dir() {
         let modules =
-            Module::load_dir("src/rustyext").expect("Failed to load modules from directory");
+            Module::load_dir("src/ext/rustyscript").expect("Failed to load modules from directory");
         assert!(modules.len() > 0);
     }
 }

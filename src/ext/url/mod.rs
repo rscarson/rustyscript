@@ -4,7 +4,7 @@ extension!(
     init_url,
     deps = [rustyscript],
     esm_entry_point = "ext:init_url/init_url.js",
-    esm = [ dir "src/ext/console", "init_url.js" ],
+    esm = [ dir "src/ext/url", "init_url.js" ],
 );
 
 pub fn extensions() -> Vec<Extension> {

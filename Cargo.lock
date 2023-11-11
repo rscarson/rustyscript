@@ -968,54 +968,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "ext_console"
-version = "0.2.0"
-dependencies = [
- "deno_console",
- "deno_core",
-]
-
-[[package]]
-name = "ext_crypto"
-version = "0.2.0"
-dependencies = [
- "deno_core",
- "deno_crypto",
-]
-
-[[package]]
-name = "ext_url"
-version = "0.2.0"
-dependencies = [
- "deno_core",
- "deno_url",
-]
-
-[[package]]
-name = "ext_web"
-version = "0.2.0"
-dependencies = [
- "deno_core",
- "deno_fetch",
- "deno_web",
-]
-
-[[package]]
-name = "ext_web_stub"
-version = "0.2.0"
-dependencies = [
- "deno_core",
-]
-
-[[package]]
-name = "ext_webidl"
-version = "0.2.0"
-dependencies = [
- "deno_core",
- "deno_webidl",
-]
-
-[[package]]
 name = "fastrand"
 version = "2.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2358,13 +2310,13 @@ version = "0.2.0"
 dependencies = [
  "criterion",
  "deno_ast",
+ "deno_console",
  "deno_core",
- "ext_console",
- "ext_crypto",
- "ext_url",
- "ext_web",
- "ext_web_stub",
- "ext_webidl",
+ "deno_crypto",
+ "deno_fetch",
+ "deno_url",
+ "deno_web",
+ "deno_webidl",
  "reqwest",
  "serde",
  "thiserror",

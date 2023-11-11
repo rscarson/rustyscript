@@ -154,6 +154,7 @@
 #![warn(missing_docs)]
 
 mod error;
+mod ext;
 mod inner_runtime;
 mod js_function;
 mod module;
@@ -161,7 +162,6 @@ mod module_handle;
 mod module_loader;
 mod module_wrapper;
 mod runtime;
-mod rustyext;
 mod traits;
 mod transpiler;
 mod utilities;

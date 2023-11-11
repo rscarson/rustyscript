@@ -3,7 +3,7 @@ extension!(
     init_crypto,
     deps = [rustyscript],
     esm_entry_point = "ext:init_crypto/init_crypto.js",
-    esm = [ dir "src/ext/console", "init_crypto.js" ],
+    esm = [ dir "src/ext/crypto", "init_crypto.js" ],
 );
 
 pub fn extensions() -> Vec<Extension> {

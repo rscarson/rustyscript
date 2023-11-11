@@ -49,7 +49,7 @@ extension!(
     rustyscript,
     ops = [op_register_entrypoint, call_registered_function],
     esm_entry_point = "ext:rustyscript/rustyscript.js",
-    esm = [ dir "src/rustyext", "rustyscript.js" ],
+    esm = [ dir "src/ext/rustyscript", "rustyscript.js" ],
 );
 
 pub fn extensions() -> Vec<Extension> {

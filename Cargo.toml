@@ -1,17 +1,10 @@
-[workspace]
-[workspace.package]
+[package]
+name = "rustyscript"
+description = "Effortless JS Integration for Rust"
 edition = "2021"
 license = "MIT OR Apache-2.0"
 version = "0.2.0"
 repository = "https://github.com/rscarson/rustyscript"
-
-[package]
-name = "rustyscript"
-description = "Effortless JS Integration for Rust"
-license.workspace = true
-version.workspace = true
-edition.workspace = true
-repository.workspace = true
 
 keywords = ["rust", "javascript", "deno", "runtime", "embedding"]
 categories = ["web-programming", "network-programming", "api-bindings", "compilers", "development-tools::ffi"]
@@ -22,11 +15,12 @@ default = ["console", "url", "crypto"]
 no_extensions = []
 all = ["web"]
 
-webidl = ["ext_webidl"]
-url = ["ext_url", "webidl"]
-console = ["ext_console"]
-crypto = ["ext_crypto", "ext_web_stub", "webidl"]
-web = ["console", "url", "crypto", "ext_web", "url_import", "fs_import"]
+webidl = ["deno_webidl"]
+url = ["deno_url", "webidl"]
+console = ["deno_console"]
+crypto = ["deno_crypto", "webidl", "web_stub"]
+web_stub = []
+web = ["console", "url", "crypto", "deno_web", "url_import", "fs_import"]
 
 fs_import = []
 url_import = ["reqwest"]
@@ -35,11 +29,8 @@ url_import = ["reqwest"]
 version-sync = "0.9.4"
 criterion = "0.5.1"
 
-[workspace.dependencies]
-deno_core = "0.229.0"
-
 [dependencies]
-deno_core = { workspace = true }
+deno_core = "0.229.0"
 deno_ast = { version = "0.31.3", features = ["transpiling"]}
 thiserror = "1.0.50"
 serde = "1.0.192"
@@ -49,12 +40,12 @@ tokio = "1.34.0"
 reqwest = { version = "0.11.22", optional = true, features = ["blocking"] }
 
 # Extension features
-ext_url = { path = "ext/url", optional = true }
-ext_webidl = { path = "ext/webidl", optional = true }
-ext_console = { path = "ext/console", optional = true }
-ext_crypto = { path = "ext/crypto", optional = true }
-ext_web_stub = { path = "ext/web_stub", optional = true }
-ext_web = { path = "ext/web", optional = true }
+deno_url = {version = "0.123.0", optional = true}
+deno_webidl = {version = "0.123.0", optional = true}
+deno_console = {version = "0.123.0", optional = true}
+deno_crypto = {version = "0.137.0", optional = true}
+deno_fetch = {version = "0.147.0", optional = true}
+deno_web = {version = "0.154.0", optional = true}
 
 [[example]]
 name = "web_features"

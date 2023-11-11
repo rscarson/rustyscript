@@ -31,7 +31,7 @@ extension!(
     init_web,
     deps = [rustyscript],
     esm_entry_point = "ext:init_web/init_web.js",
-    esm = [ dir "src/ext/console", "init_web.js" ],
+    esm = [ dir "src/ext/web", "init_web.js" ],
     state = |state| state.put(Permissions{})
 );
 
@@ -39,7 +39,7 @@ extension!(
     init_fetch,
     deps = [rustyscript],
     esm_entry_point = "ext:init_fetch/init_fetch.js",
-    esm = [ dir "src/ext/console", "init_fetch.js" ],
+    esm = [ dir "src/ext/web", "init_fetch.js" ],
     state = |state| state.put(Permissions{})
 );
 

@@ -3,7 +3,7 @@ extension!(
     init_webidl,
     deps = [rustyscript],
     esm_entry_point = "ext:init_webidl/init_webidl.js",
-    esm = [ dir "src/ext/console", "init_webidl.js" ],
+    esm = [ dir "src/ext/webidl", "init_webidl.js" ],
 );
 
 pub fn extensions() -> Vec<Extension> {
