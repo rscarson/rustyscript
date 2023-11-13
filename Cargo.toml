@@ -20,7 +20,7 @@ url = ["deno_url", "webidl"]
 console = ["deno_console"]
 crypto = ["deno_crypto", "webidl", "web_stub"]
 web_stub = []
-web = ["console", "url", "crypto", "deno_web", "url_import", "fs_import"]
+web = ["console", "url", "crypto", "deno_web", "deno_fetch", "url_import", "fs_import"]
 
 fs_import = []
 url_import = ["reqwest"]
