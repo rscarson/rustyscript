@@ -31,7 +31,7 @@ criterion = "0.5.1"
 
 [dependencies]
 deno_core = "0.229.0"
-deno_ast = { version = "0.31.3", features = ["transpiling"]}
+deno_ast = { version = "0.31.5", features = ["transpiling"]}
 thiserror = "1.0.50"
 serde = "1.0.192"
 tokio = "1.34.0"
