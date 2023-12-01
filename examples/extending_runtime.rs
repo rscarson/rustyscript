@@ -35,13 +35,12 @@ pub struct MyRuntime(Runtime);
 impl MyRuntime {
     /// Create a new instance of the runtime
     pub fn new() -> Result<Self, Error> {
-        let mut runtime = Self(Runtime::new(RuntimeOptions {
+        let runtime = Self(Runtime::new(RuntimeOptions {
             extensions: vec![example_extension::example_extension::init_ops_and_esm()],
             timeout: Duration::from_millis(500),
             ..Default::default()
         })?);
 
-        runtime.reset();
         Ok(runtime)
     }
 
@@ -79,15 +78,6 @@ impl MyRuntime {
     /// * `module` - A `Module` object containing the module's filename and contents.
     pub fn load_module(&mut self, module: &Module) -> Result<ModuleHandle, Error> {
         self.0.load_module(module)
-    }
-
-    /// Reset the runtime
-    /// This clears any running modules
-    /// We do make sure our important thing stays loaded
-    pub fn reset(&mut self) {
-        self.0.reset();
-        self.load_module(&MY_MODULE.to_module())
-            .expect("Could not load default module!");
     }
 }
 
