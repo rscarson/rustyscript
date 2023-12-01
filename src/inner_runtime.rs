@@ -81,12 +81,6 @@ impl InnerRuntime {
         &mut self.deno_runtime
     }
 
-    /// Destroy the module cache in the underlying runtime
-    /// May leak memory!
-    pub fn clear_modules(&mut self) {
-        self.deno_runtime().clear_modules()
-    }
-
     /// Remove and return a value from the state
     pub fn take<T>(&mut self) -> Option<T>
     where

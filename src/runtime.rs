@@ -442,15 +442,6 @@ impl Runtime {
         )
         .expect("Could not reset the runtime");
     }
-
-    /// Reset the runtime
-    /// This clears any side-effects in global, and unloads any running modules
-    ///
-    /// Use this function if you need to clear the sandbox between runs, to prevent
-    /// interop side-effects
-    pub fn reset(&mut self) {
-        self.0.clear_modules();
-    }
 }
 
 #[cfg(test)]
@@ -695,38 +686,6 @@ mod test_runtime {
         );
         Runtime::execute_module::<Undefined>(&module, vec![], Default::default(), json_args!())
             .expect_err("Could not detect no entrypoint");
-    }
-
-    #[test]
-    #[should_panic]
-    fn test_reset() {
-        let module = Module::new(
-            "test.js",
-            "
-            rustyscript.register_entrypoint(() => globalThis.foo = 'bar');
-            export const getFoo = () => globalThis.foo;
-        ",
-        );
-
-        let mut runtime = Runtime::new(Default::default()).expect("Could not create the runtime");
-        let module = runtime
-            .load_modules(&module, vec![])
-            .expect("Could not load module");
-        runtime
-            .call_entrypoint::<Undefined>(&module, json_args!())
-            .expect("Could not call entrypoint");
-
-        assert_eq!(
-            "bar",
-            runtime
-                .call_function::<String>(&module, "getFoo", json_args!())
-                .expect("Error getting value")
-        );
-
-        runtime.reset();
-        runtime
-            .call_function::<String>(&module, "getFoo", json_args!())
-            .expect_err("Global was not cleared");
     }
 
     #[test]
