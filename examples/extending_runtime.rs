@@ -35,11 +35,12 @@ pub struct MyRuntime(Runtime);
 impl MyRuntime {
     /// Create a new instance of the runtime
     pub fn new() -> Result<Self, Error> {
-        let runtime = Self(Runtime::new(RuntimeOptions {
+        let mut runtime = Self(Runtime::new(RuntimeOptions {
             extensions: vec![example_extension::example_extension::init_ops_and_esm()],
             timeout: Duration::from_millis(500),
             ..Default::default()
         })?);
+        runtime.load_module(&MY_MODULE.to_module())?;
 
         Ok(runtime)
     }
