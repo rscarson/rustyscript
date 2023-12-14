@@ -42,7 +42,7 @@ reqwest = { version = "0.11.22", optional = true, features = ["blocking"] }
 # Extension features
 deno_url = {version = "0.126.0", optional = true}
 deno_webidl = {version = "0.126.0", optional = true}
-deno_console = {version = "0.126.0", optional = true}
+deno_console = {version = "0.128.0", optional = true}
 deno_crypto = {version = "0.140.0", optional = true}
 deno_fetch = {version = "0.150.0", optional = true}
 deno_web = {version = "0.157.0", optional = true}
