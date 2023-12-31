@@ -5,7 +5,9 @@ use crate::{
     traits::{ToDefinedValue, ToModuleSpecifier, ToV8String},
     transpiler, Error, Module, ModuleHandle,
 };
-use deno_core::{serde_json, v8, Extension, JsRuntime, OpState, RuntimeOptions};
+use deno_core::{
+    serde_json, v8, Extension, JsRuntime, OpState, PollEventLoopOptions, RuntimeOptions,
+};
 use std::{collections::HashMap, rc::Rc, time::Duration};
 
 /// Callback type for rust callback functions
@@ -271,7 +273,7 @@ impl InnerRuntime {
         Self::run_async_task(
             async move {
                 let result = self.get_value_ref_sync(module_context, name)?;
-                let result = self.deno_runtime.resolve_value(result).await?;
+                let result = self.deno_runtime.resolve(result).await?;
 
                 let mut scope = self.deno_runtime.handle_scope();
                 let result = v8::Local::new(&mut scope, result);
@@ -388,7 +390,7 @@ impl InnerRuntime {
         Self::run_async_task(
             async move {
                 let result = self.call_function_by_ref_sync(module_context, function, args)?;
-                let result = self.deno_runtime.resolve_value(result).await?;
+                let result = self.deno_runtime.resolve(result).await?;
 
                 let mut scope = self.deno_runtime.handle_scope();
                 let result = v8::Local::new(&mut scope, result);
@@ -451,8 +453,13 @@ impl InnerRuntime {
                         )
                         .await?;
                     let result = deno_runtime.mod_evaluate(s_modid);
-                    deno_runtime.run_event_loop(false).await?;
-                    result.await??;
+                    deno_runtime
+                        .run_event_loop(PollEventLoopOptions {
+                            wait_for_inspector: false,
+                            ..Default::default()
+                        })
+                        .await?;
+                    result.await?;
                     module_handle_stub = ModuleHandle::new(side_module, s_modid, None);
                 }
 
@@ -470,8 +477,13 @@ impl InnerRuntime {
 
                     // Finish execution
                     let result = deno_runtime.mod_evaluate(module_id);
-                    deno_runtime.run_event_loop(false).await?;
-                    result.await??;
+                    deno_runtime
+                        .run_event_loop(PollEventLoopOptions {
+                            wait_for_inspector: false,
+                            ..Default::default()
+                        })
+                        .await?;
+                    result.await?;
                     module_handle_stub = ModuleHandle::new(module, module_id, None);
                 }
 
