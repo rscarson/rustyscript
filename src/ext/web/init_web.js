@@ -15,6 +15,7 @@ import * as location from 'ext:deno_web/12_location.js';
 import * as messagePort from 'ext:deno_web/13_message_port.js';
 import * as compression from 'ext:deno_web/14_compression.js';
 import * as performance from 'ext:deno_web/15_performance.js';
+import * as imageData from 'ext:deno_web/16_image_data.js';
 
 Deno.core.setMacrotaskCallback(timers.handleTimerMacrotask);
 
@@ -88,4 +89,5 @@ applyToGlobal({
     setInterval: writeable(timers.setInterval),
     setTimeout: writeable(timers.setTimeout),
     structuredClone: writeable(messagePort.structuredClone),
+    ImageData: nonEnumerable(imageData.ImageData),
 });
