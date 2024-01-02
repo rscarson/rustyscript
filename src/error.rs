@@ -1,6 +1,5 @@
-use thiserror::Error;
-
 use crate::Module;
+use thiserror::Error;
 
 /// Represents the errors that can occur during execution of a module
 #[derive(Error, Debug, Clone)]
@@ -70,6 +69,9 @@ map_error!(deno_core::serde_v8::Error, |e| Error::JsonDecode(
 ));
 map_error!(deno_core::anyhow::Error, |e| Error::Runtime(e.to_string()));
 map_error!(tokio::time::error::Elapsed, |e| {
+    Error::Timeout(e.to_string())
+});
+map_error!(tokio::task::JoinError, |e| {
     Error::Timeout(e.to_string())
 });
 map_error!(deno_core::futures::channel::oneshot::Canceled, |e| {

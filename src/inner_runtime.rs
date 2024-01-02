@@ -273,7 +273,11 @@ impl InnerRuntime {
         Self::run_async_task(
             async move {
                 let result = self.get_value_ref_sync(module_context, name)?;
-                let result = self.deno_runtime.resolve(result).await?;
+                let future = self.deno_runtime.resolve(result);
+                let result = self
+                    .deno_runtime
+                    .with_event_loop_future(future, Default::default())
+                    .await?;
 
                 let mut scope = self.deno_runtime.handle_scope();
                 let result = v8::Local::new(&mut scope, result);
@@ -390,7 +394,13 @@ impl InnerRuntime {
         Self::run_async_task(
             async move {
                 let result = self.call_function_by_ref_sync(module_context, function, args)?;
-                let result = self.deno_runtime.resolve(result).await?;
+                let future = self.deno_runtime.resolve(result);
+                let result = self
+                    .deno_runtime
+                    .with_event_loop_future(future, Default::default())
+                    .await?;
+
+                //let result = self.deno_runtime.resolve(result).await?;
 
                 let mut scope = self.deno_runtime.handle_scope();
                 let result = v8::Local::new(&mut scope, result);
@@ -454,10 +464,7 @@ impl InnerRuntime {
                         .await?;
                     let result = deno_runtime.mod_evaluate(s_modid);
                     deno_runtime
-                        .run_event_loop(PollEventLoopOptions {
-                            wait_for_inspector: false,
-                            ..Default::default()
-                        })
+                        .run_event_loop(PollEventLoopOptions::default())
                         .await?;
                     result.await?;
                     module_handle_stub = ModuleHandle::new(side_module, s_modid, None);
