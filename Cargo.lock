@@ -216,6 +216,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "bit-set"
+version = "0.5.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0700ddab506f33b20a03b13996eccd309a48e5ff77d0d95926aa0210fb4e95f1"
+dependencies = [
+ "bit-vec",
+]
+
+[[package]]
+name = "bit-vec"
+version = "0.6.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "349f9b6a179ed607305526ca489b34ad0a41aed5f7980fa90eb03160b69598fb"
+
+[[package]]
 name = "bitflags"
 version = "1.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -633,7 +648,7 @@ version = "0.129.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "dafc349dd66deb1e8d4fb8474e0416e86684c0e6d75c8cc5264486c2786326d9"
 dependencies = [
- "deno_core",
+ "deno_core 0.238.0",
 ]
 
 [[package]]
@@ -645,7 +660,7 @@ dependencies = [
  "anyhow",
  "bytes",
  "cooked-waker",
- "deno_ops",
+ "deno_ops 0.114.0",
  "deno_unsync",
  "futures",
  "libc",
@@ -654,7 +669,37 @@ dependencies = [
  "pin-project",
  "serde",
  "serde_json",
- "serde_v8",
+ "serde_v8 0.147.0",
+ "smallvec",
+ "sourcemap 7.0.0",
+ "static_assertions",
+ "tokio",
+ "url",
+ "v8",
+]
+
+[[package]]
+name = "deno_core"
+version = "0.245.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c820d7e4712b7519dac7b03c338d0c666a77f4122aa956c630a4a888371b206e"
+dependencies = [
+ "anyhow",
+ "bit-set",
+ "bit-vec",
+ "bytes",
+ "cooked-waker",
+ "deno_ops 0.121.0",
+ "deno_unsync",
+ "futures",
+ "libc",
+ "log",
+ "memoffset",
+ "parking_lot",
+ "pin-project",
+ "serde",
+ "serde_json",
+ "serde_v8 0.154.0",
  "smallvec",
  "sourcemap 7.0.0",
  "static_assertions",
@@ -677,7 +722,7 @@ dependencies = [
  "const-oid",
  "ctr",
  "curve25519-dalek",
- "deno_core",
+ "deno_core 0.238.0",
  "deno_web",
  "elliptic-curve",
  "num-traits",
@@ -700,19 +745,20 @@ dependencies = [
 
 [[package]]
 name = "deno_fetch"
-version = "0.153.0"
+version = "0.155.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "55f5b5807c0c93e5f0dde34f7338af180f6414894f715e4151ca6b93872bea78"
+checksum = "48b0102d18e1c5dd92f9c1d4cb5567aa195cb84d4e0859534fb2ed152b26526d"
 dependencies = [
  "bytes",
  "data-url",
- "deno_core",
+ "deno_core 0.245.0",
  "deno_tls",
  "dyn-clone",
  "http",
  "pin-project",
  "reqwest",
  "serde",
+ "serde_json",
  "tokio",
  "tokio-util",
 ]
@@ -757,12 +803,27 @@ dependencies = [
 ]
 
 [[package]]
-name = "deno_tls"
-version = "0.116.0"
+name = "deno_ops"
+version = "0.121.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ae4984ecfdfc0a53553024a0fe164ceb948d2dce8c8dd9934f1c1b58743f65b8"
+checksum = "3fe00963c45b37cc9494d134a34b72b708a8702f52024c6155958664d042ba6d"
 dependencies = [
- "deno_core",
+ "proc-macro-rules",
+ "proc-macro2",
+ "quote",
+ "strum",
+ "strum_macros",
+ "syn 2.0.39",
+ "thiserror",
+]
+
+[[package]]
+name = "deno_tls"
+version = "0.118.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "78058b5e1fff40e7750b4b162eabf665a45b57af69efe80ab395bd23852f7cfe"
+dependencies = [
+ "deno_core 0.245.0",
  "deno_native_certs",
  "once_cell",
  "rustls",
@@ -774,9 +835,9 @@ dependencies = [
 
 [[package]]
 name = "deno_unsync"
-version = "0.3.0"
+version = "0.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f8a8f3722afd50e566ecfc783cc8a3a046bc4dd5eb45007431dfb2776aeb8993"
+checksum = "30dff7e03584dbae188dae96a0f1876740054809b2ad0cf7c9fc5d361f20e739"
 dependencies = [
  "tokio",
 ]
@@ -787,7 +848,7 @@ version = "0.129.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "bf2973ee5189b027a0cafd856ce67e42aa65e975b0f41cb98f9f81328fe33ece"
 dependencies = [
- "deno_core",
+ "deno_core 0.238.0",
  "serde",
  "urlpattern",
 ]
@@ -801,7 +862,7 @@ dependencies = [
  "async-trait",
  "base64-simd",
  "bytes",
- "deno_core",
+ "deno_core 0.238.0",
  "encoding_rs",
  "flate2",
  "futures",
@@ -817,7 +878,7 @@ version = "0.129.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "03a3840ca8a597af0fafbaff106353766610b43ff3bcfe624662c83dfd9c4927"
 dependencies = [
- "deno_core",
+ "deno_core 0.238.0",
 ]
 
 [[package]]
@@ -2298,7 +2359,7 @@ dependencies = [
  "criterion",
  "deno_ast",
  "deno_console",
- "deno_core",
+ "deno_core 0.238.0",
  "deno_crypto",
  "deno_fetch",
  "deno_url",
@@ -2488,6 +2549,21 @@ name = "serde_v8"
 version = "0.147.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2af950d83e1c70b762d48fa7a869d6db9a4f191548dfd666fa4e62f2229e1dce"
+dependencies = [
+ "bytes",
+ "derive_more",
+ "num-bigint",
+ "serde",
+ "smallvec",
+ "thiserror",
+ "v8",
+]
+
+[[package]]
+name = "serde_v8"
+version = "0.154.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3748eaed607f7dd2b5800100e5fe7c6babe9941492974d55d0bd08775f66ebbd"
 dependencies = [
  "bytes",
  "derive_more",
