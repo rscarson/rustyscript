@@ -1,7 +1,7 @@
 use crate::{
     ext,
     js_function::JsFunction,
-    module_loader::RustyLoader,
+    module_loader::{DefaultModuleCacheProvider, ModuleCacheProvider, RustyLoader},
     traits::{ToDefinedValue, ToModuleSpecifier, ToV8String},
     transpiler, Error, Module, ModuleHandle,
 };
@@ -26,6 +26,8 @@ pub struct InnerRuntimeOptions {
 
     /// Amount of time to run for before killing the thread
     pub timeout: Duration,
+
+    pub module_cache: Option<Box<dyn ModuleCacheProvider>>,
 }
 
 impl Default for InnerRuntimeOptions {
@@ -34,6 +36,7 @@ impl Default for InnerRuntimeOptions {
             extensions: Default::default(),
             default_entrypoint: Default::default(),
             timeout: Duration::MAX,
+            module_cache: Some(Box::new(DefaultModuleCacheProvider::default())),
         }
     }
 }
@@ -49,7 +52,7 @@ impl InnerRuntime {
         Self {
             deno_runtime: JsRuntime::new(RuntimeOptions {
                 extensions: InnerRuntime::all_extensions(options.extensions),
-                module_loader: Some(Rc::new(RustyLoader::new())),
+                module_loader: Some(Rc::new(RustyLoader::new(options.module_cache))),
                 ..Default::default()
             }),
             options: InnerRuntimeOptions {
@@ -457,9 +460,9 @@ impl InnerRuntime {
                     let code = transpiler::transpile(&module_specifier, side_module.contents())?;
 
                     let s_modid = deno_runtime
-                        .load_side_module(
+                        .load_side_es_module_from_code(
                             &module_specifier,
-                            Some(deno_core::FastString::from(code)),
+                            deno_core::FastString::from(code),
                         )
                         .await?;
                     let result = deno_runtime.mod_evaluate(s_modid);
@@ -476,9 +479,9 @@ impl InnerRuntime {
                     let code = transpiler::transpile(&module_specifier, module.contents())?;
 
                     let module_id = deno_runtime
-                        .load_main_module(
+                        .load_main_es_module_from_code(
                             &module_specifier,
-                            Some(deno_core::FastString::from(code)),
+                            deno_core::FastString::from(code),
                         )
                         .await?;
 

@@ -25,17 +25,19 @@ impl Serialize for JsFunction<'_> {
         S: serde::Serializer,
     {
         let v: v8::Local<v8::Value> = self.0.into();
-        deno_core::serde_v8::Value::from(v).serialize(serializer)
+        todo!();
+        // deno_core::serde_v8::Value::from(v).serialize(serializer)
     }
 }
 
 impl<'de> Deserialize<'de> for JsFunction<'_> {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        let value = deno_core::serde_v8::Value::deserialize(deserializer)?;
-        let value = value.v8_value;
-        let function: v8::Local<v8::Function> = value
-            .try_into()
-            .or(Err(serde::de::Error::custom("value was not a function")))?;
-        Ok(Self(function))
+        todo!();
+        //let value = deno_core::serde_v8::Value::deserialize(deserializer)?;
+        //    let value = value.v8_value;
+        //     let function: v8::Local<v8::Function> = value
+        //        .try_into()
+        //.or(Err(serde::de::Error::custom("value was not a function")))?;
+        //    Ok(Self(function))
     }
 }

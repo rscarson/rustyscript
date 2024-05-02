@@ -312,8 +312,7 @@ impl Runtime {
     /// And call functions.
     ///
     /// This will load 'module' as the main module, and the others as side-modules.
-    /// Only one main module can be loaded, so be sure to call `.reset()` if you need
-    /// to load a different main module.
+    /// Only one main module can be loaded per runtime
     ///
     /// # Arguments
     /// * `module` - A `Module` object containing the module's filename and contents.
@@ -427,20 +426,6 @@ impl Runtime {
         let module = runtime.load_modules(module, side_modules)?;
         let value: T = runtime.call_entrypoint(&module, entrypoint_args)?;
         Ok(value)
-    }
-
-    /// Reset the runtime
-    /// This clears any side-effects in global, but leaves modules in place
-    ///
-    /// Use this function if you need to clear the sandbox between runs, to prevent
-    /// interop side-effects
-    pub fn soft_reset(&mut self) {
-        self.call_function::<Undefined>(
-            &ModuleHandle::default(),
-            "rustyscript_reset",
-            Runtime::EMPTY_ARGS,
-        )
-        .expect("Could not reset the runtime");
     }
 }
 

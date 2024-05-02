@@ -1,57 +1,114 @@
 use crate::transpiler;
 use deno_core::{
-    anyhow,
-    anyhow::anyhow,
+    anyhow::{self, anyhow},
     futures::{self, FutureExt},
-    ModuleLoader, ModuleSource, ModuleSpecifier, ModuleType,
+    ModuleCodeBytes, ModuleLoadResponse, ModuleLoader, ModuleSource, ModuleSourceCode,
+    ModuleSourceFuture, ModuleSpecifier, ModuleType,
 };
-use std::{collections::HashSet, sync::Mutex};
+use std::{
+    cell::RefCell,
+    collections::{HashMap, HashSet},
+    sync::Mutex,
+};
+
+/// Module cache provider trait
+/// Implement this trait to provide a custom module cache
+/// You will need to use interior due to the deno's loader trait
+/// Default cache for the loader is in-memory
+pub trait ModuleCacheProvider {
+    fn set(&self, specifier: &ModuleSpecifier, source: ModuleSource);
+    fn get(&self, specifier: &ModuleSpecifier) -> Option<ModuleSource>;
+
+    fn clone_source(&self, specifier: &ModuleSpecifier, source: &ModuleSource) -> ModuleSource {
+        ModuleSource::new(
+            source.module_type.clone(),
+            match &source.code {
+                ModuleSourceCode::String(s) => ModuleSourceCode::String(s.to_string().into()),
+                ModuleSourceCode::Bytes(b) => {
+                    ModuleSourceCode::Bytes(ModuleCodeBytes::Boxed(b.to_vec().into()))
+                }
+            },
+            specifier,
+            source.code_cache.clone(),
+        )
+    }
+}
+
+/// Default in-memory module cache provider
+#[derive(Default)]
+pub struct DefaultModuleCacheProvider(RefCell<HashMap<ModuleSpecifier, ModuleSource>>);
+impl ModuleCacheProvider for DefaultModuleCacheProvider {
+    fn set(&self, specifier: &ModuleSpecifier, source: ModuleSource) {
+        self.0.borrow_mut().insert(specifier.clone(), source);
+    }
+
+    fn get(&self, specifier: &ModuleSpecifier) -> Option<ModuleSource> {
+        let cache = self.0.borrow();
+        let source = cache.get(specifier)?;
+        Some(Self::clone_source(&self, specifier, source))
+    }
+}
 
 #[cfg(feature = "url_import")]
 async fn load_from_url(
-    module_specifier: ModuleSpecifier,
+    module_specifier: &ModuleSpecifier,
+    cache_provider: &Option<Box<dyn ModuleCacheProvider>>,
 ) -> Result<ModuleSource, deno_core::error::AnyError> {
-    let module_type = if module_specifier.path().ends_with(".json") {
-        ModuleType::Json
-    } else {
-        ModuleType::JavaScript
-    };
+    match cache_provider.as_ref().map(|p| p.get(&module_specifier)) {
+        Some(Some(source)) => return Ok(source),
+        _ => {
+            let module_type = if module_specifier.path().ends_with(".json") {
+                ModuleType::Json
+            } else {
+                ModuleType::JavaScript
+            };
 
-    let response = reqwest::get(module_specifier.as_str()).await?;
-    let code = response.text().await?;
-    let code = transpiler::transpile(&module_specifier, &code)?;
+            let response = reqwest::get(module_specifier.as_str()).await?;
+            let code = response.text().await?;
+            let code = transpiler::transpile(&module_specifier, &code)?;
 
-    Ok(ModuleSource::new(
-        module_type,
-        code.into(),
-        &module_specifier,
-    ))
+            Ok(ModuleSource::new(
+                module_type,
+                ModuleSourceCode::String(code.into()),
+                &module_specifier,
+                None,
+            ))
+        }
+    }
 }
 
 async fn load_from_file(
-    module_specifier: ModuleSpecifier,
+    module_specifier: &ModuleSpecifier,
+    cache_provider: &Option<Box<dyn ModuleCacheProvider>>,
 ) -> Result<ModuleSource, deno_core::error::AnyError> {
-    let module_type = if module_specifier.path().ends_with(".json") {
-        ModuleType::Json
-    } else {
-        ModuleType::JavaScript
-    };
+    match cache_provider.as_ref().map(|p| p.get(&module_specifier)) {
+        Some(Some(source)) => return Ok(source),
+        _ => {
+            let module_type = if module_specifier.path().ends_with(".json") {
+                ModuleType::Json
+            } else {
+                ModuleType::JavaScript
+            };
 
-    let path = module_specifier.to_file_path().map_err(|_| {
-        anyhow!("Provided module specifier \"{module_specifier}\" is not a file URL.")
-    })?;
-    let code = std::fs::read_to_string(path)?;
-    let code = transpiler::transpile(&module_specifier, &code)?;
+            let path = module_specifier.to_file_path().map_err(|_| {
+                anyhow!("Provided module specifier \"{module_specifier}\" is not a file URL.")
+            })?;
+            let code = std::fs::read_to_string(path)?;
+            let code = transpiler::transpile(&module_specifier, &code)?;
 
-    Ok(ModuleSource::new(
-        module_type,
-        code.into(),
-        &module_specifier,
-    ))
+            Ok(ModuleSource::new(
+                module_type,
+                ModuleSourceCode::String(code.into()),
+                &module_specifier,
+                None,
+            ))
+        }
+    }
 }
 
 pub struct RustyLoader {
     fs_whlist: Mutex<HashSet<String>>,
+    cache_provider: Option<Box<dyn ModuleCacheProvider>>,
 }
 #[allow(unreachable_code)]
 impl ModuleLoader for RustyLoader {
@@ -102,31 +159,38 @@ impl ModuleLoader for RustyLoader {
         module_specifier: &ModuleSpecifier,
         _maybe_referrer: Option<&ModuleSpecifier>,
         _is_dyn_import: bool,
-    ) -> std::pin::Pin<Box<deno_core::ModuleSourceFuture>> {
+        _requested_module_type: deno_core::RequestedModuleType,
+    ) -> deno_core::ModuleLoadResponse {
         // We check permissions first
         match module_specifier.scheme() {
             // Remote fetch imports
             #[cfg(feature = "url_import")]
-            "https" | "http" => load_from_url(module_specifier.clone()).boxed_local(),
+            "https" | "http" => {
+                let future = load_from_url(&module_specifier, &self.cache_provider);
+                ModuleLoadResponse::Async(Box::pin(future))
+            }
 
             // FS imports
-            "file" => load_from_file(module_specifier.clone()).boxed_local(),
+            "file" => {
+                let future = load_from_file(&module_specifier, &self.cache_provider);
+                ModuleLoadResponse::Async(Box::pin(future))
+            }
 
-            _ => futures::future::ready(Err(anyhow!(
+            _ => ModuleLoadResponse::Sync(Err(anyhow!(
                 "{} imports are not allowed here: {}",
                 module_specifier.scheme(),
                 module_specifier.as_str()
-            )))
-            .boxed_local(),
+            ))),
         }
     }
 }
 
 #[allow(dead_code)]
 impl RustyLoader {
-    pub fn new() -> Self {
+    pub fn new(cache_provider: Option<Box<dyn ModuleCacheProvider>>) -> Self {
         Self {
             fs_whlist: Mutex::new(Default::default()),
+            cache_provider,
         }
     }
 

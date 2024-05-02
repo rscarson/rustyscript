@@ -39,20 +39,27 @@ pub fn transpile(module_specifier: &ModuleSpecifier, code: &str) -> Result<Strin
 
     let code = if should_transpile {
         let parsed = deno_ast::parse_module(ParseParams {
-            specifier: module_specifier.to_string(),
+            specifier: module_specifier.clone(),
             text_info: SourceTextInfo::from_string(code.to_string()),
             media_type,
             capture_tokens: false,
             scope_analysis: false,
             maybe_syntax: None,
         })?;
-        let res = parsed.transpile(&deno_ast::EmitOptions {
-            inline_source_map: false,
-            source_map: true,
+
+        let transpile_options = deno_ast::TranspileOptions {
+            ..Default::default()
+        };
+
+        let emit_options = deno_ast::EmitOptions {
+            keep_comments: true,
+            source_map: deno_ast::SourceMapOption::Inline,
             inline_sources: true,
             ..Default::default()
-        })?;
-        res.text
+        };
+
+        let res = parsed.transpile(&transpile_options, &emit_options)?;
+        res.into_source().text
     } else {
         code.to_string()
     };
@@ -67,9 +74,12 @@ pub fn transpile_extension(source: &mut ExtensionFileSource) -> Result<(), Error
     let media_type = MediaType::from_specifier(&specifier);
     if should_transpile(&media_type) {
         let source_code = match &source.code {
-            deno_core::ExtensionFileSourceCode::IncludedInBinary(s) => s.to_string(),
-            deno_core::ExtensionFileSourceCode::LoadedFromFsDuringSnapshot(s) => s.to_string(),
-            deno_core::ExtensionFileSourceCode::Computed(s) => s.to_string(),
+            #[allow(deprecated)]
+            ExtensionFileSourceCode::IncludedInBinary(s) => s.to_string(),
+
+            ExtensionFileSourceCode::LoadedFromFsDuringSnapshot(s) => s.to_string(),
+            ExtensionFileSourceCode::Computed(s) => s.to_string(),
+            ExtensionFileSourceCode::LoadedFromMemoryDuringSnapshot(s) => s.to_string(),
         };
         let source_code = transpile(&specifier, &source_code)?;
         source.code = ExtensionFileSourceCode::Computed(source_code.into());
