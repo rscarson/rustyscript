@@ -600,7 +600,9 @@ mod test_inner_runtime {
             "test.js",
             "
             globalThis.fna = (i) => i;
-            export function fnb() { return 'test'; }
+            export function fnb() { 
+                return 'test'; 
+            }
             export const fnc = 2;
             export const fne = () => {};
         ",
