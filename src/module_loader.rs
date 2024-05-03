@@ -1,13 +1,14 @@
 use crate::transpiler;
 use deno_core::{
     anyhow::{self, anyhow},
-    futures::{self, FutureExt},
     ModuleCodeBytes, ModuleLoadResponse, ModuleLoader, ModuleSource, ModuleSourceCode,
-    ModuleSourceFuture, ModuleSpecifier, ModuleType,
+    ModuleSpecifier, ModuleType,
 };
 use std::{
+    borrow::Borrow,
     cell::RefCell,
     collections::{HashMap, HashSet},
+    rc::Rc,
     sync::Mutex,
 };
 
@@ -49,66 +50,9 @@ impl ModuleCacheProvider for DefaultModuleCacheProvider {
     }
 }
 
-#[cfg(feature = "url_import")]
-async fn load_from_url(
-    module_specifier: &ModuleSpecifier,
-    cache_provider: &Option<Box<dyn ModuleCacheProvider>>,
-) -> Result<ModuleSource, deno_core::error::AnyError> {
-    match cache_provider.as_ref().map(|p| p.get(&module_specifier)) {
-        Some(Some(source)) => return Ok(source),
-        _ => {
-            let module_type = if module_specifier.path().ends_with(".json") {
-                ModuleType::Json
-            } else {
-                ModuleType::JavaScript
-            };
-
-            let response = reqwest::get(module_specifier.as_str()).await?;
-            let code = response.text().await?;
-            let code = transpiler::transpile(&module_specifier, &code)?;
-
-            Ok(ModuleSource::new(
-                module_type,
-                ModuleSourceCode::String(code.into()),
-                &module_specifier,
-                None,
-            ))
-        }
-    }
-}
-
-async fn load_from_file(
-    module_specifier: &ModuleSpecifier,
-    cache_provider: &Option<Box<dyn ModuleCacheProvider>>,
-) -> Result<ModuleSource, deno_core::error::AnyError> {
-    match cache_provider.as_ref().map(|p| p.get(&module_specifier)) {
-        Some(Some(source)) => return Ok(source),
-        _ => {
-            let module_type = if module_specifier.path().ends_with(".json") {
-                ModuleType::Json
-            } else {
-                ModuleType::JavaScript
-            };
-
-            let path = module_specifier.to_file_path().map_err(|_| {
-                anyhow!("Provided module specifier \"{module_specifier}\" is not a file URL.")
-            })?;
-            let code = std::fs::read_to_string(path)?;
-            let code = transpiler::transpile(&module_specifier, &code)?;
-
-            Ok(ModuleSource::new(
-                module_type,
-                ModuleSourceCode::String(code.into()),
-                &module_specifier,
-                None,
-            ))
-        }
-    }
-}
-
 pub struct RustyLoader {
     fs_whlist: Mutex<HashSet<String>>,
-    cache_provider: Option<Box<dyn ModuleCacheProvider>>,
+    cache_provider: Mutex<Rc<Option<Box<dyn ModuleCacheProvider>>>>,
 }
 #[allow(unreachable_code)]
 impl ModuleLoader for RustyLoader {
@@ -166,13 +110,19 @@ impl ModuleLoader for RustyLoader {
             // Remote fetch imports
             #[cfg(feature = "url_import")]
             "https" | "http" => {
-                let future = load_from_url(&module_specifier, &self.cache_provider);
+                let future = Self::load_from_url(
+                    module_specifier.clone(),
+                    Rc::clone(self.cache_provider.lock().unwrap().borrow()),
+                );
                 ModuleLoadResponse::Async(Box::pin(future))
             }
 
             // FS imports
             "file" => {
-                let future = load_from_file(&module_specifier, &self.cache_provider);
+                let future = Self::load_from_file(
+                    module_specifier.clone(),
+                    Rc::clone(self.cache_provider.lock().unwrap().borrow()),
+                );
                 ModuleLoadResponse::Async(Box::pin(future))
             }
 
@@ -190,7 +140,7 @@ impl RustyLoader {
     pub fn new(cache_provider: Option<Box<dyn ModuleCacheProvider>>) -> Self {
         Self {
             fs_whlist: Mutex::new(Default::default()),
-            cache_provider,
+            cache_provider: Mutex::new(Rc::new(cache_provider)),
         }
     }
 
@@ -205,6 +155,65 @@ impl RustyLoader {
             whitelist.contains(specifier)
         } else {
             false
+        }
+    }
+
+    #[cfg(feature = "url_import")]
+    async fn load_from_url(
+        module_specifier: ModuleSpecifier,
+        cache_provider: std::rc::Rc<Option<Box<dyn ModuleCacheProvider>>>,
+    ) -> Result<ModuleSource, deno_core::error::AnyError> {
+        let cache_provider = cache_provider.as_ref().as_ref().map(|p| p.as_ref());
+        match cache_provider.map(|p| p.get(&module_specifier)) {
+            Some(Some(source)) => return Ok(source),
+            _ => {
+                let module_type = if module_specifier.path().ends_with(".json") {
+                    ModuleType::Json
+                } else {
+                    ModuleType::JavaScript
+                };
+
+                let response = reqwest::get(module_specifier.as_str()).await?;
+                let code = response.text().await?;
+                let code = transpiler::transpile(&module_specifier, &code)?;
+
+                Ok(ModuleSource::new(
+                    module_type,
+                    ModuleSourceCode::String(code.into()),
+                    &module_specifier,
+                    None,
+                ))
+            }
+        }
+    }
+
+    async fn load_from_file(
+        module_specifier: ModuleSpecifier,
+        cache_provider: std::rc::Rc<Option<Box<dyn ModuleCacheProvider>>>,
+    ) -> Result<ModuleSource, deno_core::error::AnyError> {
+        let cache_provider = cache_provider.as_ref().as_ref().map(|p| p.as_ref());
+        match cache_provider.map(|p| p.get(&module_specifier)) {
+            Some(Some(source)) => return Ok(source),
+            _ => {
+                let module_type = if module_specifier.path().ends_with(".json") {
+                    ModuleType::Json
+                } else {
+                    ModuleType::JavaScript
+                };
+
+                let path = module_specifier.to_file_path().map_err(|_| {
+                    anyhow!("Provided module specifier \"{module_specifier}\" is not a file URL.")
+                })?;
+                let code = std::fs::read_to_string(path)?;
+                let code = transpiler::transpile(&module_specifier, &code)?;
+
+                Ok(ModuleSource::new(
+                    module_type,
+                    ModuleSourceCode::String(code.into()),
+                    &module_specifier,
+                    None,
+                ))
+            }
         }
     }
 }

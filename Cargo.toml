@@ -20,7 +20,7 @@ url = ["deno_url", "webidl"]
 console = ["deno_console"]
 crypto = ["deno_crypto", "webidl", "web_stub"]
 web_stub = []
-web = ["console", "url", "crypto", "deno_web", "deno_fetch", "url_import", "fs_import"]
+web = ["console", "url", "crypto", "deno_web", "deno_fetch", "url_import", "fs_import", "deno_net"]
 
 fs_import = []
 url_import = ["reqwest"]
@@ -46,6 +46,7 @@ deno_console = {version = "0.149.0", optional = true}
 deno_crypto = {version = "0.163.0", optional = true}
 deno_fetch = {version = "0.173.0", optional = true}
 deno_web = {version = "0.180.0", optional = true}
+deno_net = {version = "0.141.0", optional = true}
 
 [[example]]
 name = "web_features"

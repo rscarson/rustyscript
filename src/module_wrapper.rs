@@ -80,6 +80,7 @@ impl ModuleWrapper {
     /// `true` if the value is callable as a JavaScript function, `false` otherwise.
     pub fn is_callable(&mut self, name: &str) -> bool {
         let test = self.get::<JsFunction>(name);
+        println!("{:?}", test);
         test.is_ok()
     }
 
@@ -206,6 +207,7 @@ mod test_runtime {
 
         let mut module = ModuleWrapper::new_from_module(&module, RuntimeOptions::default())
             .expect("Could not create wrapper");
+
         assert_eq!(true, module.is_callable("func"));
         assert_eq!(false, module.is_callable("value"));
     }
