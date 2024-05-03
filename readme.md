@@ -131,19 +131,19 @@ Use with caution.
 
 Please note that the `web` feature will also enable fs_import and url_import, allowing arbitrary filesystem and network access for import statements
 
-| Feature     | Description                                                                                       | Preserves Sandbox | Dependencies                                                        |  
-|-------------|---------------------------------------------------------------------------------------------------|------------------|----------------------------------------------------------------------|
-|console      |Provides `console.*` functionality from JS                                                         |yes               |deno_console                                                          |
-|crypto       |Provides `crypto.*` functionality from JS                                                          |yes               |deno_crypto, deno_webidl                                              |
-|url          |Provides the URL, and URLPattern APIs from within JS                                               |yes               |deno_webidl, deno_url                                                 |
-|web          |Provides the Event, TextEncoder, TextDecoder, File, Web Cryptography, and fetch APIs from within JS|**NO**            |deno_webidl, deno_web, deno_crypto, deno_fetch, deno_url              |
-|             |                                                                                                   |                  |                                                                      |
-|default      |Provides only those extensions that preserve sandboxing                                            |yes               |deno_console, deno_crypto, deno_webidl, deno_url                      |
-|no_extensions|Disables all extensions to the JS runtime - you can still add your own extensions in this mode     |yes               |None                                                                  |
-|all          |Provides all available functionality                                                               |**NO**            |deno_console, deno_webidl, deno_web, deno_crypto, deno_fetch, deno_url|
-|             |                                                                                                   |                  |                                                                      |
-|fs_import    | Enables importing arbitrary code from the filesystem through JS                                   |**NO**            |None                                                                  |
-|url_import   | Enables importing arbitrary code from network locations through JS                                |**NO**            |reqwest                                                               |
+| Feature     | Description                                                                                       | Preserves Sandbox | Dependencies                                                                   |  
+|-------------|---------------------------------------------------------------------------------------------------|------------------|---------------------------------------------------------------------------------|
+|console      |Provides `console.*` functionality from JS                                                         |yes               |deno_console                                                                     |
+|crypto       |Provides `crypto.*` functionality from JS                                                          |yes               |deno_crypto, deno_webidl                                                         |
+|url          |Provides the URL, and URLPattern APIs from within JS                                               |yes               |deno_webidl, deno_url                                                            |
+|web          |Provides the Event, TextEncoder, TextDecoder, File, Web Cryptography, and fetch APIs from within JS|**NO**            |deno_webidl, deno_web, deno_crypto, deno_fetch, deno_url, deno_net               |
+|             |                                                                                                   |                  |                                                                                 |
+|default      |Provides only those extensions that preserve sandboxing                                            |yes               |deno_console, deno_crypto, deno_webidl, deno_url                                 |
+|no_extensions|Disables all extensions to the JS runtime - you can still add your own extensions in this mode     |yes               |None                                                                             |
+|all          |Provides all available functionality                                                               |**NO**            |deno_console, deno_webidl, deno_web, deno_net, deno_crypto, deno_fetch, deno_url |
+|             |                                                                                                   |                  |                                                                                 |
+|fs_import    | Enables importing arbitrary code from the filesystem through JS                                   |**NO**            |None                                                                             |
+|url_import   | Enables importing arbitrary code from network locations through JS                                |**NO**            |reqwest                                                                          |
 ----
 
 Please also check out [@Bromeon/js_sandbox](https://github.com/Bromeon/js-sandbox), another great crate in this niche
