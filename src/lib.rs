@@ -1,3 +1,4 @@
+#![warn(clippy::all, clippy::pedantic, clippy::nursery, clippy::cargo)]
 //! This crate is meant to provide a quick and simple way to integrate a runtime javacript or typescript component from within rust.
 //!
 //! - **By default, the code being run is entirely sandboxed from the host, having no filesystem or network access.**

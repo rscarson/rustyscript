@@ -54,7 +54,7 @@ pub fn validate(javascript: &str) -> Result<bool, Error> {
     let mut runtime = Runtime::new(Default::default())?;
     match runtime.load_modules(&module, vec![]) {
         Ok(_) => Ok(true),
-        Err(e) if matches!(e, Error::Runtime(_)) => Ok(false),
+        Err(Error::Runtime(_)) => Ok(false),
         Err(e) => Err(e),
     }
 }

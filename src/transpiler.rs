@@ -27,7 +27,7 @@ fn should_transpile(media_type: &MediaType) -> bool {
         | MediaType::Dcts
         | MediaType::Tsx => true,
 
-        _ => return false,
+        _ => false,
     }
 }
 

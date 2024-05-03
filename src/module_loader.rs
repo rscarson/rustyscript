@@ -46,7 +46,7 @@ impl ModuleCacheProvider for DefaultModuleCacheProvider {
     fn get(&self, specifier: &ModuleSpecifier) -> Option<ModuleSource> {
         let cache = self.0.borrow();
         let source = cache.get(specifier)?;
-        Some(Self::clone_source(&self, specifier, source))
+        Some(Self::clone_source(self, specifier, source))
     }
 }
 
@@ -62,7 +62,7 @@ impl ModuleLoader for RustyLoader {
         referrer: &str,
         _kind: deno_core::ResolutionKind,
     ) -> Result<ModuleSpecifier, anyhow::Error> {
-        let url = deno_core::resolve_import(specifier, &referrer)?;
+        let url = deno_core::resolve_import(specifier, referrer)?;
         if referrer == "." {
             self.whitelist_add(url.as_str());
         }
@@ -165,7 +165,7 @@ impl RustyLoader {
     ) -> Result<ModuleSource, deno_core::error::AnyError> {
         let cache_provider = cache_provider.as_ref().as_ref().map(|p| p.as_ref());
         match cache_provider.map(|p| p.get(&module_specifier)) {
-            Some(Some(source)) => return Ok(source),
+            Some(Some(source)) => Ok(source),
             _ => {
                 let module_type = if module_specifier.path().ends_with(".json") {
                     ModuleType::Json
@@ -193,7 +193,7 @@ impl RustyLoader {
     ) -> Result<ModuleSource, deno_core::error::AnyError> {
         let cache_provider = cache_provider.as_ref().as_ref().map(|p| p.as_ref());
         match cache_provider.map(|p| p.get(&module_specifier)) {
-            Some(Some(source)) => return Ok(source),
+            Some(Some(source)) => Ok(source),
             _ => {
                 let module_type = if module_specifier.path().ends_with(".json") {
                     ModuleType::Json
@@ -204,7 +204,7 @@ impl RustyLoader {
                 let path = module_specifier.to_file_path().map_err(|_| {
                     anyhow!("Provided module specifier \"{module_specifier}\" is not a file URL.")
                 })?;
-                let code = std::fs::read_to_string(path)?;
+                let code = tokio::fs::read_to_string(path).await?;
                 let code = transpiler::transpile(&module_specifier, &code)?;
 
                 Ok(ModuleSource::new(

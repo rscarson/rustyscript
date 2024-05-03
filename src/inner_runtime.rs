@@ -36,7 +36,7 @@ impl Default for InnerRuntimeOptions {
             extensions: Default::default(),
             default_entrypoint: Default::default(),
             timeout: Duration::MAX,
-            module_cache: Some(Box::new(DefaultModuleCacheProvider::default())),
+            module_cache: Some(Box::<DefaultModuleCacheProvider>::default()),
         }
     }
 }

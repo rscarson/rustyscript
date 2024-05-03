@@ -10,7 +10,7 @@ pub trait ToModuleSpecifier {
 
 impl ToModuleSpecifier for str {
     fn to_module_specifier(&self) -> Result<ModuleSpecifier, Error> {
-        resolve_path(self, &current_dir()?).map_err(|e| Error::from(e))
+        resolve_path(self, &current_dir()?).map_err(Error::from)
     }
 }
 
