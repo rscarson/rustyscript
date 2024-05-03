@@ -94,7 +94,7 @@ pub fn resolve_path(path: &str) -> Result<String, Error> {
 
 #[macro_use]
 mod runtime_macros {
-    /// Map a series of values to a slice of serde_json::Value objects
+    /// Map a series of values to a slice of `serde_json::Value` objects
     /// that javascript functions can understand
     /// # Example
     /// ```rust
