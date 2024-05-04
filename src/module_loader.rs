@@ -37,8 +37,8 @@ pub trait ModuleCacheProvider {
 
 /// Default in-memory module cache provider
 #[derive(Default)]
-pub struct DefaultModuleCacheProvider(RefCell<HashMap<ModuleSpecifier, ModuleSource>>);
-impl ModuleCacheProvider for DefaultModuleCacheProvider {
+pub struct MemoryModuleCacheProvider(RefCell<HashMap<ModuleSpecifier, ModuleSource>>);
+impl ModuleCacheProvider for MemoryModuleCacheProvider {
     fn set(&self, specifier: &ModuleSpecifier, source: ModuleSource) {
         self.0.borrow_mut().insert(specifier.clone(), source);
     }
@@ -159,6 +159,7 @@ impl RustyLoader {
     }
 
     #[cfg(feature = "url_import")]
+    #[inline(always)]
     async fn load_from_url(
         module_specifier: ModuleSpecifier,
         cache_provider: std::rc::Rc<Option<Box<dyn ModuleCacheProvider>>>,
@@ -177,12 +178,20 @@ impl RustyLoader {
                 let code = response.text().await?;
                 let code = transpiler::transpile(&module_specifier, &code)?;
 
-                Ok(ModuleSource::new(
+                let source = ModuleSource::new(
                     module_type,
                     ModuleSourceCode::String(code.into()),
                     &module_specifier,
                     None,
-                ))
+                );
+
+                cache_provider.map(|p| {
+                    p.set(
+                        &module_specifier,
+                        p.clone_source(&module_specifier, &source),
+                    )
+                });
+                Ok(source)
             }
         }
     }
@@ -207,12 +216,20 @@ impl RustyLoader {
                 let code = tokio::fs::read_to_string(path).await?;
                 let code = transpiler::transpile(&module_specifier, &code)?;
 
-                Ok(ModuleSource::new(
+                let source = ModuleSource::new(
                     module_type,
                     ModuleSourceCode::String(code.into()),
                     &module_specifier,
                     None,
-                ))
+                );
+
+                cache_provider.map(|p| {
+                    p.set(
+                        &module_specifier,
+                        p.clone_source(&module_specifier, &source),
+                    )
+                });
+                Ok(source)
             }
         }
     }

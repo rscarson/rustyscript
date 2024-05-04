@@ -1,7 +1,7 @@
 use crate::{
     ext,
     js_function::JsFunction,
-    module_loader::{DefaultModuleCacheProvider, ModuleCacheProvider, RustyLoader},
+    module_loader::{ModuleCacheProvider, RustyLoader},
     traits::{ToDefinedValue, ToModuleSpecifier, ToV8String},
     transpiler, Error, Module, ModuleHandle,
 };
@@ -36,7 +36,7 @@ impl Default for InnerRuntimeOptions {
             extensions: Default::default(),
             default_entrypoint: Default::default(),
             timeout: Duration::MAX,
-            module_cache: Some(Box::<DefaultModuleCacheProvider>::default()),
+            module_cache: None,
         }
     }
 }
