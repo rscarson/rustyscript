@@ -154,12 +154,6 @@ pub struct ConsoleSize {
     pub rows: u32,
 }
 
-pub fn console_size(std_file: &std::fs::File) -> Result<ConsoleSize, std::io::Error> {
-    use std::os::unix::io::AsRawFd;
-    let fd = std_file.as_raw_fd();
-    console_size_from_fd(fd)
-}
-
 fn console_size_from_fd(fd: std::os::unix::prelude::RawFd) -> Result<ConsoleSize, std::io::Error> {
     // SAFETY: libc calls
     unsafe {
