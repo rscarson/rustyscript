@@ -136,6 +136,7 @@ Please note that the `web` feature will also enable fs_import and url_import, al
 |console      |Provides `console.*` functionality from JS                                                         |yes               |deno_console                                                                     |
 |crypto       |Provides `crypto.*` functionality from JS                                                          |yes               |deno_crypto, deno_webidl                                                         |
 |url          |Provides the URL, and URLPattern APIs from within JS                                               |yes               |deno_webidl, deno_url                                                            |
+|io           |Provides IO primitives such as stdio streams and abstraction over File System files.               |**NO**            |deno_io, rustyline, winapi, nix, libc
 |web          |Provides the Event, TextEncoder, TextDecoder, File, Web Cryptography, and fetch APIs from within JS|**NO**            |deno_webidl, deno_web, deno_crypto, deno_fetch, deno_url, deno_net               |
 |             |                                                                                                   |                  |                                                                                 |
 |default      |Provides only those extensions that preserve sandboxing                                            |yes               |deno_console, deno_crypto, deno_webidl, deno_url                                 |
