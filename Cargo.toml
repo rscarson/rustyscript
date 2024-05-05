@@ -16,7 +16,7 @@ no_extensions = []
 all = ["web", "io"]
 
 webidl = ["deno_webidl"]
-io = ["deno_web", "deno_io", "rustyline", "winapi", "nix", "libc"]
+io = ["deno_web", "deno_io", "rustyline", "winapi", "nix", "libc", "once_cell"]
 url = ["deno_url", "webidl"]
 console = ["deno_console"]
 crypto = ["deno_crypto", "webidl", "web_stub"]
@@ -55,6 +55,7 @@ rustyline = {version = "=13.0.0", optional = true}
 winapi = {version = "=0.3.9", optional = true}
 nix = {version = "=0.26.2", optional = true}
 libc = {version = "0.2.126", optional = true}
+once_cell = {version = "1.19.0", optional = true}
 
 [[example]]
 name = "web_features"

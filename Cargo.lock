@@ -2692,6 +2692,7 @@ dependencies = [
  "deno_webidl",
  "libc",
  "nix 0.26.2",
+ "once_cell",
  "reqwest",
  "rustyline",
  "serde",
