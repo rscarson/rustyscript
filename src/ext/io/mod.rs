@@ -6,7 +6,7 @@ mod tty_windows;
 use tty_windows as tty;
 
 #[cfg(unix)]
-mod tty_unixy;
+mod tty_unix;
 #[cfg(unix)]
 use tty_unix as tty;
 
