@@ -110,18 +110,28 @@ impl ModuleLoader for RustyLoader {
             // Remote fetch imports
             #[cfg(feature = "url_import")]
             "https" | "http" => {
-                let future = Self::load_from_url(
+                let future = Self::load_external(
                     module_specifier.clone(),
                     Rc::clone(self.cache_provider.lock().unwrap().borrow()),
+                    |specifier| async {
+                        let response = reqwest::get(specifier).await?;
+                        Ok(response.text().await?)
+                    },
                 );
                 ModuleLoadResponse::Async(Box::pin(future))
             }
 
             // FS imports
             "file" => {
-                let future = Self::load_from_file(
+                let future = Self::load_external(
                     module_specifier.clone(),
                     Rc::clone(self.cache_provider.lock().unwrap().borrow()),
+                    |specifier| async move {
+                        let path = specifier
+                            .to_file_path()
+                            .map_err(|_| anyhow!("`{specifier}` is not a valid file URL."))?;
+                        Ok(tokio::fs::read_to_string(path).await?)
+                    },
                 );
                 ModuleLoadResponse::Async(Box::pin(future))
             }
@@ -158,12 +168,15 @@ impl RustyLoader {
         }
     }
 
-    #[cfg(feature = "url_import")]
-    #[inline(always)]
-    async fn load_from_url(
+    async fn load_external<F, Fut>(
         module_specifier: ModuleSpecifier,
         cache_provider: std::rc::Rc<Option<Box<dyn ModuleCacheProvider>>>,
-    ) -> Result<ModuleSource, deno_core::error::AnyError> {
+        handler: F,
+    ) -> Result<ModuleSource, deno_core::error::AnyError>
+    where
+        F: Fn(ModuleSpecifier) -> Fut,
+        Fut: std::future::Future<Output = Result<String, deno_core::error::AnyError>>,
+    {
         let cache_provider = cache_provider.as_ref().as_ref().map(|p| p.as_ref());
         match cache_provider.map(|p| p.get(&module_specifier)) {
             Some(Some(source)) => Ok(source),
@@ -174,8 +187,7 @@ impl RustyLoader {
                     ModuleType::JavaScript
                 };
 
-                let response = reqwest::get(module_specifier.as_str()).await?;
-                let code = response.text().await?;
+                let code = handler(module_specifier.clone()).await?;
                 let code = transpiler::transpile(&module_specifier, &code)?;
 
                 let source = ModuleSource::new(
@@ -195,42 +207,53 @@ impl RustyLoader {
             }
         }
     }
+}
 
-    async fn load_from_file(
-        module_specifier: ModuleSpecifier,
-        cache_provider: std::rc::Rc<Option<Box<dyn ModuleCacheProvider>>>,
-    ) -> Result<ModuleSource, deno_core::error::AnyError> {
-        let cache_provider = cache_provider.as_ref().as_ref().map(|p| p.as_ref());
-        match cache_provider.map(|p| p.get(&module_specifier)) {
-            Some(Some(source)) => Ok(source),
-            _ => {
-                let module_type = if module_specifier.path().ends_with(".json") {
-                    ModuleType::Json
+#[cfg(test)]
+mod test {
+    use super::*;
+    use crate::traits::ToModuleSpecifier;
+
+    #[tokio::test]
+    async fn test_loader() {
+        let cache_provider = MemoryModuleCacheProvider::default();
+        let specifier = "file:///test.ts".to_module_specifier().unwrap();
+        let source = ModuleSource::new(
+            ModuleType::JavaScript,
+            ModuleSourceCode::String("console.log('Hello, World!')".to_string().into()),
+            &specifier,
+            None,
+        );
+
+        cache_provider.set(&specifier, cache_provider.clone_source(&specifier, &source));
+        let cached_source = cache_provider
+            .get(&specifier)
+            .expect("Expected to get cached source");
+
+        let loader = RustyLoader::new(Some(Box::new(cache_provider)));
+        let response = loader.load(
+            &specifier,
+            None,
+            false,
+            deno_core::RequestedModuleType::None,
+        );
+        match response {
+            ModuleLoadResponse::Async(future) => {
+                let source = future.await.expect("Expected to get source");
+
+                let source = if let ModuleSourceCode::String(s) = source.code {
+                    s
                 } else {
-                    ModuleType::JavaScript
+                    panic!("Unexpected source code type");
                 };
-
-                let path = module_specifier.to_file_path().map_err(|_| {
-                    anyhow!("Provided module specifier \"{module_specifier}\" is not a file URL.")
-                })?;
-                let code = tokio::fs::read_to_string(path).await?;
-                let code = transpiler::transpile(&module_specifier, &code)?;
-
-                let source = ModuleSource::new(
-                    module_type,
-                    ModuleSourceCode::String(code.into()),
-                    &module_specifier,
-                    None,
-                );
-
-                cache_provider.map(|p| {
-                    p.set(
-                        &module_specifier,
-                        p.clone_source(&module_specifier, &source),
-                    )
-                });
-                Ok(source)
+                let cached_source = if let ModuleSourceCode::String(s) = cached_source.code {
+                    s
+                } else {
+                    panic!("Unexpected source code type");
+                };
+                assert_eq!(source, cached_source);
             }
+            _ => panic!("Unexpected response"),
         }
     }
 }
