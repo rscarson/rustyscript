@@ -197,12 +197,12 @@ impl RustyLoader {
                     None,
                 );
 
-                cache_provider.map(|p| {
+                if let Some(p) = cache_provider {
                     p.set(
                         &module_specifier,
                         p.clone_source(&module_specifier, &source),
-                    )
-                });
+                    );
+                }
                 Ok(source)
             }
         }
