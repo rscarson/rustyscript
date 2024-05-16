@@ -83,12 +83,20 @@ fn op_set_raw(state: &mut OpState, rid: u32, is_raw: bool, cbreak: bool) -> Resu
 
     let raw_fd = handle_or_fd;
 
+    fn wrap_fd<'a>(r: &'a ResourceTable, rd: RawFd) -> BorrowedFd<'a> {
+        match fd {
+            -1 => Err(anyhow!("bad file descriptor")),
+            _ => unsafe { BorrowedFd::borrow_raw(fd) },
+        }
+    }
+    let fd = wrap_fd(&state.resource_table, raw_fd)?;
+
     if is_raw {
         let mut raw = match previous_mode {
             Some(mode) => mode,
             None => {
                 // Save original mode.
-                let original_mode = termios::tcgetattr(raw_fd)?;
+                let original_mode = termios::tcgetattr(fd)?;
                 tty_mode_store.set(rid, original_mode.clone());
                 original_mode
             }
@@ -110,11 +118,11 @@ fn op_set_raw(state: &mut OpState, rid: u32, is_raw: bool, cbreak: bool) -> Resu
         }
         raw.control_chars[termios::SpecialCharacterIndices::VMIN as usize] = 1;
         raw.control_chars[termios::SpecialCharacterIndices::VTIME as usize] = 0;
-        termios::tcsetattr(raw_fd, termios::SetArg::TCSADRAIN, &raw)?;
+        termios::tcsetattr(fd, termios::SetArg::TCSADRAIN, &raw)?;
     } else {
         // Try restore saved mode.
         if let Some(mode) = tty_mode_store.take(rid) {
-            termios::tcsetattr(raw_fd, termios::SetArg::TCSADRAIN, &mode)?;
+            termios::tcsetattr(fd, termios::SetArg::TCSADRAIN, &mode)?;
         }
     }
 
@@ -177,7 +185,7 @@ pub fn op_read_line_prompt(
     let mut editor =
         Editor::<(), rustyline::history::DefaultHistory>::new().expect("Failed to create editor.");
 
-    editor.set_keyseq_timeout(1);
+    editor.set_keyseq_timeout(Some(1));
     editor.bind_sequence(KeyEvent(KeyCode::Esc, Modifiers::empty()), Cmd::Interrupt);
 
     let read_result = editor.readline_with_initial(prompt_text, (default_value, ""));
