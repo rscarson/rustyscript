@@ -86,13 +86,16 @@ fn op_set_raw(state: &mut OpState, rid: u32, is_raw: bool, cbreak: bool) -> Resu
     fn wrap_fd<'a>(
         r: &'a deno_core::ResourceTable,
         fd: std::os::fd::RawFd,
-    ) -> std::os::fd::BorrowedFd<'a> {
+    ) -> Option<std::os::fd::BorrowedFd<'a>> {
         match fd {
-            -1 => Err(anyhow!("bad file descriptor")),
-            _ => unsafe { std::os::fd::BorrowedFd::borrow_raw(fd) },
+            -1 => None,
+
+            // Safety: `fd` is validated upstream by deno_core, and the -1 case is handled above.
+            _ => Some(unsafe { std::os::fd::BorrowedFd::borrow_raw(fd) }),
         }
     }
-    let fd = wrap_fd(&state.resource_table, raw_fd)?;
+    let fd = wrap_fd(&state.resource_table, raw_fd)
+        .ok_or(deno_core::anyhow::anyhow!("bad file descriptor"))?;
 
     if is_raw {
         let mut raw = match previous_mode {
