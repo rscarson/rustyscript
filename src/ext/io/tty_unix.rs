@@ -83,7 +83,10 @@ fn op_set_raw(state: &mut OpState, rid: u32, is_raw: bool, cbreak: bool) -> Resu
 
     let raw_fd = handle_or_fd;
 
-    fn wrap_fd<'a>(r: &'a ResourceTable, fd: RawFd) -> std::os::fd::BorrowedFd<'a> {
+    fn wrap_fd<'a>(
+        r: &'a deno_core::ResourceTable,
+        fd: std::os::fd::RawFd,
+    ) -> std::os::fd::BorrowedFd<'a> {
         match fd {
             -1 => Err(anyhow!("bad file descriptor")),
             _ => unsafe { std::os::fd::BorrowedFd::borrow_raw(fd) },
