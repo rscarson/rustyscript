@@ -3,7 +3,7 @@ name = "rustyscript"
 description = "Effortless JS Integration for Rust"
 edition = "2021"
 license = "MIT OR Apache-2.0"
-version = "0.4.3"
+version = "0.4.4"
 repository = "https://github.com/rscarson/rustyscript"
 
 keywords = ["rust", "javascript", "deno", "runtime", "embedding"]
@@ -31,7 +31,7 @@ version-sync = "0.9.5"
 criterion = "0.5.1"
 
 [dependencies]
-deno_core = "0.278.0"
+deno_core = "0.280.0"
 deno_ast = { version = "0.38.1", features = ["transpiling"]}
 thiserror = "1.0.60"
 serde = "1.0.200"
@@ -41,19 +41,19 @@ tokio = "1.37.0"
 reqwest = { version = "0.12.4", optional = true, features = ["blocking"] }
 
 # Extension features
-deno_url = {version = "0.149.0", optional = true}
-deno_webidl = {version = "0.149.0", optional = true}
-deno_console = {version = "0.149.0", optional = true}
-deno_crypto = {version = "0.163.0", optional = true}
-deno_fetch = {version = "0.173.0", optional = true}
-deno_web = {version = "0.180.0", optional = true}
-deno_net = {version = "0.141.0", optional = true}
+deno_url = {version = "0.151.0", optional = true}
+deno_webidl = {version = "0.151.0", optional = true}
+deno_console = {version = "0.151.0", optional = true}
+deno_crypto = {version = "0.165.0", optional = true}
+deno_fetch = {version = "0.175.0", optional = true}
+deno_web = {version = "0.182.0", optional = true}
+deno_net = {version = "0.143.0", optional = true}
 
 # io feature deps
-deno_io = {version = "0.59.0", optional = true}
+deno_io = {version = "0.61.0", optional = true}
 rustyline = {version = "=14.0.0", optional = true}
 winapi = {version = "=0.3.9", optional = true}
-nix = {version = "=0.27.1", optional = true}
+nix = {version = "=0.28.0", optional = true}
 libc = {version = "0.2.154", optional = true}
 once_cell = {version = "1.19.0", optional = true}
 
