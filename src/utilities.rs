@@ -131,7 +131,7 @@ mod test_runtime {
     #[test]
     fn test_evaluate() {
         assert_eq!(5, evaluate::<i64>("3 + 2").expect("invalid expression"));
-        evaluate::<i64>("5; 3 + 2").expect_err("invalid expression");
+        evaluate::<i64>("5").expect_err("invalid expression");
     }
 
     #[test]
