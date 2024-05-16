@@ -151,6 +151,27 @@ impl InnerRuntime {
         Ok(deno_core::serde_v8::from_v8(&mut scope, value)?)
     }
 
+    /// Evaluate a piece of non-ECMAScript-module JavaScript code
+    /// The expression is evaluated in the global context, so changes persist
+    ///
+    /// # Arguments
+    /// * `expr` - A string representing the JavaScript expression to evaluate
+    ///
+    /// # Returns
+    /// A `Result` containing the deserialized result of the expression (`T`)
+    /// or an error (`Error`) if the expression cannot be evaluated or if the
+    /// result cannot be deserialized.
+    pub fn eval<T>(&mut self, expr: &str) -> Result<T, Error>
+    where
+        T: serde::de::DeserializeOwned,
+    {
+        let result = self.deno_runtime().execute_script("", expr.to_string())?;
+
+        let mut scope = self.deno_runtime.handle_scope();
+        let result = v8::Local::new(&mut scope, result);
+        Ok(deno_core::serde_v8::from_v8(&mut scope, result)?)
+    }
+
     /// Calls a stored javascript function and deserializes its return value.
     ///
     /// # Arguments

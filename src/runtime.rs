@@ -194,6 +194,36 @@ impl Runtime {
         self.0.register_function(name, callback)
     }
 
+    /// Evaluate a piece of non-ECMAScript-module JavaScript code
+    /// The expression is evaluated in the global context, so changes persist
+    ///
+    /// # Arguments
+    /// * `expr` - A string representing the JavaScript expression to evaluate
+    ///
+    /// # Returns
+    /// A `Result` containing the deserialized result of the expression (`T`)
+    /// or an error (`Error`) if the expression cannot be evaluated or if the
+    /// result cannot be deserialized.
+    ///
+    /// # Example
+    /// ```rust
+    /// use rustyscript::{ Runtime, Error };
+    ///
+    /// # fn main() -> Result<(), Error> {
+    /// let mut runtime = Runtime::new(Default::default())?;
+    /// let value:
+    ///    usize = runtime.eval("2 + 2")?;
+    /// assert_eq!(4, value);
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub fn eval<T>(&mut self, expr: &str) -> Result<T, Error>
+    where
+        T: serde::de::DeserializeOwned,
+    {
+        self.0.eval(expr)
+    }
+
     /// Calls a stored javascript function and deserializes its return value.
     ///
     /// # Arguments

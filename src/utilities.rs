@@ -1,7 +1,9 @@
 use crate::traits::ToModuleSpecifier;
 use crate::{Error, Module, ModuleWrapper, Runtime};
 
-/// Execute a single JS expression
+/// Evaluate a piece of non-ECMAScript-module JavaScript code
+/// Effects on the global scope will not persist
+/// For a persistant variant, see [Runtime::eval]
 ///
 /// # Arguments
 /// * `javascript` - A single javascript expression
@@ -20,19 +22,8 @@ pub fn evaluate<T>(javascript: &str) -> Result<T, Error>
 where
     T: deno_core::serde::de::DeserializeOwned,
 {
-    let module = Module::new(
-        "js_eval.js",
-        &format!(
-            "
-        export function rustyscript_evaluate(){{
-            return ({javascript});
-        }}
-    "
-        ),
-    );
     let mut runtime = Runtime::new(Default::default())?;
-    let module = runtime.load_modules(&module, vec![])?;
-    runtime.call_function(&module, "rustyscript_evaluate", Runtime::EMPTY_ARGS)
+    runtime.eval(javascript)
 }
 
 /// Validates the syntax of some JS
@@ -55,6 +46,7 @@ pub fn validate(javascript: &str) -> Result<bool, Error> {
     match runtime.load_modules(&module, vec![]) {
         Ok(_) => Ok(true),
         Err(Error::Runtime(_)) => Ok(false),
+        Err(Error::JsError(_)) => Ok(false),
         Err(e) => Err(e),
     }
 }

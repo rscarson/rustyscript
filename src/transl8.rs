@@ -5,27 +5,11 @@
 //! Type-safety is enforced using special struct names for each "magic type".
 //! Memory-safety relies on transerialized values being "pinned" during de/serialization.
 
-use deno_core::v8;
-
 pub(crate) const MAGIC_FIELD: &str = "$__v8_magic_field";
 
 pub(crate) trait MagicType {
     const NAME: &'static str;
     const MAGIC_NAME: &'static str;
-}
-
-pub(crate) trait ToV8 {
-    fn to_v8<'a>(
-        &mut self,
-        scope: &mut v8::HandleScope<'a>,
-    ) -> Result<v8::Local<'a, v8::Value>, crate::Error>;
-}
-
-pub(crate) trait FromV8: Sized {
-    fn from_v8(
-        scope: &mut v8::HandleScope,
-        value: v8::Local<v8::Value>,
-    ) -> Result<Self, crate::Error>;
 }
 
 pub(crate) fn magic_serialize<T, S>(serializer: S, x: &T) -> Result<S::Ok, S::Error>
