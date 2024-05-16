@@ -17,7 +17,7 @@ fn main() -> Result<(), Error> {
     );
 
     // Or ensure a given export is a function
-    assert_eq!(module.is_callable("addBook"), true);
+    assert!(module.is_callable("addBook"));
 
     // We can grab constants
     let value: String = module.get("MY_FAVOURITE_FOOD")?;

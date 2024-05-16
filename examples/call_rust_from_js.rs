@@ -11,7 +11,7 @@ fn main() -> Result<(), Error> {
     // Let's get a new runtime and register a rust callback
     let mut runtime = Runtime::new(Default::default())?;
     runtime.register_function("setValue", |args, state| {
-        if let Some(value) = args.get(0) {
+        if let Some(value) = args.first() {
             let value: String = serde_json::from_value(value.clone())?;
             state.put(value);
         }

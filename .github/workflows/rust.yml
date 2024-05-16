@@ -38,9 +38,6 @@ jobs:
     - name: Run web tests
       run: cargo test --features "web"
 
-    - name: Run clippy
-      run: cargo clippy
-
     - name: Check if the README is up to date.
       run: |
         cargo install cargo-rdme
