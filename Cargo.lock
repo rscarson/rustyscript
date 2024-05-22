@@ -951,9 +951,9 @@ dependencies = [
 
 [[package]]
 name = "deno_webidl"
-version = "0.151.0"
+version = "0.153.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4ffa30c6acba42d8a4d952514bbb7b5d247b9c900fa1fd82ce9084c32f640827"
+checksum = "0fb812944890c465c065ae1455904ce13b1d37696e797172dfb5a076972f180c"
 dependencies = [
  "deno_core",
 ]
