@@ -752,9 +752,9 @@ checksum = "a13951ea98c0a4c372f162d669193b4c9d991512de9f2381dd161027f34b26b1"
 
 [[package]]
 name = "deno_crypto"
-version = "0.165.0"
+version = "0.167.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f399d4bd84b014f5dcf9f0ceda39d7fc5624c732fb2c71f93dea4af2b5daa706"
+checksum = "1403655527cb7de76ef5260ac6c44306e0008838acd0485280446accef9c7ab6"
 dependencies = [
  "aes",
  "aes-gcm",
@@ -765,7 +765,7 @@ dependencies = [
  "ctr",
  "curve25519-dalek",
  "deno_core",
- "deno_web",
+ "deno_web 0.184.0",
  "elliptic-curve",
  "num-traits",
  "once_cell",
@@ -781,7 +781,6 @@ dependencies = [
  "sha2",
  "signature",
  "spki",
- "tokio",
  "uuid",
  "x25519-dalek",
 ]
@@ -947,6 +946,24 @@ dependencies = [
  "tokio",
  "uuid",
  "windows-sys 0.48.0",
+]
+
+[[package]]
+name = "deno_web"
+version = "0.184.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b383f260fcf394a0f4a19b6973a5fd19af31d8775d473a86005d18bde88f1df0"
+dependencies = [
+ "async-trait",
+ "base64-simd 0.8.0",
+ "bytes",
+ "deno_core",
+ "encoding_rs",
+ "flate2",
+ "futures",
+ "serde",
+ "tokio",
+ "uuid",
 ]
 
 [[package]]
@@ -2832,7 +2849,7 @@ dependencies = [
  "deno_io",
  "deno_net",
  "deno_url",
- "deno_web",
+ "deno_web 0.182.0",
  "deno_webidl",
  "libc",
  "nix",
