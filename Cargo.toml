@@ -34,7 +34,7 @@ criterion = "0.5.1"
 deno_core = "0.283.0"
 deno_ast = { version = "0.38.2", features = ["transpiling"]}
 thiserror = "1.0.60"
-serde = "1.0.202"
+serde = "1.0.203"
 tokio = "1.37.0"
 
 # For URL imports
