@@ -3,11 +3,10 @@ use crate::{
     js_function::JsFunction,
     module_loader::{ModuleCacheProvider, RustyLoader},
     traits::{ToDefinedValue, ToModuleSpecifier, ToV8String},
-    transpiler, Error, Module, ModuleHandle,
+    transpiler::{self, transpile_extension},
+    Error, Module, ModuleHandle,
 };
-use deno_core::{
-    serde_json, v8, Extension, JsRuntime, OpState, PollEventLoopOptions, RuntimeOptions,
-};
+use deno_core::{serde_json, v8, JsRuntime, OpState, PollEventLoopOptions, RuntimeOptions};
 use std::{collections::HashMap, rc::Rc, time::Duration};
 
 /// Callback type for rust callback functions
@@ -49,10 +48,18 @@ pub struct InnerRuntime {
 }
 impl InnerRuntime {
     pub fn new(options: InnerRuntimeOptions) -> Self {
+        let loader = Rc::new(RustyLoader::new(options.module_cache));
         Self {
             deno_runtime: JsRuntime::new(RuntimeOptions {
-                extensions: InnerRuntime::all_extensions(options.extensions),
-                module_loader: Some(Rc::new(RustyLoader::new(options.module_cache))),
+                extensions: ext::all_extensions(options.extensions),
+                module_loader: Some(loader.clone()),
+
+                extension_transpiler: Some(Rc::new(|specifier, code| {
+                    transpile_extension(specifier, code)
+                })),
+
+                source_map_getter: Some(loader),
+
                 ..Default::default()
             }),
             options: InnerRuntimeOptions {
@@ -61,24 +68,6 @@ impl InnerRuntime {
                 ..Default::default()
             },
         }
-    }
-
-    ///
-    /// Add up all required extensions
-    fn all_extensions(user_extensions: Vec<Extension>) -> Vec<Extension> {
-        let mut extensions = ext::all_extensions(user_extensions);
-
-        // Transpilation step
-        for extension in &mut extensions {
-            for source in extension.esm_files.to_mut() {
-                transpiler::transpile_extension(source).expect("could not load extension");
-            }
-            for source in extension.js_files.to_mut() {
-                transpiler::transpile_extension(source).expect("could not load extension");
-            }
-        }
-
-        extensions
     }
 
     /// Access the underlying deno runtime instance directly
@@ -478,13 +467,12 @@ impl InnerRuntime {
                 // Get additional modules first
                 for side_module in side_modules {
                     let module_specifier = side_module.filename().to_module_specifier()?;
-                    let code = transpiler::transpile(&module_specifier, side_module.contents())?;
+                    let (code, _) =
+                        transpiler::transpile(&module_specifier, side_module.contents())?;
+                    let code = deno_core::FastString::from(code);
 
                     let s_modid = deno_runtime
-                        .load_side_es_module_from_code(
-                            &module_specifier,
-                            deno_core::FastString::from(code),
-                        )
+                        .load_side_es_module_from_code(&module_specifier, code)
                         .await?;
                     let result = deno_runtime.mod_evaluate(s_modid);
                     deno_runtime
@@ -497,13 +485,11 @@ impl InnerRuntime {
                 // Load main module
                 if let Some(module) = main_module {
                     let module_specifier = module.filename().to_module_specifier()?;
-                    let code = transpiler::transpile(&module_specifier, module.contents())?;
+                    let (code, _) = transpiler::transpile(&module_specifier, module.contents())?;
+                    let code = deno_core::FastString::from(code);
 
                     let module_id = deno_runtime
-                        .load_main_es_module_from_code(
-                            &module_specifier,
-                            deno_core::FastString::from(code),
-                        )
+                        .load_main_es_module_from_code(&module_specifier, code)
                         .await?;
 
                     // Finish execution

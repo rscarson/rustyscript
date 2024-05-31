@@ -1,15 +1,15 @@
 use crate::transpiler;
 use deno_core::{
     anyhow::{self, anyhow},
+    futures::FutureExt,
     ModuleCodeBytes, ModuleLoadResponse, ModuleLoader, ModuleSource, ModuleSourceCode,
-    ModuleSpecifier, ModuleType,
+    ModuleSpecifier, ModuleType, SourceMapGetter,
 };
 use std::{
-    borrow::Borrow,
     cell::RefCell,
     collections::{HashMap, HashSet},
     rc::Rc,
-    sync::Mutex,
+    sync::Arc,
 };
 
 /// Module cache provider trait
@@ -50,9 +50,86 @@ impl ModuleCacheProvider for MemoryModuleCacheProvider {
     }
 }
 
+type SourceMapCache = HashMap<String, (String, Vec<u8>)>;
+
+#[derive(Clone)]
+struct InnerRustyLoader {
+    cache_provider: Arc<Option<Box<dyn ModuleCacheProvider>>>,
+    fs_whlist: Arc<RefCell<HashSet<String>>>,
+    source_map_cache: Arc<RefCell<SourceMapCache>>,
+}
+
+impl InnerRustyLoader {
+    fn new(cache_provider: Option<Box<dyn ModuleCacheProvider>>) -> Self {
+        Self {
+            cache_provider: Arc::new(cache_provider),
+            fs_whlist: Arc::new(RefCell::new(HashSet::new())),
+            source_map_cache: Arc::new(RefCell::new(SourceMapCache::new())),
+        }
+    }
+
+    fn whitelist_add(&self, specifier: &str) {
+        self.fs_whlist.borrow_mut().insert(specifier.to_string());
+    }
+
+    fn whitelist_has(&self, specifier: &str) -> bool {
+        self.fs_whlist.borrow_mut().contains(specifier)
+    }
+
+    async fn load<F, Fut>(
+        &self,
+        module_specifier: ModuleSpecifier,
+        handler: F,
+    ) -> Result<ModuleSource, deno_core::error::AnyError>
+    where
+        F: Fn(ModuleSpecifier) -> Fut,
+        Fut: std::future::Future<Output = Result<String, deno_core::error::AnyError>>,
+    {
+        let cache_provider = self.cache_provider.clone();
+        let cache_provider = cache_provider.as_ref().as_ref().map(|p| p.as_ref());
+        match cache_provider.map(|p| p.get(&module_specifier)) {
+            Some(Some(source)) => Ok(source),
+            _ => {
+                let module_type = if module_specifier.path().ends_with(".json") {
+                    ModuleType::Json
+                } else {
+                    ModuleType::JavaScript
+                };
+
+                let code = handler(module_specifier.clone()).await?;
+                let (tcode, source_map) = transpiler::transpile(&module_specifier, &code)?;
+
+                let source = ModuleSource::new(
+                    module_type,
+                    ModuleSourceCode::String(tcode.into()),
+                    &module_specifier,
+                    None,
+                );
+
+                if let Some(source_map) = source_map {
+                    self.source_map_cache
+                        .borrow_mut()
+                        .insert(module_specifier.to_string(), (code, source_map.to_vec()));
+                }
+
+                if let Some(p) = cache_provider {
+                    p.set(
+                        &module_specifier,
+                        p.clone_source(&module_specifier, &source),
+                    );
+                }
+                Ok(source)
+            }
+        }
+    }
+
+    fn source_map_cache(&self) -> Arc<RefCell<SourceMapCache>> {
+        self.source_map_cache.clone()
+    }
+}
+
 pub struct RustyLoader {
-    fs_whlist: Mutex<HashSet<String>>,
-    cache_provider: Mutex<Rc<Option<Box<dyn ModuleCacheProvider>>>>,
+    inner: Rc<InnerRustyLoader>,
 }
 #[allow(unreachable_code)]
 impl ModuleLoader for RustyLoader {
@@ -105,36 +182,38 @@ impl ModuleLoader for RustyLoader {
         _is_dyn_import: bool,
         _requested_module_type: deno_core::RequestedModuleType,
     ) -> deno_core::ModuleLoadResponse {
+        let inner = self.inner.clone();
+        let module_specifier = module_specifier.clone();
         // We check permissions first
         match module_specifier.scheme() {
             // Remote fetch imports
             #[cfg(feature = "url_import")]
-            "https" | "http" => {
-                let future = Self::load_external(
-                    module_specifier.clone(),
-                    Rc::clone(self.cache_provider.lock().unwrap().borrow()),
-                    |specifier| async {
-                        let response = reqwest::get(specifier).await?;
-                        Ok(response.text().await?)
-                    },
-                );
-                ModuleLoadResponse::Async(Box::pin(future))
-            }
+            "https" | "http" => ModuleLoadResponse::Async(
+                async move {
+                    inner
+                        .load(module_specifier, |specifier| async move {
+                            let response = reqwest::get(specifier).await?;
+                            Ok(response.text().await?)
+                        })
+                        .await
+                }
+                .boxed_local(),
+            ),
 
             // FS imports
-            "file" => {
-                let future = Self::load_external(
-                    module_specifier.clone(),
-                    Rc::clone(self.cache_provider.lock().unwrap().borrow()),
-                    |specifier| async move {
-                        let path = specifier
-                            .to_file_path()
-                            .map_err(|_| anyhow!("`{specifier}` is not a valid file URL."))?;
-                        Ok(tokio::fs::read_to_string(path).await?)
-                    },
-                );
-                ModuleLoadResponse::Async(Box::pin(future))
-            }
+            "file" => ModuleLoadResponse::Async(
+                async move {
+                    inner
+                        .load(module_specifier, |specifier| async move {
+                            let path = specifier
+                                .to_file_path()
+                                .map_err(|_| anyhow!("`{specifier}` is not a valid file URL."))?;
+                            Ok(tokio::fs::read_to_string(path).await?)
+                        })
+                        .await
+                }
+                .boxed_local(),
+            ),
 
             _ => ModuleLoadResponse::Sync(Err(anyhow!(
                 "{} imports are not allowed here: {}",
@@ -149,63 +228,38 @@ impl ModuleLoader for RustyLoader {
 impl RustyLoader {
     pub fn new(cache_provider: Option<Box<dyn ModuleCacheProvider>>) -> Self {
         Self {
-            fs_whlist: Mutex::new(Default::default()),
-            cache_provider: Mutex::new(Rc::new(cache_provider)),
+            inner: Rc::new(InnerRustyLoader::new(cache_provider)),
         }
     }
 
     pub fn whitelist_add(&self, specifier: &str) {
-        if let Ok(mut whitelist) = self.fs_whlist.lock() {
-            whitelist.insert(specifier.to_string());
-        }
+        self.inner.whitelist_add(specifier);
     }
 
     pub fn whitelist_has(&self, specifier: &str) -> bool {
-        if let Ok(whitelist) = self.fs_whlist.lock() {
-            whitelist.contains(specifier)
-        } else {
-            false
-        }
+        self.inner.whitelist_has(specifier)
+    }
+}
+
+impl SourceMapGetter for RustyLoader {
+    fn get_source_map(&self, file_name: &str) -> Option<Vec<u8>> {
+        self.inner
+            .source_map_cache()
+            .borrow()
+            .get(file_name)
+            .map(|(_, map)| map.to_vec())
     }
 
-    async fn load_external<F, Fut>(
-        module_specifier: ModuleSpecifier,
-        cache_provider: std::rc::Rc<Option<Box<dyn ModuleCacheProvider>>>,
-        handler: F,
-    ) -> Result<ModuleSource, deno_core::error::AnyError>
-    where
-        F: Fn(ModuleSpecifier) -> Fut,
-        Fut: std::future::Future<Output = Result<String, deno_core::error::AnyError>>,
-    {
-        let cache_provider = cache_provider.as_ref().as_ref().map(|p| p.as_ref());
-        match cache_provider.map(|p| p.get(&module_specifier)) {
-            Some(Some(source)) => Ok(source),
-            _ => {
-                let module_type = if module_specifier.path().ends_with(".json") {
-                    ModuleType::Json
-                } else {
-                    ModuleType::JavaScript
-                };
-
-                let code = handler(module_specifier.clone()).await?;
-                let code = transpiler::transpile(&module_specifier, &code)?;
-
-                let source = ModuleSource::new(
-                    module_type,
-                    ModuleSourceCode::String(code.into()),
-                    &module_specifier,
-                    None,
-                );
-
-                if let Some(p) = cache_provider {
-                    p.set(
-                        &module_specifier,
-                        p.clone_source(&module_specifier, &source),
-                    );
-                }
-                Ok(source)
-            }
+    fn get_source_line(&self, file_name: &str, line_number: usize) -> Option<String> {
+        let map = self.inner.source_map_cache();
+        let map = map.borrow();
+        let code = map.get(file_name).map(|(c, _)| c)?;
+        let lines: Vec<&str> = code.split('\n').collect();
+        if line_number >= lines.len() {
+            return None;
         }
+
+        Some(lines[line_number].to_string())
     }
 }
 
