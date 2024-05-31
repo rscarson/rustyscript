@@ -3,7 +3,7 @@ use deno_core::{
     anyhow::{self, anyhow},
     futures::FutureExt,
     ModuleCodeBytes, ModuleLoadResponse, ModuleLoader, ModuleSource, ModuleSourceCode,
-    ModuleSpecifier, ModuleType, SourceMapGetter,
+    ModuleSpecifier, ModuleType, SourceCodeCacheInfo, SourceMapGetter,
 };
 use std::{
     cell::RefCell,
@@ -30,7 +30,10 @@ pub trait ModuleCacheProvider {
                 }
             },
             specifier,
-            source.code_cache.clone(),
+            source.code_cache.as_ref().map(|c| SourceCodeCacheInfo {
+                hash: c.hash.clone(),
+                data: c.data.clone(),
+            }),
         )
     }
 }

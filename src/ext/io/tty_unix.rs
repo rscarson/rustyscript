@@ -84,7 +84,7 @@ fn op_set_raw(state: &mut OpState, rid: u32, is_raw: bool, cbreak: bool) -> Resu
     let raw_fd = handle_or_fd;
 
     fn wrap_fd<'a>(
-        r: &'a deno_core::ResourceTable,
+        _r: &'a deno_core::ResourceTable,
         fd: std::os::fd::RawFd,
     ) -> Option<std::os::fd::BorrowedFd<'a>> {
         match fd {
