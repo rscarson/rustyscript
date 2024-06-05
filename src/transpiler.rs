@@ -43,9 +43,11 @@ pub fn transpile(module_specifier: &ModuleSpecifier, code: &str) -> Result<Modul
     let should_transpile = should_transpile(&media_type);
 
     let code = if should_transpile {
+        let sti = SourceTextInfo::from_string(code.to_string());
+        let text = sti.text();
         let parsed = deno_ast::parse_module(ParseParams {
             specifier: module_specifier.clone(),
-            text_info: SourceTextInfo::from_string(code.to_string()),
+            text,
             media_type,
             capture_tokens: false,
             scope_analysis: false,
@@ -57,7 +59,7 @@ pub fn transpile(module_specifier: &ModuleSpecifier, code: &str) -> Result<Modul
         };
 
         let emit_options = deno_ast::EmitOptions {
-            keep_comments: true,
+            remove_comments: false,
             source_map: deno_ast::SourceMapOption::Separate,
             inline_sources: false,
             ..Default::default()
@@ -66,8 +68,11 @@ pub fn transpile(module_specifier: &ModuleSpecifier, code: &str) -> Result<Modul
             .transpile(&transpile_options, &emit_options)?
             .into_source();
 
-        let text = res.text;
-        let source_map: Option<SourceMapData> = res.source_map.map(|sm| sm.into_bytes().into());
+        let text = res.source;
+        // Convert utf8 bytes to a string
+        let text = String::from_utf8(text)?;
+
+        let source_map: Option<SourceMapData> = res.source_map.map(|sm| sm.into());
 
         (text, source_map)
     } else {
