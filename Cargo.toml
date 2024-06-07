@@ -31,7 +31,7 @@ version-sync = "0.9.5"
 criterion = "0.5.1"
 
 [dependencies]
-deno_core = "0.284.0"
+deno_core = "0.285.0"
 deno_ast = { version = "0.39.0", features = ["transpiling"]}
 thiserror = "1.0.61"
 serde = "1.0.203"
