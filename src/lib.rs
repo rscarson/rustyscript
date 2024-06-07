@@ -172,6 +172,8 @@ mod traits;
 mod transpiler;
 mod utilities;
 
+pub mod worker;
+
 // Expose a few dependencies that could be useful
 pub use deno_core;
 pub use deno_core::serde_json;
