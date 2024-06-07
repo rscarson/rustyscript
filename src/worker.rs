@@ -229,3 +229,119 @@ where
     /// ```
     fn thread(runtime: Self::Runtime, rx: Receiver<Self::Query>, tx: Sender<Self::Response>);
 }
+
+/// A worker implementation that uses the default runtime
+/// This is the simplest way to use the worker, as it requires no additional setup
+/// It attempts to provide as much functionality as possible from the standard runtime
+///
+/// Please note that it uses serde_json::Value for queries and responses, which comes with a performance cost
+/// For a more performant worker, or to use extensions and/or loader caches, you'll need to implement your own worker
+pub struct DefaultWorker(Worker<DefaultWorker>);
+impl InnerWorker for DefaultWorker {
+    type Runtime = crate::Runtime;
+    type RuntimeOptions = DefaultWorkerOptions;
+    type Query = DefaultWorkerQuery;
+    type Response = DefaultWorkerResponse;
+
+    fn init_runtime(options: Self::RuntimeOptions) -> Result<Self::Runtime, Error> {
+        crate::Runtime::new(crate::RuntimeOptions {
+            default_entrypoint: options.default_entrypoint,
+            timeout: options.timeout,
+            ..Default::default()
+        })
+    }
+
+    fn thread(mut runtime: Self::Runtime, rx: Receiver<Self::Query>, tx: Sender<Self::Response>) {
+        loop {
+            let msg = match rx.recv() {
+                Ok(msg) => msg,
+                Err(_) => break,
+            };
+
+            match msg {
+                DefaultWorkerQuery::Stop => {
+                    tx.send(Self::Response::Ok(())).unwrap();
+                    break;
+                }
+
+                DefaultWorkerQuery::RegisterFunction(name, func) => {
+                    match runtime.register_function(&name, func) {
+                        Ok(_) => tx.send(Self::Response::Ok(())).unwrap(),
+                        Err(e) => tx.send(Self::Response::Error(e)).unwrap(),
+                    }
+                }
+
+                DefaultWorkerQuery::Eval(code) => match runtime.eval(&code) {
+                    Ok(v) => tx.send(Self::Response::Value(v)).unwrap(),
+                    Err(e) => tx.send(Self::Response::Error(e)).unwrap(),
+                },
+            }
+        }
+    }
+}
+impl DefaultWorker {
+    /// Create a new worker instance
+    pub fn new(options: DefaultWorkerOptions) -> Result<Self, Error> {
+        Worker::new(options).map(Self)
+    }
+
+    /// Stop the worker and wait for it to finish
+    /// Consumes the worker and returns an error if the worker panicked
+    pub fn stop(self) -> Result<(), Error> {
+        self.0.send(DefaultWorkerQuery::Stop)?;
+        self.0.join()
+    }
+
+    /// Register a rust function with the worker
+    /// This function will be callable from javascript
+    pub fn register_function(&self, name: String, func: crate::RsFunction) -> Result<(), Error> {
+        self.0
+            .send_and_await(DefaultWorkerQuery::RegisterFunction(name, func))?;
+        Ok(())
+    }
+
+    /// Evaluate a string of javascript code
+    /// Returns the result of the evaluation
+    pub fn eval(&self, code: String) -> Result<crate::serde_json::Value, Error> {
+        match self.0.send_and_await(DefaultWorkerQuery::Eval(code))? {
+            DefaultWorkerResponse::Value(v) => Ok(v),
+            DefaultWorkerResponse::Error(e) => Err(e),
+            _ => Err(Error::Runtime(
+                "Unexpected response from the worker".to_string(),
+            )),
+        }
+    }
+}
+
+/// Options for the default worker
+pub struct DefaultWorkerOptions {
+    /// The default entrypoint function to use if none is registered
+    pub default_entrypoint: Option<String>,
+
+    /// The timeout to use for the runtime
+    pub timeout: std::time::Duration,
+}
+
+/// Query types for the default worker
+pub enum DefaultWorkerQuery {
+    /// Stops the worker
+    Stop,
+
+    /// Registers a function with the worker
+    RegisterFunction(String, crate::RsFunction),
+
+    /// Evaluates a string of javascript code
+    Eval(String),
+}
+
+/// Response types for the default worker
+pub enum DefaultWorkerResponse {
+    /// A successful response with a value
+    Value(crate::serde_json::Value),
+
+    /// A successful response with no value
+    Ok(()),
+
+    /// An error response
+    Error(Error),
+}
