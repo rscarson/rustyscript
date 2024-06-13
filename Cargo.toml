@@ -60,7 +60,7 @@ deno_net = {version = "0.148.0", optional = true}
 deno_io = {version = "0.66.0", optional = true}
 rustyline = {version = "=14.0.0", optional = true}
 winapi = {version = "=0.3.9", optional = true}
-nix = {version = "=0.28.0", optional = true}
+nix = {version = "=0.29.0", optional = true}
 libc = {version = "0.2.155", optional = true}
 once_cell = {version = "1.19.0", optional = true}
 
