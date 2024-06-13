@@ -10,7 +10,11 @@
 //!         timeout: Duration::from_secs(5),
 //!     })?;
 //!
-//!     worker.register_function("add".to_string(), |a: i32, b: i32| a + b)?;
+//!     worker.register_function("add".to_string(), |args, _state| {
+//!         let a = args[0].as_i64().unwrap();
+//!         let b = args[1].as_i64().unwrap();
+//!         Ok(a + b)
+//!     })?;
 //!     let result: i32 = worker.eval("add(5, 5)".to_string())?;
 //!     assert_eq!(result, 10);
 //!     Ok(())
