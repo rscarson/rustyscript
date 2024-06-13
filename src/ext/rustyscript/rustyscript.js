@@ -1,7 +1,7 @@
 // Loaders used by other extensions
 const ObjectProperties = {
     'nonEnumerable': {writable: true, enumerable: false, configurable: true},
-    'readOnly': {writable: true, enumerable: false, configurable: true},
+    'readOnly': {writable: false, enumerable: false, configurable: true},
     'writeable': {writable: true, enumerable: true, configurable: true},
     'getterOnly': {enumerable: true, configurable: true},
 

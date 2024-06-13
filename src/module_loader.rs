@@ -9,7 +9,6 @@ use std::{
     cell::RefCell,
     collections::{HashMap, HashSet},
     rc::Rc,
-    sync::Arc,
 };
 
 /// Module cache provider trait
@@ -31,7 +30,7 @@ pub trait ModuleCacheProvider {
             },
             specifier,
             source.code_cache.as_ref().map(|c| SourceCodeCacheInfo {
-                hash: c.hash.clone(),
+                hash: c.hash,
                 data: c.data.clone(),
             }),
         )
@@ -57,17 +56,17 @@ type SourceMapCache = HashMap<String, (String, Vec<u8>)>;
 
 #[derive(Clone)]
 struct InnerRustyLoader {
-    cache_provider: Arc<Option<Box<dyn ModuleCacheProvider>>>,
-    fs_whlist: Arc<RefCell<HashSet<String>>>,
-    source_map_cache: Arc<RefCell<SourceMapCache>>,
+    cache_provider: Rc<Option<Box<dyn ModuleCacheProvider>>>,
+    fs_whlist: Rc<RefCell<HashSet<String>>>,
+    source_map_cache: Rc<RefCell<SourceMapCache>>,
 }
 
 impl InnerRustyLoader {
     fn new(cache_provider: Option<Box<dyn ModuleCacheProvider>>) -> Self {
         Self {
-            cache_provider: Arc::new(cache_provider),
-            fs_whlist: Arc::new(RefCell::new(HashSet::new())),
-            source_map_cache: Arc::new(RefCell::new(SourceMapCache::new())),
+            cache_provider: Rc::new(cache_provider),
+            fs_whlist: Rc::new(RefCell::new(HashSet::new())),
+            source_map_cache: Rc::new(RefCell::new(SourceMapCache::new())),
         }
     }
 
@@ -126,7 +125,7 @@ impl InnerRustyLoader {
         }
     }
 
-    fn source_map_cache(&self) -> Arc<RefCell<SourceMapCache>> {
+    fn source_map_cache(&self) -> Rc<RefCell<SourceMapCache>> {
         self.source_map_cache.clone()
     }
 }

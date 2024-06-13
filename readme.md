@@ -118,14 +118,38 @@ The 'state' parameter can be used to persist data - please see the `call_rust_fr
 
 ----
 
-#### Utility Functions
+A threaded worker can be used to run code in a separate thread, or to allow multiple concurrent runtimes.
+
+the `worker` module provides a simple interface to create and interact with workers.
+The `InnerWorker` trait can be implemented to provide custom worker behavior.
+
+It also provides a default worker implementation that can be used without any additional setup:
+```rust
+use rustyscript::{Error, Worker, DefaultWorker, DefaultWorkerOptions};
+use std::time::Duration;
+
+fn main() -> Result<(), Error> {
+    let worker = DefaultWorker::new(DefaultWorkerOptions {
+        default_entrypoint: None,
+        timeout: Duration::from_secs(5),
+    })?;
+
+    worker.register_function("add".to_string(), |a: i32, b: i32| a + b)?;
+    let result: i32 = worker.eval("add(5, 5)".to_string())?;
+    assert_eq!(result, 10);
+    Ok(())
+}
+
+----
+
+# Utility Functions
 These functions provide simple one-liner access to common features of this crate:
 - evaluate; Evaluate a single JS expression and return the resulting value
 - import; Get a handle to a JS module from which you can get exported values and functions
 - resolve_path; Resolve a relative path to the current working dir
 - validate; Validate the syntax of a JS expression
 
-#### Crate features
+# Crate features
 The table below lists the available features for this crate. Features marked at `Preserves Sandbox: NO` break isolation between loaded JS modules and the host system.
 Use with caution.
 

@@ -11,7 +11,7 @@ categories = ["web-programming", "network-programming", "api-bindings", "compile
 readme = "readme.md"
 
 [features]
-default = ["snapshot_creation", "console", "url", "crypto"]
+default = ["worker", "console", "url", "crypto"]
 no_extensions = []
 all = ["web", "io"]
 
@@ -29,6 +29,9 @@ url_import = ["reqwest"]
 
 # Enables the use of the `snapshot` function
 snapshot_creation = []
+
+# Enables the threaded worker API
+worker = []
 
 [dev-dependencies]
 version-sync = "0.9.5"
@@ -62,8 +65,12 @@ libc = {version = "0.2.155", optional = true}
 once_cell = {version = "1.19.0", optional = true}
 
 [[example]]
-name = "web_features"
-required-features = ["web"]
+name = "custom_threaded_worker"
+required-features = ["worker"]
+
+[[example]]
+name = "default_threaded_worker"
+required-features = ["worker"]
 
 [[example]]
 name = "url_import"
