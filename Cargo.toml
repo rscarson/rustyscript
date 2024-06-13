@@ -38,8 +38,8 @@ version-sync = "0.9.5"
 criterion = "0.5.1"
 
 [dependencies]
-deno_core = "0.284.0"
-deno_ast = { version = "0.39.0", features = ["transpiling"]}
+deno_core = "0.288.0"
+deno_ast = { version = "0.39.1", features = ["transpiling"]}
 thiserror = "1.0.61"
 serde = "1.0.203"
 tokio = "1.38.0"
@@ -48,16 +48,16 @@ tokio = "1.38.0"
 reqwest = { version = "0.12.4", optional = true, default-features = false, features = ["blocking", "rustls-tls"] }
 
 # Extension features
-deno_url = {version = "0.155.0", optional = true}
-deno_webidl = {version = "0.155.0", optional = true}
-deno_console = {version = "0.155.0", optional = true}
-deno_crypto = {version = "0.169.0", optional = true}
-deno_fetch = {version = "0.179.0", optional = true}
-deno_web = {version = "0.186.0", optional = true}
-deno_net = {version = "0.147.0", optional = true}
+deno_url = {version = "0.156.0", optional = true}
+deno_webidl = {version = "0.156.0", optional = true}
+deno_console = {version = "0.156.0", optional = true}
+deno_crypto = {version = "0.170.0", optional = true}
+deno_fetch = {version = "0.180.0", optional = true}
+deno_web = {version = "0.187.0", optional = true}
+deno_net = {version = "0.148.0", optional = true}
 
 # io feature deps
-deno_io = {version = "0.65.0", optional = true}
+deno_io = {version = "0.66.0", optional = true}
 rustyline = {version = "=14.0.0", optional = true}
 winapi = {version = "=0.3.9", optional = true}
 nix = {version = "=0.28.0", optional = true}

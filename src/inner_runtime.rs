@@ -63,7 +63,7 @@ pub struct InnerRuntime {
     pub options: InnerRuntimeOptions,
 }
 impl InnerRuntime {
-    pub fn new(options: InnerRuntimeOptions) -> Self {
+    pub fn new(options: InnerRuntimeOptions) -> Result<Self, Error> {
         let loader = Rc::new(RustyLoader::new(options.module_cache));
 
         // If a snapshot is provided, do not reload ops
@@ -74,7 +74,7 @@ impl InnerRuntime {
         };
 
         Self {
-            deno_runtime: JsRuntimeType::new(RuntimeOptions {
+            deno_runtime: JsRuntimeType::try_new(RuntimeOptions {
                 module_loader: Some(loader.clone()),
 
                 extension_transpiler: Some(Rc::new(|specifier, code| {
@@ -87,7 +87,7 @@ impl InnerRuntime {
                 extensions,
 
                 ..Default::default()
-            }),
+            })?,
 
             options: InnerRuntimeOptions {
                 timeout: options.timeout,

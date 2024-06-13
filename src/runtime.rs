@@ -54,7 +54,7 @@ impl Runtime {
     /// ```
     ///
     pub fn new(options: RuntimeOptions) -> Result<Self, Error> {
-        Ok(Self(InnerRuntime::new(options)))
+        Ok(Self(InnerRuntime::new(options))?)
     }
 
     /// Consumes the runtime and returns a snapshot of the runtime state
