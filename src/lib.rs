@@ -217,7 +217,7 @@ pub use deno_core::serde_json;
 
 // Expose some important stuff from us
 pub use error::Error;
-pub use inner_runtime::{FunctionArguments, RsFunction};
+pub use inner_runtime::{FunctionArguments, RsAsyncFunction, RsFunction};
 pub use js_function::JsFunction;
 pub use module::{Module, StaticModule};
 pub use module_handle::ModuleHandle;

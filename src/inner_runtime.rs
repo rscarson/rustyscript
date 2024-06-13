@@ -11,10 +11,11 @@ use std::{collections::HashMap, pin::Pin, rc::Rc, time::Duration};
 
 /// Callback type for rust callback functions
 pub type RsFunction = fn(&FunctionArguments, &mut OpState) -> Result<serde_json::Value, Error>;
+
+/// Callback type for async rust callback functions
 pub type RsAsyncFunction =
     fn(
-        &FunctionArguments,
-        &mut OpState,
+        Vec<serde_json::Value>,
     ) -> Pin<Box<dyn std::future::Future<Output = Result<serde_json::Value, Error>>>>;
 
 /// Type required to pass arguments to JsFunctions
@@ -147,7 +148,7 @@ impl InnerRuntime {
 
     /// Register an async rust function
     /// The function must return a Future that resolves to a serde_json::Value
-    /// and accept a slice of serde_json::Value as arguments
+    /// and accept a vec of serde_json::Value as arguments
     pub fn register_async_function(
         &mut self,
         name: &str,

@@ -2721,7 +2721,7 @@ dependencies = [
 
 [[package]]
 name = "rustyscript"
-version = "0.4.5"
+version = "0.5.0"
 dependencies = [
  "criterion",
  "deno_ast",

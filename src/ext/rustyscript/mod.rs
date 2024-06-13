@@ -1,40 +1,7 @@
 use std::collections::HashMap;
 
-use crate::{error::Error, inner_runtime::RsAsyncFunction, FunctionArguments, RsFunction};
+use crate::{error::Error, RsAsyncFunction, RsFunction};
 use deno_core::{extension, op2, serde_json, v8, Extension, OpState};
-
-fn call_rs_fn(
-    name: &str,
-    args: &FunctionArguments,
-    state: &mut OpState,
-) -> Result<serde_json::Value, Error> {
-    if state.has::<HashMap<String, RsFunction>>() {
-        let table = state.borrow_mut::<HashMap<String, RsFunction>>();
-        if let Some(callback) = table.get(name) {
-            return callback(args, state);
-        }
-    }
-
-    Err(Error::ValueNotCallable(name.to_string()))
-}
-
-async fn call_async_rs_fn(
-    name: &str,
-    args: &FunctionArguments,
-    state: &mut OpState,
-) -> Result<serde_json::Value, Error> {
-    if state.has::<HashMap<String, RsAsyncFunction>>() {
-        let table = state.borrow_mut::<HashMap<String, RsAsyncFunction>>();
-        if let Some(callback) = table.get(name) {
-            return callback(args, state).await;
-        }
-    }
-
-    Box::pin(std::future::ready(Err(Error::ValueNotCallable(
-        name.to_string(),
-    ))))
-    .await
-}
 
 #[op2]
 /// Registers a JS function with the runtime as being the entrypoint for the module
@@ -57,17 +24,31 @@ fn call_registered_function(
     #[serde] args: Vec<serde_json::Value>,
     state: &mut OpState,
 ) -> Result<serde_json::Value, Error> {
-    call_rs_fn(&name, args.as_slice(), state)
+    if state.has::<HashMap<String, RsFunction>>() {
+        let table = state.borrow_mut::<HashMap<String, RsFunction>>();
+        if let Some(callback) = table.get(&name) {
+            return callback(&args, state);
+        }
+    }
+
+    Err(Error::ValueNotCallable(name.to_string()))
 }
 
 #[op2(async)]
 #[serde]
-async fn call_registered_function_async(
+fn call_registered_function_async(
     #[string] name: String,
     #[serde] args: Vec<serde_json::Value>,
     state: &mut OpState,
-) -> Result<serde_json::Value, Error> {
-    call_async_rs_fn(&name, args.as_slice(), state).await
+) -> impl std::future::Future<Output = Result<serde_json::Value, Error>> {
+    if state.has::<HashMap<String, RsAsyncFunction>>() {
+        let table = state.borrow_mut::<HashMap<String, RsAsyncFunction>>();
+        if let Some(callback) = table.get(&name) {
+            return callback(args);
+        }
+    }
+
+    Box::pin(std::future::ready(Err(Error::ValueNotCallable(name))))
 }
 
 extension!(

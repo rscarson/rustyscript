@@ -217,11 +217,11 @@ impl Runtime {
     /// # fn main() -> Result<(), rustyscript::Error> {
     /// let module = Module::new("test.js", " rustyscript.async_functions.foo(); ");
     /// let mut runtime = Runtime::new(Default::default())?;
-    /// runtime.register_function("foo", async |args, _state| {
+    /// runtime.register_function("foo", async |args| {
     ///    if let Some(value) = args.get(0) {
-    ///       println!("called with: {}", value);
-    ///   }
-    ///  Ok(Value::Null)
+    ///         println!("called with: {}", value);
+    ///    }
+    ///    Ok(Value::Null)
     /// })?;
     ///
     /// # Ok(())
