@@ -11,7 +11,7 @@ categories = ["web-programming", "network-programming", "api-bindings", "compile
 readme = "readme.md"
 
 [features]
-default = ["console", "url", "crypto"]
+default = ["snapshot_creation", "console", "url", "crypto"]
 no_extensions = []
 all = ["web", "io"]
 
@@ -23,8 +23,12 @@ crypto = ["deno_crypto", "webidl", "web_stub"]
 web_stub = []
 web = ["console", "url", "crypto", "deno_web", "deno_fetch", "url_import", "fs_import", "deno_net"]
 
+# Features for the module loader
 fs_import = []
 url_import = ["reqwest"]
+
+# Enables the use of the `snapshot` function
+snapshot_creation = []
 
 [dev-dependencies]
 version-sync = "0.9.5"

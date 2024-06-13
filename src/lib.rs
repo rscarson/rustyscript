@@ -113,6 +113,8 @@
 //! # }
 //! ```
 //!
+//! See [Runtime::register_async_function] for registering and calling async rust from JS
+//!
 //! For better performance calling rust code, consider using an extension instead - see the `runtime_extensions` example for details
 //!
 //! The 'state' parameter can be used to persist data - please see the `call_rust_from_js` example for details
@@ -146,6 +148,13 @@
 //! |             |                                                                                                   |                  |                                                                                 |
 //! |fs_import    | Enables importing arbitrary code from the filesystem through JS                                   |**NO**            |None                                                                             |
 //! |url_import   | Enables importing arbitrary code from network locations through JS                                |**NO**            |reqwest                                                                          |
+//!
+//! There is also a `snapshot_creation` feature that loads an alternate deno runtime,
+//! which can be used to create snapshots of the runtime for faster startup times. See:
+//!
+//! - [Runtime::create_snapshot]
+//! - [RuntimeOptions::startup_snapshot]
+//!
 //! ----
 //!
 //! Please also check out [@Bromeon/js_sandbox](https://github.com/Bromeon/js-sandbox), another great crate in this niche

@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::{error::Error, FunctionArguments, RsFunction};
+use crate::{error::Error, inner_runtime::RsAsyncFunction, FunctionArguments, RsFunction};
 use deno_core::{extension, op2, serde_json, v8, Extension, OpState};
 
 fn call_rs_fn(
@@ -9,16 +9,31 @@ fn call_rs_fn(
     state: &mut OpState,
 ) -> Result<serde_json::Value, Error> {
     if state.has::<HashMap<String, RsFunction>>() {
-        let table = state.borrow_mut::<HashMap<
-            String,
-            fn(&FunctionArguments, &mut OpState) -> Result<serde_json::Value, Error>,
-        >>();
+        let table = state.borrow_mut::<HashMap<String, RsFunction>>();
         if let Some(callback) = table.get(name) {
             return callback(args, state);
         }
     }
 
     Err(Error::ValueNotCallable(name.to_string()))
+}
+
+async fn call_async_rs_fn(
+    name: &str,
+    args: &FunctionArguments,
+    state: &mut OpState,
+) -> Result<serde_json::Value, Error> {
+    if state.has::<HashMap<String, RsAsyncFunction>>() {
+        let table = state.borrow_mut::<HashMap<String, RsAsyncFunction>>();
+        if let Some(callback) = table.get(name) {
+            return callback(args, state).await;
+        }
+    }
+
+    Box::pin(std::future::ready(Err(Error::ValueNotCallable(
+        name.to_string(),
+    ))))
+    .await
 }
 
 #[op2]
@@ -45,13 +60,27 @@ fn call_registered_function(
     call_rs_fn(&name, args.as_slice(), state)
 }
 
+#[op2(async)]
+#[serde]
+async fn call_registered_function_async(
+    #[string] name: String,
+    #[serde] args: Vec<serde_json::Value>,
+    state: &mut OpState,
+) -> Result<serde_json::Value, Error> {
+    call_async_rs_fn(&name, args.as_slice(), state).await
+}
+
 extension!(
     rustyscript,
-    ops = [op_register_entrypoint, call_registered_function],
+    ops = [op_register_entrypoint, call_registered_function, call_registered_function_async],
     esm_entry_point = "ext:rustyscript/rustyscript.js",
     esm = [ dir "src/ext/rustyscript", "rustyscript.js" ],
 );
 
 pub fn extensions() -> Vec<Extension> {
     vec![rustyscript::init_ops_and_esm()]
+}
+
+pub fn snapshot_extensions() -> Vec<Extension> {
+    vec![rustyscript::init_ops()]
 }

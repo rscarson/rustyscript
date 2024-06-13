@@ -12,3 +12,10 @@ pub fn extensions() -> Vec<Extension> {
         init_console::init_ops_and_esm(),
     ]
 }
+
+pub fn snapshot_extensions() -> Vec<Extension> {
+    vec![
+        deno_console::deno_console::init_ops(),
+        init_console::init_ops(),
+    ]
+}
