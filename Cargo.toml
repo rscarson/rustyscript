@@ -11,7 +11,7 @@ categories = ["web-programming", "network-programming", "api-bindings", "compile
 readme = "readme.md"
 
 [features]
-default = ["console", "url", "crypto"]
+default = ["worker", "console", "url", "crypto"]
 no_extensions = []
 all = ["web", "io"]
 
@@ -22,6 +22,8 @@ console = ["deno_console"]
 crypto = ["deno_crypto", "webidl", "web_stub"]
 web_stub = []
 web = ["console", "url", "crypto", "deno_web", "deno_fetch", "url_import", "fs_import", "deno_net"]
+
+worker = []
 
 fs_import = []
 url_import = ["reqwest"]
@@ -58,8 +60,12 @@ libc = {version = "0.2.155", optional = true}
 once_cell = {version = "1.19.0", optional = true}
 
 [[example]]
-name = "web_features"
-required-features = ["web"]
+name = "custom_threaded_worker"
+required-features = ["worker"]
+
+[[example]]
+name = "default_threaded_worker"
+required-features = ["worker"]
 
 [[example]]
 name = "url_import"

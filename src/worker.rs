@@ -1,4 +1,20 @@
 //! Provides a worker thread that can be used to run javascript code in a separate thread through a channel pair
+//! It also provides a default worker implementation that can be used without any additional setup:
+//! ```rust
+//! use rustyscript::{Error, worker::{Worker, DefaultWorker, DefaultWorkerOptions}};
+//! use std::time::Duration;
+//!
+//! fn main() -> Result<(), Error> {
+//!     let worker = DefaultWorker::new(DefaultWorkerOptions {
+//!         default_entrypoint: None,
+//!         timeout: Duration::from_secs(5),
+//!     })?;
+//!
+//!     worker.register_function("add".to_string(), |a: i32, b: i32| a + b)?;
+//!     let result: i32 = worker.eval("add(5, 5)".to_string())?;
+//!     assert_eq!(result, 10);
+//!     Ok(())
+//! }
 
 use crate::Error;
 use std::sync::mpsc::{channel, Receiver, Sender};
@@ -6,6 +22,11 @@ use std::thread::{spawn, JoinHandle};
 
 /// A worker thread that can be used to run javascript code in a separate thread
 /// Contains a channel pair for communication, and a single runtime instance
+///
+/// This worker is generic over an implementation of the [worker::InnerWorker] trait
+/// This allows flexibility in the runtime used by the worker, as well as the types of queries and responses that can be used
+///
+/// For a simple worker that uses the default runtime, see [worker::DefaultWorker]
 pub struct Worker<W>
 where
     W: InnerWorker,
@@ -120,71 +141,7 @@ where
 /// As well as the types of queries and responses that can be used
 ///
 /// Implement this trait for a specific runtime to use it with the worker
-///
-/// Example:
-/// ```rust
-/// use rustyscript::{Worker, InnerWorker, RuntimeOptions, Runtime, Error};
-///
-/// enum Query {
-///     Call(String, Vec<serde_json::Value>),
-///     Stop,
-/// }
-///
-/// enum Response {
-///    Value(serde_json::Value),
-///    Error(Error),
-/// }
-///
-/// struct MyWorker;
-/// impl InnerWorker for MyWorker {
-///     type Runtime = Runtime;
-///     type RuntimeOptions = RuntimeOptions;
-///     type Query = Query;
-///     type Response = Response;
-///
-///     fn init_runtime(options: Self::RuntimeOptions) -> Result<Self::Runtime, Error> {
-///         Runtime::new(options)
-///     }
-///
-///     fn thread(
-///         runtime: Self::Runtime,
-///         rx: Receiver<Self::Query>,
-///         tx: Sender<Self::Response>,
-///     ) {
-///            loop {
-///                let msg = match rx.recv() {
-///                    Ok(msg) => msg,
-///                    Err(_) => break,
-///                };
-///                
-///                match msg {
-///                    Query::Call(name, args) => {
-///                        let result = runtime.call(name, args);
-///                        tx.send(match result {
-///                            Ok(v) => Response::Value(v),
-///                            Err(e) => Response::Error(e),
-///                        }).unwrap();
-///                    }
-///
-///                    Query::Stop => break,
-///                }
-///            }
-///        }
-/// }
-///
-/// fn main() -> Result<(), Error> {
-///     let worker = Worker::<MyWorker>::new()?;
-///     let value = match worker.send_and_await(Query::Call("my_function".to_string(), vec![]))? {
-///         Ok(Response::Value(v)) => Ok(v),
-///         Ok(Response::Error(e)) => Err(e),
-///     }?;
-///
-///     println!("Result: {:?}", value);
-///     worker.send(Query::Stop)?;
-///     worker.join()?;
-///     Ok(())
-/// }
-/// ```
+/// For an example implementation, see [worker::DefaultWorker]
 pub trait InnerWorker
 where
     Self: Send,
@@ -212,22 +169,23 @@ where
     /// This should return a new instance of the runtime that will respond to queries
     fn init_runtime(options: Self::RuntimeOptions) -> Result<Self::Runtime, Error>;
 
+    /// Handle a query sent to the worker
+    /// Must always return a response of some kind
+    fn handle_query(runtime: &mut Self::Runtime, query: Self::Query) -> Self::Response;
+
     /// The main thread function that will be run by the worker
     /// This should handle all incoming queries and send responses back
-    /// Normally takes this form:
-    /// ```no_run
-    /// loop {
-    ///     let msg = match rx.recv() {
-    ///         Ok(msg) => msg,
-    ///         Err(_) => break,
-    ///     };
-    ///
-    ///     match msg {
-    ///         [...]
-    ///     }
-    /// }
-    /// ```
-    fn thread(runtime: Self::Runtime, rx: Receiver<Self::Query>, tx: Sender<Self::Response>);
+    fn thread(mut runtime: Self::Runtime, rx: Receiver<Self::Query>, tx: Sender<Self::Response>) {
+        loop {
+            let msg = match rx.recv() {
+                Ok(msg) => msg,
+                Err(_) => break,
+            };
+
+            let response = Self::handle_query(&mut runtime, msg);
+            tx.send(response).unwrap();
+        }
+    }
 }
 
 /// A worker implementation that uses the default runtime
@@ -238,19 +196,86 @@ where
 /// For a more performant worker, or to use extensions and/or loader caches, you'll need to implement your own worker
 pub struct DefaultWorker(Worker<DefaultWorker>);
 impl InnerWorker for DefaultWorker {
-    type Runtime = crate::Runtime;
+    type Runtime = (
+        crate::Runtime,
+        std::collections::HashMap<deno_core::ModuleId, crate::ModuleHandle>,
+    );
     type RuntimeOptions = DefaultWorkerOptions;
     type Query = DefaultWorkerQuery;
     type Response = DefaultWorkerResponse;
 
     fn init_runtime(options: Self::RuntimeOptions) -> Result<Self::Runtime, Error> {
-        crate::Runtime::new(crate::RuntimeOptions {
+        let runtime = crate::Runtime::new(crate::RuntimeOptions {
             default_entrypoint: options.default_entrypoint,
             timeout: options.timeout,
             ..Default::default()
-        })
+        })?;
+        let modules = std::collections::HashMap::new();
+        Ok((runtime, modules))
     }
 
+    fn handle_query(runtime: &mut Self::Runtime, query: Self::Query) -> Self::Response {
+        let (runtime, modules) = runtime;
+        match query {
+            DefaultWorkerQuery::Stop => Self::Response::Ok(()),
+
+            DefaultWorkerQuery::RegisterFunction(name, func) => {
+                match runtime.register_function(&name, func) {
+                    Ok(_) => Self::Response::Ok(()),
+                    Err(e) => Self::Response::Error(e),
+                }
+            }
+
+            DefaultWorkerQuery::Eval(code) => match runtime.eval(&code) {
+                Ok(v) => Self::Response::Value(v),
+                Err(e) => Self::Response::Error(e),
+            },
+
+            DefaultWorkerQuery::LoadMainModule(module) => match runtime.load_module(&module) {
+                Ok(handle) => {
+                    let id = handle.id();
+                    modules.insert(id, handle);
+                    Self::Response::ModuleId(id)
+                }
+                Err(e) => Self::Response::Error(e),
+            },
+
+            DefaultWorkerQuery::LoadModule(module) => match runtime.load_module(&module) {
+                Ok(handle) => {
+                    let id = handle.id();
+                    modules.insert(id, handle);
+                    Self::Response::ModuleId(id)
+                }
+                Err(e) => Self::Response::Error(e),
+            },
+
+            DefaultWorkerQuery::CallEntrypoint(id, args) => match modules.get(&id) {
+                Some(handle) => match runtime.call_entrypoint(handle, &args) {
+                    Ok(v) => Self::Response::Value(v),
+                    Err(e) => Self::Response::Error(e),
+                },
+                None => Self::Response::Error(Error::Runtime("Module not found".to_string())),
+            },
+
+            DefaultWorkerQuery::CallFunction(id, name, args) => match modules.get(&id) {
+                Some(handle) => match runtime.call_function(handle, &name, &args) {
+                    Ok(v) => Self::Response::Value(v),
+                    Err(e) => Self::Response::Error(e),
+                },
+                None => Self::Response::Error(Error::Runtime("Module not found".to_string())),
+            },
+
+            DefaultWorkerQuery::GetValue(id, name) => match modules.get(&id) {
+                Some(handle) => match runtime.get_value(handle, &name) {
+                    Ok(v) => Self::Response::Value(v),
+                    Err(e) => Self::Response::Error(e),
+                },
+                None => Self::Response::Error(Error::Runtime("Module not found".to_string())),
+            },
+        }
+    }
+
+    // Custom thread impl to handle stop
     fn thread(mut runtime: Self::Runtime, rx: Receiver<Self::Query>, tx: Sender<Self::Response>) {
         loop {
             let msg = match rx.recv() {
@@ -258,23 +283,15 @@ impl InnerWorker for DefaultWorker {
                 Err(_) => break,
             };
 
-            match msg {
+            match &msg {
                 DefaultWorkerQuery::Stop => {
                     tx.send(Self::Response::Ok(())).unwrap();
                     break;
                 }
-
-                DefaultWorkerQuery::RegisterFunction(name, func) => {
-                    match runtime.register_function(&name, func) {
-                        Ok(_) => tx.send(Self::Response::Ok(())).unwrap(),
-                        Err(e) => tx.send(Self::Response::Error(e)).unwrap(),
-                    }
+                _ => {
+                    let response = Self::handle_query(&mut runtime, msg);
+                    tx.send(response).unwrap();
                 }
-
-                DefaultWorkerQuery::Eval(code) => match runtime.eval(&code) {
-                    Ok(v) => tx.send(Self::Response::Value(v)).unwrap(),
-                    Err(e) => tx.send(Self::Response::Error(e)).unwrap(),
-                },
             }
         }
     }
@@ -302,9 +319,113 @@ impl DefaultWorker {
 
     /// Evaluate a string of javascript code
     /// Returns the result of the evaluation
-    pub fn eval(&self, code: String) -> Result<crate::serde_json::Value, Error> {
+    pub fn eval<T>(&self, code: String) -> Result<T, Error>
+    where
+        T: serde::de::DeserializeOwned,
+    {
         match self.0.send_and_await(DefaultWorkerQuery::Eval(code))? {
-            DefaultWorkerResponse::Value(v) => Ok(v),
+            DefaultWorkerResponse::Value(v) => Ok(crate::serde_json::from_value(v)?),
+            DefaultWorkerResponse::Error(e) => Err(e),
+            _ => Err(Error::Runtime(
+                "Unexpected response from the worker".to_string(),
+            )),
+        }
+    }
+
+    /// Load a module into the worker as the main module
+    /// Returns the module id of the loaded module
+    pub fn load_main_module(&self, module: crate::Module) -> Result<deno_core::ModuleId, Error> {
+        match self
+            .0
+            .send_and_await(DefaultWorkerQuery::LoadMainModule(module))?
+        {
+            DefaultWorkerResponse::ModuleId(id) => Ok(id),
+            DefaultWorkerResponse::Error(e) => Err(e),
+            _ => Err(Error::Runtime(
+                "Unexpected response from the worker".to_string(),
+            )),
+        }
+    }
+
+    /// Load a module into the worker as a side module
+    /// Returns the module id of the loaded module
+    pub fn load_module(&self, module: crate::Module) -> Result<deno_core::ModuleId, Error> {
+        match self
+            .0
+            .send_and_await(DefaultWorkerQuery::LoadModule(module))?
+        {
+            DefaultWorkerResponse::ModuleId(id) => Ok(id),
+            DefaultWorkerResponse::Error(e) => Err(e),
+            _ => Err(Error::Runtime(
+                "Unexpected response from the worker".to_string(),
+            )),
+        }
+    }
+
+    /// Call the entrypoint function in a module
+    /// Returns the result of the function call
+    /// The module id must be the id of a module loaded with `load_main_module` or `load_module`
+    pub fn call_entrypoint<T>(
+        &self,
+        id: deno_core::ModuleId,
+        args: Vec<crate::serde_json::Value>,
+    ) -> Result<T, Error>
+    where
+        T: serde::de::DeserializeOwned,
+    {
+        match self
+            .0
+            .send_and_await(DefaultWorkerQuery::CallEntrypoint(id, args))?
+        {
+            DefaultWorkerResponse::Value(v) => {
+                crate::serde_json::from_value(v).map_err(Error::from)
+            }
+            DefaultWorkerResponse::Error(e) => Err(e),
+            _ => Err(Error::Runtime(
+                "Unexpected response from the worker".to_string(),
+            )),
+        }
+    }
+
+    /// Call a function in a module
+    /// Returns the result of the function call
+    /// The module id must be the id of a module loaded with `load_main_module` or `load_module`
+    pub fn call_function<T>(
+        &self,
+        id: deno_core::ModuleId,
+        name: String,
+        args: Vec<crate::serde_json::Value>,
+    ) -> Result<T, Error>
+    where
+        T: serde::de::DeserializeOwned,
+    {
+        match self
+            .0
+            .send_and_await(DefaultWorkerQuery::CallFunction(id, name, args))?
+        {
+            DefaultWorkerResponse::Value(v) => {
+                crate::serde_json::from_value(v).map_err(Error::from)
+            }
+            DefaultWorkerResponse::Error(e) => Err(e),
+            _ => Err(Error::Runtime(
+                "Unexpected response from the worker".to_string(),
+            )),
+        }
+    }
+
+    /// Get a value from a module
+    /// The module id must be the id of a module loaded with `load_main_module` or `load_module`
+    pub fn get_value<T>(&self, id: deno_core::ModuleId, name: String) -> Result<T, Error>
+    where
+        T: serde::de::DeserializeOwned,
+    {
+        match self
+            .0
+            .send_and_await(DefaultWorkerQuery::GetValue(id, name))?
+        {
+            DefaultWorkerResponse::Value(v) => {
+                crate::serde_json::from_value(v).map_err(Error::from)
+            }
             DefaultWorkerResponse::Error(e) => Err(e),
             _ => Err(Error::Runtime(
                 "Unexpected response from the worker".to_string(),
@@ -314,6 +435,7 @@ impl DefaultWorker {
 }
 
 /// Options for the default worker
+#[derive(Default, Clone)]
 pub struct DefaultWorkerOptions {
     /// The default entrypoint function to use if none is registered
     pub default_entrypoint: Option<String>,
@@ -332,12 +454,30 @@ pub enum DefaultWorkerQuery {
 
     /// Evaluates a string of javascript code
     Eval(String),
+
+    /// Loads a module into the worker as the main module
+    LoadMainModule(crate::Module),
+
+    /// Loads a module into the worker as a side module
+    LoadModule(crate::Module),
+
+    /// Calls an entrypoint function in a module
+    CallEntrypoint(deno_core::ModuleId, Vec<crate::serde_json::Value>),
+
+    /// Calls a function in a module
+    CallFunction(deno_core::ModuleId, String, Vec<crate::serde_json::Value>),
+
+    /// Gets a value from a module
+    GetValue(deno_core::ModuleId, String),
 }
 
 /// Response types for the default worker
 pub enum DefaultWorkerResponse {
     /// A successful response with a value
     Value(crate::serde_json::Value),
+
+    /// A successful response with a module id
+    ModuleId(deno_core::ModuleId),
 
     /// A successful response with no value
     Ok(()),

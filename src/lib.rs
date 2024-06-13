@@ -119,6 +119,31 @@
 //!
 //! ----
 //!
+//! A threaded worker can be used to run code in a separate thread, or to allow multiple concurrent runtimes.
+//!
+//! the `worker` module provides a simple interface to create and interact with workers.
+//! The `InnerWorker` trait can be implemented to provide custom worker behavior.
+//!
+//! It also provides a default worker implementation that can be used without any additional setup:
+//! ```rust
+//! use rustyscript::{Error, worker::{Worker, DefaultWorker, DefaultWorkerOptions}};
+//! use std::time::Duration;
+//!
+//! fn main() -> Result<(), Error> {
+//!     let worker = DefaultWorker::new(DefaultWorkerOptions {
+//!         default_entrypoint: None,
+//!         timeout: Duration::from_secs(5),
+//!     })?;
+//!
+//!     worker.register_function("add".to_string(), |a: i32, b: i32| a + b)?;
+//!     let result: i32 = worker.eval("add(5, 5)".to_string())?;
+//!     assert_eq!(result, 10);
+//!     Ok(())
+//! }
+//! ```
+//!
+//! ----
+//!
 //! ## Utility Functions
 //! These functions provide simple one-liner access to common features of this crate:
 //! - evaluate; Evaluate a single JS expression and return the resulting value
@@ -146,6 +171,8 @@
 //! |             |                                                                                                   |                  |                                                                                 |
 //! |fs_import    | Enables importing arbitrary code from the filesystem through JS                                   |**NO**            |None                                                                             |
 //! |url_import   | Enables importing arbitrary code from network locations through JS                                |**NO**            |reqwest                                                                          |
+//! |             |                                                                                                   |                  |                                                                                 |
+//! |worker       | Enables access to the threaded worker API [rustyscript::worker]                                   |yes               |None                                                                             |
 //! ----
 //!
 //! Please also check out [@Bromeon/js_sandbox](https://github.com/Bromeon/js-sandbox), another great crate in this niche
@@ -172,6 +199,7 @@ mod traits;
 mod transpiler;
 mod utilities;
 
+#[cfg(feature = "worker")]
 pub mod worker;
 
 // Expose a few dependencies that could be useful
