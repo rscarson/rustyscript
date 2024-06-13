@@ -52,3 +52,33 @@ pub fn all_extensions(user_extensions: Vec<Extension>) -> Vec<Extension> {
     extensions.extend(user_extensions);
     extensions
 }
+
+///
+/// Add up all required extensions, in snapshot mode
+pub fn all_snapshot_extensions(user_extensions: Vec<Extension>) -> Vec<Extension> {
+    let mut extensions = rustyscript::snapshot_extensions();
+
+    #[cfg(feature = "console")]
+    extensions.extend(console::snapshot_extensions());
+
+    #[cfg(feature = "webidl")]
+    extensions.extend(webidl::snapshot_extensions());
+
+    #[cfg(feature = "url")]
+    extensions.extend(url::snapshot_extensions());
+
+    #[cfg(feature = "web_stub")]
+    extensions.extend(web_stub::snapshot_extensions());
+
+    #[cfg(feature = "web")]
+    extensions.extend(web::snapshot_extensions());
+
+    #[cfg(feature = "crypto")]
+    extensions.extend(crypto::snapshot_extensions());
+
+    #[cfg(feature = "io")]
+    extensions.extend(io::snapshot_extensions());
+
+    extensions.extend(user_extensions);
+    extensions
+}

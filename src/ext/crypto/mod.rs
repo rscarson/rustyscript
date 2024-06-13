@@ -12,3 +12,10 @@ pub fn extensions() -> Vec<Extension> {
         init_crypto::init_ops_and_esm(),
     ]
 }
+
+pub fn snapshot_extensions() -> Vec<Extension> {
+    vec![
+        deno_crypto::deno_crypto::init_ops(None),
+        init_crypto::init_ops(),
+    ]
+}

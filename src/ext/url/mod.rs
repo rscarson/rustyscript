@@ -13,3 +13,10 @@ pub fn extensions() -> Vec<Extension> {
         init_url::init_ops_and_esm(),
     ]
 }
+
+pub fn snapshot_extensions() -> Vec<Extension> {
+    vec![
+        deno_url::deno_url::init_ops(),
+        init_url::init_ops(),
+    ]
+}

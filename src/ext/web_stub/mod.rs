@@ -9,3 +9,7 @@ extension!(
 pub fn extensions() -> Vec<Extension> {
     vec![deno_web::init_ops_and_esm()]
 }
+
+pub fn snapshot_extensions() -> Vec<Extension> {
+    vec![deno_web::init_ops()]
+}

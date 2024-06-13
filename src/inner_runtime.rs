@@ -6,11 +6,16 @@ use crate::{
     transpiler::{self, transpile_extension},
     Error, Module, ModuleHandle,
 };
-use deno_core::{serde_json, v8, JsRuntime, OpState, PollEventLoopOptions, RuntimeOptions};
-use std::{collections::HashMap, rc::Rc, time::Duration};
+use deno_core::{serde_json, v8, OpState, PollEventLoopOptions, RuntimeOptions};
+use std::{collections::HashMap, pin::Pin, rc::Rc, time::Duration};
 
 /// Callback type for rust callback functions
 pub type RsFunction = fn(&FunctionArguments, &mut OpState) -> Result<serde_json::Value, Error>;
+pub type RsAsyncFunction =
+    fn(
+        &FunctionArguments,
+        &mut OpState,
+    ) -> Pin<Box<dyn std::future::Future<Output = Result<serde_json::Value, Error>>>>;
 
 /// Type required to pass arguments to JsFunctions
 pub type FunctionArguments = [serde_json::Value];
@@ -26,7 +31,10 @@ pub struct InnerRuntimeOptions {
     /// Amount of time to run for before killing the thread
     pub timeout: Duration,
 
+    /// Optional cache provider for the module loader
     pub module_cache: Option<Box<dyn ModuleCacheProvider>>,
+
+    pub startup_snapshot: Option<&'static [u8]>,
 }
 
 impl Default for InnerRuntimeOptions {
@@ -36,22 +44,36 @@ impl Default for InnerRuntimeOptions {
             default_entrypoint: Default::default(),
             timeout: Duration::MAX,
             module_cache: None,
+            startup_snapshot: None,
         }
     }
 }
 
+#[cfg(feature = "snapshot_creation")]
+type JsRuntimeType = deno_core::JsRuntimeForSnapshot;
+
+#[cfg(not(feature = "snapshot_creation"))]
+type JsRuntimeType = deno_core::JsRuntime;
+
 /// Deno JsRuntime wrapper providing helper functions needed
 /// by the public-facing Runtime API
 pub struct InnerRuntime {
-    pub deno_runtime: JsRuntime,
+    pub deno_runtime: JsRuntimeType,
     pub options: InnerRuntimeOptions,
 }
 impl InnerRuntime {
     pub fn new(options: InnerRuntimeOptions) -> Self {
         let loader = Rc::new(RustyLoader::new(options.module_cache));
+
+        // If a snapshot is provided, do not reload ops
+        let extensions = if options.startup_snapshot.is_some() {
+            ext::all_snapshot_extensions(options.extensions)
+        } else {
+            ext::all_extensions(options.extensions)
+        };
+
         Self {
-            deno_runtime: JsRuntime::new(RuntimeOptions {
-                extensions: ext::all_extensions(options.extensions),
+            deno_runtime: JsRuntimeType::new(RuntimeOptions {
                 module_loader: Some(loader.clone()),
 
                 extension_transpiler: Some(Rc::new(|specifier, code| {
@@ -60,8 +82,12 @@ impl InnerRuntime {
 
                 source_map_getter: Some(loader),
 
+                startup_snapshot: options.startup_snapshot,
+                extensions,
+
                 ..Default::default()
             }),
+
             options: InnerRuntimeOptions {
                 timeout: options.timeout,
                 default_entrypoint: options.default_entrypoint,
@@ -70,8 +96,24 @@ impl InnerRuntime {
         }
     }
 
+    /// Consumes the runtime and returns a snapshot of the runtime state
+    /// This is only available when the `snapshot_creation` feature is enabled
+    /// and will return a `Box<[u8]>` representing the snapshot
+    ///
+    /// To use the snapshot, provide it, as a static slice, in [`RuntimeOptions::startup_snapshot`]
+    /// Therefore, in order to use this snapshot, make sure you write it to a file and load it with
+    /// `include_bytes!`
+    ///
+    /// WARNING: In order to use the snapshot, make sure the runtime using it is
+    /// provided the same extensions and options as the original runtime. Any extensions
+    /// you provided must be loaded with `init_ops` instead of `init_ops_and_esm`.
+    #[cfg(feature = "snapshot_creation")]
+    pub fn into_snapshot(self) -> Box<[u8]> {
+        self.deno_runtime.snapshot()
+    }
+
     /// Access the underlying deno runtime instance directly
-    pub fn deno_runtime(&mut self) -> &mut JsRuntime {
+    pub fn deno_runtime(&mut self) -> &mut JsRuntimeType {
         &mut self.deno_runtime
     }
 
@@ -103,18 +145,39 @@ impl InnerRuntime {
         Ok(())
     }
 
+    /// Register an async rust function
+    /// The function must return a Future that resolves to a serde_json::Value
+    /// and accept a slice of serde_json::Value as arguments
+    pub fn register_async_function(
+        &mut self,
+        name: &str,
+        callback: RsAsyncFunction,
+    ) -> Result<(), Error> {
+        self.register_function_generic(name, callback)
+    }
+
     /// Register a rust function
+    /// The function must return a serde_json::Value
+    /// and accept a slice of serde_json::Value as arguments
     pub fn register_function(&mut self, name: &str, callback: RsFunction) -> Result<(), Error> {
+        self.register_function_generic(name, callback)
+    }
+
+    /// Register a rust function
+    fn register_function_generic<F>(&mut self, name: &str, callback: F) -> Result<(), Error>
+    where
+        F: 'static,
+    {
         let state = self.deno_runtime().op_state();
         let mut state = state.try_borrow_mut()?;
 
-        if !state.has::<HashMap<String, RsFunction>>() {
-            state.put(HashMap::<String, RsFunction>::new());
+        if !state.has::<HashMap<String, F>>() {
+            state.put(HashMap::<String, F>::new());
         }
 
         // Insert the callback into the state
         state
-            .borrow_mut::<HashMap<String, RsFunction>>()
+            .borrow_mut::<HashMap<String, F>>()
             .insert(name.to_string(), callback);
 
         Ok(())

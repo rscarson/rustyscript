@@ -12,3 +12,10 @@ pub fn extensions() -> Vec<Extension> {
         init_webidl::init_ops_and_esm(),
     ]
 }
+
+pub fn snapshot_extensions() -> Vec<Extension> {
+    vec![
+        deno_webidl::deno_webidl::init_ops(),
+        init_webidl::init_ops(),
+    ]
+}

@@ -24,3 +24,11 @@ pub fn extensions() -> Vec<Extension> {
         deno_io::deno_io::init_ops_and_esm(Some(deno_io::Stdio::default())),
     ]
 }
+
+pub fn snapshot_extensions() -> Vec<Extension> {
+    vec![
+        tty::deno_tty::init_ops(),
+        init_io::init_ops(),
+        deno_io::deno_io::init_ops(Some(deno_io::Stdio::default())),
+    ]
+}

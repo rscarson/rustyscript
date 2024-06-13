@@ -1,5 +1,5 @@
 use crate::{
-    inner_runtime::{InnerRuntime, InnerRuntimeOptions},
+    inner_runtime::{InnerRuntime, InnerRuntimeOptions, RsAsyncFunction},
     Error, FunctionArguments, JsFunction, Module, ModuleHandle, RsFunction,
 };
 use deno_core::serde_json;
@@ -55,6 +55,22 @@ impl Runtime {
     ///
     pub fn new(options: RuntimeOptions) -> Result<Self, Error> {
         Ok(Self(InnerRuntime::new(options)))
+    }
+
+    /// Consumes the runtime and returns a snapshot of the runtime state
+    /// This is only available when the `snapshot_creation` feature is enabled
+    /// and will return a `Box<[u8]>` representing the snapshot
+    ///
+    /// To use the snapshot, provide it, as a static slice, in [`RuntimeOptions::startup_snapshot`]
+    /// Therefore, in order to use this snapshot, make sure you write it to a file and load it with
+    /// `include_bytes!`
+    ///
+    /// WARNING: In order to use the snapshot, make sure the runtime using it is
+    /// provided the same extensions and options as the original runtime. Any extensions
+    /// you provided must be loaded with `init_ops` instead of `init_ops_and_esm`.
+    #[cfg(feature = "snapshot_creation")]
+    pub fn into_snapshot(self) -> Box<[u8]> {
+        self.0.into_snapshot()
     }
 
     /// Access the underlying deno runtime instance directly
@@ -192,6 +208,31 @@ impl Runtime {
     /// ```
     pub fn register_function(&mut self, name: &str, callback: RsFunction) -> Result<(), Error> {
         self.0.register_function(name, callback)
+    }
+
+    /// Register a non-blocking rust function to be callable from JS
+    /// ```rust
+    /// use rustyscript::{ Runtime, Module, serde_json::Value };
+    ///
+    /// # fn main() -> Result<(), rustyscript::Error> {
+    /// let module = Module::new("test.js", " rustyscript.async_functions.foo(); ");
+    /// let mut runtime = Runtime::new(Default::default())?;
+    /// runtime.register_function("foo", async |args, _state| {
+    ///    if let Some(value) = args.get(0) {
+    ///       println!("called with: {}", value);
+    ///   }
+    ///  Ok(Value::Null)
+    /// })?;
+    ///
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub fn register_async_function(
+        &mut self,
+        name: &str,
+        callback: RsAsyncFunction,
+    ) -> Result<(), Error> {
+        self.0.register_async_function(name, callback)
     }
 
     /// Evaluate a piece of non-ECMAScript-module JavaScript code

@@ -86,3 +86,14 @@ pub fn extensions() -> Vec<Extension> {
         init_net::init_ops_and_esm(),
     ]
 }
+
+pub fn snapshot_extensions() -> Vec<Extension> {
+    vec![
+        deno_web::deno_web::init_ops::<Permissions>(Default::default(), None),
+        deno_fetch::deno_fetch::init_ops::<Permissions>(Default::default()),
+        deno_net::deno_net::init_ops::<Permissions>(None, None),
+        init_web::init_ops(),
+        init_fetch::init_ops(),
+        init_net::init_ops(),
+    ]
+}
