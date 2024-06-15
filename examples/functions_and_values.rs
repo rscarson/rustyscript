@@ -38,11 +38,12 @@ fn main() -> Result<(), Error> {
 
     // Calling an exported function
     // This will also work with anything in the global scope (eg: globalThis)
-    let function_value: String = runtime.call_function(&module_handle, "test", json_args!("A"))?;
+    let function_value: String =
+        runtime.call_function(Some(&module_handle), "test", json_args!("A"))?;
     assert_eq!(function_value, "foo: A");
 
     // Custom types can be exported from JS easily!
-    let value: MyStruct = runtime.get_value(&module_handle, "bar")?;
+    let value: MyStruct = runtime.get_value(Some(&module_handle), "bar")?;
     assert_eq!(
         MyStruct {
             name: "test".to_string(),

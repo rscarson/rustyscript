@@ -24,7 +24,7 @@ fn main() -> Result<(), Error> {
     })?;
     let module_handle = runtime.load_module(&module)?;
 
-    let result: i64 = runtime.get_value(&module_handle, "result")?;
+    let result: i64 = runtime.get_value(Some(&module_handle), "result")?;
     assert_eq!(10, result);
     Ok(())
 }

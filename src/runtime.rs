@@ -54,23 +54,7 @@ impl Runtime {
     /// ```
     ///
     pub fn new(options: RuntimeOptions) -> Result<Self, Error> {
-        Ok(Self(InnerRuntime::new(options))?)
-    }
-
-    /// Consumes the runtime and returns a snapshot of the runtime state
-    /// This is only available when the `snapshot_creation` feature is enabled
-    /// and will return a `Box<[u8]>` representing the snapshot
-    ///
-    /// To use the snapshot, provide it, as a static slice, in [`RuntimeOptions::startup_snapshot`]
-    /// Therefore, in order to use this snapshot, make sure you write it to a file and load it with
-    /// `include_bytes!`
-    ///
-    /// WARNING: In order to use the snapshot, make sure the runtime using it is
-    /// provided the same extensions and options as the original runtime. Any extensions
-    /// you provided must be loaded with `init_ops` instead of `init_ops_and_esm`.
-    #[cfg(feature = "snapshot_creation")]
-    pub fn into_snapshot(self) -> Box<[u8]> {
-        self.0.into_snapshot()
+        Ok(Self(InnerRuntime::new(options)?))
     }
 
     /// Access the underlying deno runtime instance directly
@@ -217,7 +201,7 @@ impl Runtime {
     /// # fn main() -> Result<(), rustyscript::Error> {
     /// let module = Module::new("test.js", " rustyscript.async_functions.foo(); ");
     /// let mut runtime = Runtime::new(Default::default())?;
-    /// runtime.register_function("foo", async |args| {
+    /// runtime.register_async_function("foo", async |args| {
     ///    if let Some(value) = args.get(0) {
     ///         println!("called with: {}", value);
     ///    }
@@ -268,7 +252,9 @@ impl Runtime {
     /// Calls a stored javascript function and deserializes its return value.
     ///
     /// # Arguments
+    /// * `module_context` - Optional handle to a module providing global context for the function
     /// * `function` - A The function object
+    /// * `args` - The arguments to pass to the function
     ///
     /// # Returns
     /// A `Result` containing the deserialized result of the function call (`T`)
@@ -276,7 +262,7 @@ impl Runtime {
     /// calling the function, or if the result cannot be deserialized.
     pub fn call_stored_function<T>(
         &mut self,
-        module_context: &ModuleHandle,
+        module_context: Option<&ModuleHandle>,
         function: &JsFunction,
         args: &FunctionArguments,
     ) -> Result<T, Error>
@@ -289,7 +275,9 @@ impl Runtime {
     /// Calls a javascript function within the Deno runtime by its name and deserializes its return value.
     ///
     /// # Arguments
+    /// * `module_context` - Optional handle to a module to search - if None, or if the search fails, the global context is used
     /// * `name` - A string representing the name of the javascript function to call.
+    /// * `args` - The arguments to pass to the function
     ///
     /// # Returns
     /// A `Result` containing the deserialized result of the function call (`T`)
@@ -311,7 +299,7 @@ impl Runtime {
     /// ```
     pub fn call_function<T>(
         &mut self,
-        module_context: &ModuleHandle,
+        module_context: Option<&ModuleHandle>,
         name: &str,
         args: &FunctionArguments,
     ) -> Result<T, Error>
@@ -324,6 +312,7 @@ impl Runtime {
     /// Get a value from a runtime instance
     ///
     /// # Arguments
+    /// * `module_context` - Optional handle to a module to search - if None, or if the search fails, the global context is used
     /// * `name` - A string representing the name of the value to find
     ///
     /// # Returns
@@ -344,7 +333,11 @@ impl Runtime {
     /// # Ok(())
     /// # }
     /// ```
-    pub fn get_value<T>(&mut self, module_context: &ModuleHandle, name: &str) -> Result<T, Error>
+    pub fn get_value<T>(
+        &mut self,
+        module_context: Option<&ModuleHandle>,
+        name: &str,
+    ) -> Result<T, Error>
     where
         T: serde::de::DeserializeOwned,
     {
@@ -449,9 +442,11 @@ impl Runtime {
         T: deno_core::serde::de::DeserializeOwned,
     {
         if let Some(entrypoint) = module_context.entrypoint() {
-            let value: serde_json::Value =
-                self.0
-                    .call_function_by_ref_async(module_context, entrypoint.clone(), args)?;
+            let value: serde_json::Value = self.0.call_function_by_ref_async(
+                Some(module_context),
+                entrypoint.clone(),
+                args,
+            )?;
             Ok(serde_json::from_value(value)?)
         } else {
             Err(Error::MissingEntrypoint(module_context.module().clone()))
@@ -546,20 +541,20 @@ mod test_runtime {
         assert_eq!(
             2,
             runtime
-                .get_value::<usize>(&module, "a")
+                .get_value::<usize>(Some(&module), "a")
                 .expect("Could not find global")
         );
         assert_eq!(
             "test",
             runtime
-                .get_value::<String>(&module, "b")
+                .get_value::<String>(Some(&module), "b")
                 .expect("Could not find export")
         );
         runtime
-            .get_value::<Undefined>(&module, "c")
+            .get_value::<Undefined>(Some(&module), "c")
             .expect_err("Could not detect null");
         runtime
-            .get_value::<Undefined>(&module, "d")
+            .get_value::<Undefined>(Some(&module), "d")
             .expect_err("Could not detect undeclared");
     }
 
@@ -762,23 +757,23 @@ mod test_runtime {
             .expect("Could not load module");
 
         let result: usize = runtime
-            .call_function(&module, "fna", json_args!(2))
+            .call_function(Some(&module), "fna", json_args!(2))
             .expect("Could not call global");
         assert_eq!(2, result);
 
         let result: String = runtime
-            .call_function(&module, "fnb", json_args!())
+            .call_function(Some(&module), "fnb", json_args!())
             .expect("Could not call export");
         assert_eq!("test", result);
 
         runtime
-            .call_function::<Undefined>(&module, "fnc", json_args!())
+            .call_function::<Undefined>(Some(&module), "fnc", json_args!())
             .expect_err("Did not detect non-function");
         runtime
-            .call_function::<Undefined>(&module, "fnd", json_args!())
+            .call_function::<Undefined>(Some(&module), "fnd", json_args!())
             .expect_err("Did not detect undefined");
         runtime
-            .call_function::<Undefined>(&module, "fne", json_args!())
+            .call_function::<Undefined>(Some(&module), "fne", json_args!())
             .expect("Did not allow undefined return");
     }
 }

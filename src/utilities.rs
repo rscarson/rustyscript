@@ -122,11 +122,95 @@ mod runtime_macros {
             $crate::Runtime::EMPTY_ARGS
         };
     }
+
+    /// A simple helper macro to create a callback for use with `Runtime::register_function`
+    /// Takes care of deserializing arguments and serializing the result
+    ///
+    /// # Example
+    /// ```rust
+    /// use rustyscript::{ Error, sync_callback };
+    /// let add = sync_callback!(
+    ///     (a: i64, b: i64) -> i64 {
+    ///         Ok::<i64, Error>(a + b)
+    ///     }
+    /// );
+    /// ```
+    #[macro_export]
+    macro_rules! sync_callback {
+        (($($arg:ident: $arg_ty:ty),*) -> $ret_ty:ty $body:block) => {
+            |args: &[$crate::serde_json::Value], _state| {
+                let mut args = args.iter();
+                $(
+                    let $arg: $arg_ty = match args.next() {
+                        Some(arg) => $crate::serde_json::from_value(arg.clone())?,
+                        None => return Err($crate::Error::Runtime("Invalid number of arguments".to_string())),
+                    };
+                )*
+                let result: $ret_ty = $body?;
+                Ok($crate::serde_json::Value::try_from(result).map_err(|e| $crate::Error::Runtime(e.to_string()))?)
+            }
+        }
+    }
+
+    /// A simple helper macro to create a callback for use with `Runtime::register_async_function`
+    /// Takes care of deserializing arguments and serializing the result
+    ///
+    /// # Example
+    /// ```rust
+    /// use rustyscript::{ Error, sync_callback };
+    /// let add = async_callback!(
+    ///     (a: i64, b: i64) -> i64 {
+    ///         Ok::<i64, Error>(a + b)
+    ///     }
+    /// );
+    /// ```
+    #[macro_export]
+    macro_rules! async_callback {
+        (($($arg:ident: $arg_ty:ty),*) -> $ret_ty:ty $body:block) => {
+            |args: Vec<$crate::serde_json::Value>| {
+                let mut args = args.iter();
+                $(
+                    let $arg: $arg_ty = match args.next() {
+                        Some(arg) => $crate::serde_json::from_value(arg.clone())?,
+                        None => return Err($crate::Error::Runtime("Invalid number of arguments".to_string())),
+                    };
+                )*
+                let result: $ret_ty = $body?;
+                Ok($crate::serde_json::Value::try_from(result).map_err(|e| $crate::Error::Runtime(e.to_string()))?)
+            }
+        }
+    }
 }
 
 #[cfg(test)]
 mod test_runtime {
     use super::*;
+    use deno_core::serde_json;
+
+    #[test]
+    fn test_callback() {
+        let add = sync_callback!(
+            (a: i64, b: i64) -> i64 {
+                Ok::<i64, Error>(a + b)
+            }
+        );
+
+        let add2 = async_callback!(
+            (a: i64, b: i64) -> i64 {
+                Ok::<i64, Error>(a + b)
+            }
+        );
+
+        let args = vec![
+            serde_json::Value::Number(5.into()),
+            serde_json::Value::Number(5.into()),
+        ];
+        let result = add(&args, &mut ()).unwrap();
+        assert_eq!(serde_json::Value::Number(10.into()), result);
+
+        let result = add2(args).unwrap();
+        assert_eq!(serde_json::Value::Number(10.into()), result);
+    }
 
     #[test]
     fn test_evaluate() {

@@ -262,21 +262,45 @@ impl InnerWorker for DefaultWorker {
                 None => Self::Response::Error(Error::Runtime("Module not found".to_string())),
             },
 
-            DefaultWorkerQuery::CallFunction(id, name, args) => match modules.get(&id) {
-                Some(handle) => match runtime.call_function(handle, &name, &args) {
-                    Ok(v) => Self::Response::Value(v),
-                    Err(e) => Self::Response::Error(e),
-                },
-                None => Self::Response::Error(Error::Runtime("Module not found".to_string())),
-            },
+            DefaultWorkerQuery::CallFunction(id, name, args) => {
+                let handle = if let Some(id) = id {
+                    match modules.get(&id) {
+                        Some(handle) => Some(handle),
+                        None => {
+                            return Self::Response::Error(Error::Runtime(
+                                "Module not found".to_string(),
+                            ))
+                        }
+                    }
+                } else {
+                    None
+                };
 
-            DefaultWorkerQuery::GetValue(id, name) => match modules.get(&id) {
-                Some(handle) => match runtime.get_value(handle, &name) {
+                match runtime.call_function(handle, &name, &args) {
                     Ok(v) => Self::Response::Value(v),
                     Err(e) => Self::Response::Error(e),
-                },
-                None => Self::Response::Error(Error::Runtime("Module not found".to_string())),
-            },
+                }
+            }
+
+            DefaultWorkerQuery::GetValue(id, name) => {
+                let handle = if let Some(id) = id {
+                    match modules.get(&id) {
+                        Some(handle) => Some(handle),
+                        None => {
+                            return Self::Response::Error(Error::Runtime(
+                                "Module not found".to_string(),
+                            ))
+                        }
+                    }
+                } else {
+                    None
+                };
+
+                match runtime.get_value(handle, &name) {
+                    Ok(v) => Self::Response::Value(v),
+                    Err(e) => Self::Response::Error(e),
+                }
+            }
         }
     }
 
@@ -397,7 +421,7 @@ impl DefaultWorker {
     /// The module id must be the id of a module loaded with `load_main_module` or `load_module`
     pub fn call_function<T>(
         &self,
-        id: deno_core::ModuleId,
+        module_context: Option<deno_core::ModuleId>,
         name: String,
         args: Vec<crate::serde_json::Value>,
     ) -> Result<T, Error>
@@ -406,7 +430,7 @@ impl DefaultWorker {
     {
         match self
             .0
-            .send_and_await(DefaultWorkerQuery::CallFunction(id, name, args))?
+            .send_and_await(DefaultWorkerQuery::CallFunction(module_context, name, args))?
         {
             DefaultWorkerResponse::Value(v) => {
                 crate::serde_json::from_value(v).map_err(Error::from)
@@ -420,13 +444,17 @@ impl DefaultWorker {
 
     /// Get a value from a module
     /// The module id must be the id of a module loaded with `load_main_module` or `load_module`
-    pub fn get_value<T>(&self, id: deno_core::ModuleId, name: String) -> Result<T, Error>
+    pub fn get_value<T>(
+        &self,
+        module_context: Option<deno_core::ModuleId>,
+        name: String,
+    ) -> Result<T, Error>
     where
         T: serde::de::DeserializeOwned,
     {
         match self
             .0
-            .send_and_await(DefaultWorkerQuery::GetValue(id, name))?
+            .send_and_await(DefaultWorkerQuery::GetValue(module_context, name))?
         {
             DefaultWorkerResponse::Value(v) => {
                 crate::serde_json::from_value(v).map_err(Error::from)
@@ -470,10 +498,14 @@ pub enum DefaultWorkerQuery {
     CallEntrypoint(deno_core::ModuleId, Vec<crate::serde_json::Value>),
 
     /// Calls a function in a module
-    CallFunction(deno_core::ModuleId, String, Vec<crate::serde_json::Value>),
+    CallFunction(
+        Option<deno_core::ModuleId>,
+        String,
+        Vec<crate::serde_json::Value>,
+    ),
 
     /// Gets a value from a module
-    GetValue(deno_core::ModuleId, String),
+    GetValue(Option<deno_core::ModuleId>, String),
 }
 
 /// Response types for the default worker

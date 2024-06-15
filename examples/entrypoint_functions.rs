@@ -35,7 +35,8 @@ fn main() -> Result<(), Error> {
     runtime.call_entrypoint::<Undefined>(&module_handle, json_args!(2))?;
 
     // Now the setUp is done, and the internal value is ready for use
-    let internal_value: usize = runtime.call_function(&module_handle, "getValue", json_args!())?;
+    let internal_value: usize =
+        runtime.call_function(Some(&module_handle), "getValue", json_args!())?;
     assert_eq!(4, internal_value);
     Ok(())
 }

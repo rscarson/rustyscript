@@ -42,7 +42,7 @@ static MY_MODULE: StaticModule = module!(
 fn main() -> Result<(), Error> {
     let value: String = with_runtime(|runtime| {
         let module_context = runtime.load_module(&MY_MODULE.to_module())?;
-        runtime.call_function(&module_context, "my_function", json_args!())
+        runtime.call_function(Some(&module_context), "my_function", json_args!())
     })?;
 
     assert_eq!(value, "test");

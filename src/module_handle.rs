@@ -13,7 +13,7 @@ pub struct ModuleHandle {
 
 impl ModuleHandle {
     /// Create a new module instance
-    pub fn new(
+    pub(crate) fn new(
         module: &Module,
         module_id: ModuleId,
         entrypoint: Option<v8::Global<v8::Function>>,
@@ -23,6 +23,18 @@ impl ModuleHandle {
             entrypoint,
             module: module.clone(),
         }
+    }
+
+    /// Create a new module handle from raw parts
+    /// # Safety
+    /// This function is unsafe because it allows using potentially invalid ModuleIds.
+    /// Use of an unloaded module ID will result in a panic.
+    pub unsafe fn from_raw(
+        module: &Module,
+        module_id: ModuleId,
+        entrypoint: Option<v8::Global<v8::Function>>,
+    ) -> Self {
+        Self::new(module, module_id, entrypoint)
     }
 
     /// Return this module's contents

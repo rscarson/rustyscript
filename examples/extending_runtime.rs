@@ -58,7 +58,7 @@ impl MyRuntime {
     where
         T: deno_core::serde::de::DeserializeOwned,
     {
-        self.0.call_function(module_context, name, args)
+        self.0.call_function(Some(module_context), name, args)
     }
 
     /// Get a value from a runtime instance
@@ -69,7 +69,7 @@ impl MyRuntime {
     where
         T: serde::de::DeserializeOwned,
     {
-        self.0.get_value(module_context, name)
+        self.0.get_value(Some(module_context), name)
     }
 
     /// Executes the given module, and returns a handle allowing you to extract values

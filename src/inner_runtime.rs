@@ -6,7 +6,7 @@ use crate::{
     transpiler::{self, transpile_extension},
     Error, Module, ModuleHandle,
 };
-use deno_core::{serde_json, v8, OpState, PollEventLoopOptions, RuntimeOptions};
+use deno_core::{serde_json, v8, JsRuntime, OpState, PollEventLoopOptions, RuntimeOptions};
 use std::{collections::HashMap, pin::Pin, rc::Rc, time::Duration};
 
 /// Callback type for rust callback functions
@@ -50,16 +50,10 @@ impl Default for InnerRuntimeOptions {
     }
 }
 
-#[cfg(feature = "snapshot_creation")]
-type JsRuntimeType = deno_core::JsRuntimeForSnapshot;
-
-#[cfg(not(feature = "snapshot_creation"))]
-type JsRuntimeType = deno_core::JsRuntime;
-
 /// Deno JsRuntime wrapper providing helper functions needed
 /// by the public-facing Runtime API
 pub struct InnerRuntime {
-    pub deno_runtime: JsRuntimeType,
+    pub deno_runtime: JsRuntime,
     pub options: InnerRuntimeOptions,
 }
 impl InnerRuntime {
@@ -73,8 +67,8 @@ impl InnerRuntime {
             ext::all_extensions(options.extensions)
         };
 
-        Self {
-            deno_runtime: JsRuntimeType::try_new(RuntimeOptions {
+        Ok(Self {
+            deno_runtime: JsRuntime::try_new(RuntimeOptions {
                 module_loader: Some(loader.clone()),
 
                 extension_transpiler: Some(Rc::new(|specifier, code| {
@@ -94,27 +88,11 @@ impl InnerRuntime {
                 default_entrypoint: options.default_entrypoint,
                 ..Default::default()
             },
-        }
-    }
-
-    /// Consumes the runtime and returns a snapshot of the runtime state
-    /// This is only available when the `snapshot_creation` feature is enabled
-    /// and will return a `Box<[u8]>` representing the snapshot
-    ///
-    /// To use the snapshot, provide it, as a static slice, in [`RuntimeOptions::startup_snapshot`]
-    /// Therefore, in order to use this snapshot, make sure you write it to a file and load it with
-    /// `include_bytes!`
-    ///
-    /// WARNING: In order to use the snapshot, make sure the runtime using it is
-    /// provided the same extensions and options as the original runtime. Any extensions
-    /// you provided must be loaded with `init_ops` instead of `init_ops_and_esm`.
-    #[cfg(feature = "snapshot_creation")]
-    pub fn into_snapshot(self) -> Box<[u8]> {
-        self.deno_runtime.snapshot()
+        })
     }
 
     /// Access the underlying deno runtime instance directly
-    pub fn deno_runtime(&mut self) -> &mut JsRuntimeType {
+    pub fn deno_runtime(&mut self) -> &mut JsRuntime {
         &mut self.deno_runtime
     }
 
@@ -194,7 +172,11 @@ impl InnerRuntime {
     /// A `Result` containing the deserialized result or an error (`Error`) if the
     /// value cannot be found, if there are issues with, or if the result cannot be
     /// deserialized.
-    pub fn get_value<T>(&mut self, module_context: &ModuleHandle, name: &str) -> Result<T, Error>
+    pub fn get_value<T>(
+        &mut self,
+        module_context: Option<&ModuleHandle>,
+        name: &str,
+    ) -> Result<T, Error>
     where
         T: serde::de::DeserializeOwned,
     {
@@ -237,7 +219,7 @@ impl InnerRuntime {
     /// calling the function, or if the result cannot be deserialized.
     pub fn call_stored_function<T>(
         &mut self,
-        module_context: &ModuleHandle,
+        module_context: Option<&ModuleHandle>,
         function: &JsFunction,
         args: &FunctionArguments,
     ) -> Result<T, Error>
@@ -260,7 +242,7 @@ impl InnerRuntime {
     /// calling the function, or if the result cannot be deserialized.
     pub fn call_function<T>(
         &mut self,
-        module_context: &ModuleHandle,
+        module_context: Option<&ModuleHandle>,
         name: &str,
         args: &FunctionArguments,
     ) -> Result<T, Error>
@@ -331,19 +313,22 @@ impl InnerRuntime {
     /// A `Result` containing the non-null value extracted or an error (`Error`)
     pub fn get_value_ref_sync(
         &mut self,
-        module_context: &ModuleHandle,
+        module_context: Option<&ModuleHandle>,
         name: &str,
     ) -> Result<v8::Global<v8::Value>, Error> {
-        match self.get_global_value(name) {
-            Ok(v) => Some(v),
-            _ => self.get_module_export_value(module_context, name).ok(),
+        if let Some(module_context) = module_context {
+            if let Ok(v) = self.get_module_export_value(module_context, name) {
+                return Ok(v);
+            }
         }
-        .ok_or::<Error>(Error::ValueNotFound(name.to_string()))
+
+        self.get_global_value(name)
+            .map_err(|_| Error::ValueNotFound(name.to_string()))
     }
 
     pub fn get_value_ref_async(
         &mut self,
-        module_context: &ModuleHandle,
+        module_context: Option<&ModuleHandle>,
         name: &str,
     ) -> Result<v8::Global<v8::Value>, Error> {
         let timeout = self.options.timeout;
@@ -381,17 +366,29 @@ impl InnerRuntime {
     /// be deserialized.
     pub fn call_function_by_ref_sync(
         &mut self,
-        module_context: &ModuleHandle,
+        module_context: Option<&ModuleHandle>,
         function: v8::Global<v8::Function>,
         args: &FunctionArguments,
     ) -> Result<v8::Global<v8::Value>, Error> {
-        let module_namespace = self
-            .deno_runtime
-            .get_module_namespace(module_context.id())?;
+        let module_namespace = if let Some(module_context) = module_context {
+            Some(
+                self.deno_runtime
+                    .get_module_namespace(module_context.id())?,
+            )
+        } else {
+            None
+        };
+
         let mut scope = self.deno_runtime.handle_scope();
         let mut scope = v8::TryCatch::new(&mut scope);
 
-        let module_namespace = v8::Local::<v8::Object>::new(&mut scope, module_namespace);
+        // Get the namespace
+        // Module-level if supplied, none otherwise
+        let namespace: v8::Local<v8::Value> = match module_namespace {
+            Some(namespace) => v8::Local::<v8::Object>::new(&mut scope, namespace).into(),
+            None => v8::undefined(&mut scope).into(),
+        };
+
         let function_instance = function.open(&mut scope);
 
         // Prep arguments
@@ -401,7 +398,7 @@ impl InnerRuntime {
             .collect();
         let final_args = f_args?;
 
-        let result = function_instance.call(&mut scope, module_namespace.into(), &final_args);
+        let result = function_instance.call(&mut scope, namespace, &final_args);
         match result {
             Some(value) => {
                 let value = v8::Global::new(&mut scope, value);
@@ -413,8 +410,10 @@ impl InnerRuntime {
                 let filename = e.get_script_resource_name(&mut scope);
                 let filename = if let Some(v) = filename {
                     v.to_rust_string_lossy(&mut scope)
-                } else {
+                } else if let Some(module_context) = module_context {
                     module_context.module().filename().to_string()
+                } else {
+                    "unknown".to_string()
                 };
 
                 let linenumber = e.get_line_number(&mut scope).unwrap_or_default();
@@ -441,7 +440,7 @@ impl InnerRuntime {
     /// if it is not a valid javascript function.
     pub fn get_function_by_name(
         &mut self,
-        module_context: &ModuleHandle,
+        module_context: Option<&ModuleHandle>,
         name: &str,
     ) -> Result<v8::Global<v8::Function>, Error> {
         // Get the value
@@ -460,7 +459,7 @@ impl InnerRuntime {
 
     pub fn call_function_by_ref_async<T>(
         &mut self,
-        module_context: &ModuleHandle,
+        module_context: Option<&ModuleHandle>,
         function: v8::Global<v8::Function>,
         args: &FunctionArguments,
     ) -> Result<T, Error>
@@ -579,7 +578,7 @@ impl InnerRuntime {
         let f_entrypoint = match deep_state.try_take::<v8::Global<v8::Function>>() {
             Some(entrypoint) => Some(entrypoint),
             None => default_entrypoint.and_then(|default_entrypoint| {
-                self.get_function_by_name(&module_handle_stub, &default_entrypoint)
+                self.get_function_by_name(Some(&module_handle_stub), &default_entrypoint)
                     .ok()
             }),
         };
@@ -610,7 +609,7 @@ mod test_inner_runtime {
         ",
         );
 
-        let mut runtime = InnerRuntime::new(Default::default());
+        let mut runtime = InnerRuntime::new(Default::default()).expect("Could not load runtime");
         let module = runtime
             .load_modules(Some(&module), vec![])
             .expect("Could not load module");
@@ -618,20 +617,20 @@ mod test_inner_runtime {
         assert_eq!(
             2,
             runtime
-                .get_value::<usize>(&module, "a")
+                .get_value::<usize>(Some(&module), "a")
                 .expect("Could not find global")
         );
         assert_eq!(
             "test",
             runtime
-                .get_value::<String>(&module, "b")
+                .get_value::<String>(Some(&module), "b")
                 .expect("Could not find export")
         );
         runtime
-            .get_value::<Undefined>(&module, "c")
+            .get_value::<Undefined>(Some(&module), "c")
             .expect_err("Could not detect null");
         runtime
-            .get_value::<Undefined>(&module, "d")
+            .get_value::<Undefined>(Some(&module), "d")
             .expect_err("Could not detect undeclared");
     }
 
@@ -646,22 +645,22 @@ mod test_inner_runtime {
         ",
         );
 
-        let mut runtime = InnerRuntime::new(Default::default());
+        let mut runtime = InnerRuntime::new(Default::default()).expect("Could not load runtime");
         let module = runtime
             .load_modules(Some(&module), vec![])
             .expect("Could not load module");
 
         runtime
-            .get_value_ref_async(&module, "a")
+            .get_value_ref_async(Some(&module), "a")
             .expect("Could not find global");
         runtime
-            .get_value_ref_async(&module, "b")
+            .get_value_ref_async(Some(&module), "b")
             .expect("Could not find export");
         runtime
-            .get_value_ref_async(&module, "c")
+            .get_value_ref_async(Some(&module), "c")
             .expect_err("Could not detect null");
         runtime
-            .get_value_ref_async(&module, "d")
+            .get_value_ref_async(Some(&module), "d")
             .expect_err("Could not detect undeclared");
     }
 
@@ -679,29 +678,29 @@ mod test_inner_runtime {
         ",
         );
 
-        let mut runtime = InnerRuntime::new(Default::default());
+        let mut runtime = InnerRuntime::new(Default::default()).expect("Could not load runtime");
         let module = runtime
             .load_modules(Some(&module), vec![])
             .expect("Could not load module");
 
         let result: usize = runtime
-            .call_function(&module, "fna", json_args!(2))
+            .call_function(Some(&module), "fna", json_args!(2))
             .expect("Could not call global");
         assert_eq!(2, result);
 
         let result: String = runtime
-            .call_function(&module, "fnb", json_args!())
+            .call_function(Some(&module), "fnb", json_args!())
             .expect("Could not call export");
         assert_eq!("test", result);
 
         runtime
-            .call_function::<Undefined>(&module, "fnc", json_args!())
+            .call_function::<Undefined>(Some(&module), "fnc", json_args!())
             .expect_err("Did not detect non-function");
         runtime
-            .call_function::<Undefined>(&module, "fnd", json_args!())
+            .call_function::<Undefined>(Some(&module), "fnd", json_args!())
             .expect_err("Did not detect undefined");
         runtime
-            .call_function::<Undefined>(&module, "fne", json_args!())
+            .call_function::<Undefined>(Some(&module), "fne", json_args!())
             .expect("Did not allow undefined return");
     }
 
@@ -714,13 +713,13 @@ mod test_inner_runtime {
         ",
         );
 
-        let mut runtime = InnerRuntime::new(Default::default());
+        let mut runtime = InnerRuntime::new(Default::default()).expect("Could not load runtime");
         let module = runtime
             .load_modules(Some(&module), vec![])
             .expect("Could not load module");
 
         let e = runtime
-            .call_function::<usize>(&module, "fn", json_args!(1))
+            .call_function::<usize>(Some(&module), "fn", json_args!(1))
             .unwrap_err();
         assert!(e.to_string().ends_with("test.js:2: Uncaught Error: msg"));
     }
@@ -736,13 +735,13 @@ mod test_inner_runtime {
         ",
         );
 
-        let mut runtime = InnerRuntime::new(Default::default());
+        let mut runtime = InnerRuntime::new(Default::default()).expect("Could not load runtime");
         let module = runtime
             .load_modules(Some(&module), vec![])
             .expect("Could not load module");
 
         let result: usize = runtime
-            .call_function(&module, "test", json_args!(2, 3))
+            .call_function(Some(&module), "test", json_args!(2, 3))
             .expect("Could not call global");
         assert_eq!(5, result);
     }
@@ -758,22 +757,22 @@ mod test_inner_runtime {
         ",
         );
 
-        let mut runtime = InnerRuntime::new(Default::default());
+        let mut runtime = InnerRuntime::new(Default::default()).expect("Could not load runtime");
         let module = runtime
             .load_modules(Some(&module), vec![])
             .expect("Could not load module");
 
         runtime
-            .get_function_by_name(&module, "fna")
+            .get_function_by_name(Some(&module), "fna")
             .expect("Did not find global");
         runtime
-            .get_function_by_name(&module, "fnb")
+            .get_function_by_name(Some(&module), "fnb")
             .expect("Did not find export");
         runtime
-            .get_function_by_name(&module, "fnc")
+            .get_function_by_name(Some(&module), "fnc")
             .expect_err("Did not detect non-function");
         runtime
-            .get_function_by_name(&module, "fnd")
+            .get_function_by_name(Some(&module), "fnd")
             .expect_err("Did not detect undefined");
     }
 
@@ -791,13 +790,13 @@ mod test_inner_runtime {
         ",
         );
 
-        let mut runtime = InnerRuntime::new(Default::default());
+        let mut runtime = InnerRuntime::new(Default::default()).expect("Could not load runtime");
         let module = runtime
             .load_modules(Some(&module), vec![])
             .expect("Could not load module");
 
         let value: usize = runtime
-            .call_function(&module, "test", json_args!())
+            .call_function(Some(&module), "test", json_args!())
             .expect("Could not call function");
         assert_eq!(value, 2);
     }
@@ -818,13 +817,13 @@ mod test_inner_runtime {
         ",
         );
 
-        let mut runtime = InnerRuntime::new(Default::default());
+        let mut runtime = InnerRuntime::new(Default::default()).expect("Could not load runtime");
         let module = runtime
             .load_modules(Some(&module), vec![])
             .expect("Could not load module");
 
         let value: usize = runtime
-            .call_function(&module, "test", json_args!())
+            .call_function(Some(&module), "test", json_args!())
             .expect("Could not call function");
         assert_eq!(value, 2);
     }
@@ -843,13 +842,13 @@ mod test_inner_runtime {
         ",
         );
 
-        let mut runtime = InnerRuntime::new(Default::default());
+        let mut runtime = InnerRuntime::new(Default::default()).expect("Could not load runtime");
         let module = runtime
             .load_modules(Some(&module), vec![])
             .expect("Could not load module");
 
         let value: usize = runtime
-            .call_function(&module, "test", json_args!())
+            .call_function(Some(&module), "test", json_args!())
             .expect("Could not call function");
         assert_eq!(value, 2);
     }
@@ -866,7 +865,7 @@ mod test_inner_runtime {
         ",
         );
 
-        let mut runtime = InnerRuntime::new(Default::default());
+        let mut runtime = InnerRuntime::new(Default::default()).expect("Could not load runtime");
         let module = runtime
             .load_modules(Some(&module), vec![])
             .expect("Could not load module");
@@ -877,12 +876,17 @@ mod test_inner_runtime {
             name: String,
             func: JsFunction<'a>,
         }
-        let value: TestStruct = runtime
-            .get_value(&module, "test")
+        let structure: TestStruct = runtime
+            .get_value(Some(&module), "test")
             .expect("Could not get object");
 
         let value: usize = runtime
-            .call_stored_function(&module, &value.func, json_args!(2))
+            .call_stored_function(Some(&module), &structure.func, json_args!(2))
+            .expect("could not call function");
+        assert_eq!(7, value);
+
+        let value: usize = runtime
+            .call_stored_function(None, &structure.func, json_args!(2))
             .expect("could not call function");
         assert_eq!(7, value);
     }
@@ -896,18 +900,18 @@ mod test_inner_runtime {
         ",
         );
 
-        let mut runtime = InnerRuntime::new(Default::default());
+        let mut runtime = InnerRuntime::new(Default::default()).expect("Could not load runtime");
         let module = runtime
             .load_modules(Some(&module), vec![])
             .expect("Could not load module");
 
         let function: JsFunction = runtime
-            .get_value(&module, "test")
+            .get_value(Some(&module), "test")
             .expect("Could not get function");
 
         println!("Deserialized");
         let value: usize = runtime
-            .call_stored_function(&module, &function, json_args!(2))
+            .call_stored_function(Some(&module), &function, json_args!(2))
             .expect("could not call function");
         assert_eq!(4, value);
     }

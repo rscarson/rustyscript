@@ -44,12 +44,12 @@ fn main() -> Result<(), Error> {
 
     // The async function
     let module_handle = runtime.load_module(&module)?;
-    let value: usize = runtime.call_function(&module_handle, "test", json_args!())?;
+    let value: usize = runtime.call_function(Some(&module_handle), "test", json_args!())?;
     assert_eq!(value, 2);
 
     // Fetch example
     let data: rustyscript::serde_json::Value =
-        runtime.call_function(&module_handle, "fetch_example", json_args!())?;
+        runtime.call_function(Some(&module_handle), "fetch_example", json_args!())?;
     println!("{:?}", data);
     Ok(())
 }

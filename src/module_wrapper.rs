@@ -66,7 +66,7 @@ impl ModuleWrapper {
     where
         T: serde::de::DeserializeOwned,
     {
-        self.runtime.get_value(&self.module_context, name)
+        self.runtime.get_value(Some(&self.module_context), name)
     }
 
     /// Checks if a value in the module with the given name is callable as a JavaScript function.
@@ -98,7 +98,8 @@ impl ModuleWrapper {
     where
         T: serde::de::DeserializeOwned,
     {
-        self.runtime.call_function(&self.module_context, name, args)
+        self.runtime
+            .call_function(Some(&self.module_context), name, args)
     }
 
     /// Calls a function using the module's runtime that was previously stored
@@ -121,7 +122,7 @@ impl ModuleWrapper {
         T: serde::de::DeserializeOwned,
     {
         self.runtime
-            .call_stored_function(&self.module_context, function, args)
+            .call_stored_function(Some(&self.module_context), function, args)
     }
 
     /// Retrieves the names of the module's exports.

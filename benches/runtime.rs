@@ -42,7 +42,7 @@ fn criterion_benchmark(c: &mut Criterion) {
     c.bench_function("call_function", |b| {
         b.iter(|| {
             let _: usize = runtime
-                .call_function(&modref, "test", json_args!())
+                .call_function(Some(&modref), "test", json_args!())
                 .expect("could not call function");
         })
     });
@@ -50,7 +50,7 @@ fn criterion_benchmark(c: &mut Criterion) {
     c.bench_function("call_function_with_args", |b| {
         b.iter(|| {
             let _: usize = runtime
-                .call_function(&modref, "test", json_args!("test", 1, false))
+                .call_function(Some(&modref), "test", json_args!("test", 1, false))
                 .expect("could not call function");
         })
     });

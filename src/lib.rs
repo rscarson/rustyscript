@@ -181,11 +181,8 @@
 //! |             |                                                                                                   |                  |                                                                                 |
 //! |worker       | Enables access to the threaded worker API [rustyscript::worker]                                   |yes               |None                                                                             |
 //!
-//! There is also a `snapshot_creation` feature that loads an alternate deno runtime,
-//! which can be used to create snapshots of the runtime for faster startup times. See:
-//!
-//! - [Runtime::create_snapshot]
-//! - [RuntimeOptions::startup_snapshot]
+//! There is also a `snapshot_builder` feature enables access to an alternative runtime
+//! used to create snapshots of the runtime for faster startup times. See [SnapshotBuilder] for more information
 //!
 //! ----
 //!
@@ -199,6 +196,11 @@
 mod transl8;
 
 mod v8_serializer;
+
+#[cfg(feature = "snapshot_builder")]
+mod snapshot_builder;
+#[cfg(feature = "snapshot_builder")]
+pub use snapshot_builder::SnapshotBuilder;
 
 mod error;
 mod ext;

@@ -50,7 +50,7 @@ fn main() -> Result<(), Error> {
     // We use the returned handle to extract the const that it exports!
     // We tell the compiler we'd like it as a string, and give the name of the value
     // We'd like to retrieve!
-    let final_value: String = runtime.get_value(&use_value_handle, "final_value")?;
+    let final_value: String = runtime.get_value(Some(&use_value_handle), "final_value")?;
     println!("The received value was {final_value}");
 
     Ok(())

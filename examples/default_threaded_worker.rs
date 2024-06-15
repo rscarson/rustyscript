@@ -10,8 +10,11 @@ fn main() -> Result<(), Error> {
     let module = Module::new("test.js", "export function add(a, b) { return a + b; }");
     let module_id = worker.load_module(module)?;
 
-    let result: i32 =
-        worker.call_function(module_id, "add".to_string(), json_args!(1, 2).to_vec())?;
+    let result: i32 = worker.call_function(
+        Some(module_id),
+        "add".to_string(),
+        json_args!(1, 2).to_vec(),
+    )?;
     assert_eq!(result, 3);
 
     worker.stop()
