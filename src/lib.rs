@@ -223,6 +223,10 @@ pub mod worker;
 pub use deno_core;
 pub use deno_core::serde_json;
 
+#[cfg(feature = "web")]
+pub use ext::web::WebOptions;
+pub use ext::ExtensionOptions;
+
 // Expose some important stuff from us
 pub use error::Error;
 pub use inner_runtime::{FunctionArguments, RsAsyncFunction, RsFunction};

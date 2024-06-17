@@ -17,18 +17,18 @@ extension!(
     esm = [ dir "src/ext/io", "init_io.js" ],
 );
 
-pub fn extensions() -> Vec<Extension> {
+pub fn extensions(pipes: Option<deno_io::Stdio>) -> Vec<Extension> {
     vec![
         tty::deno_tty::init_ops_and_esm(),
         init_io::init_ops_and_esm(),
-        deno_io::deno_io::init_ops_and_esm(Some(deno_io::Stdio::default())),
+        deno_io::deno_io::init_ops_and_esm(pipes),
     ]
 }
 
-pub fn snapshot_extensions() -> Vec<Extension> {
+pub fn snapshot_extensions(pipes: Option<deno_io::Stdio>) -> Vec<Extension> {
     vec![
         tty::deno_tty::init_ops(),
         init_io::init_ops(),
-        deno_io::deno_io::init_ops(Some(deno_io::Stdio::default())),
+        deno_io::deno_io::init_ops(pipes),
     ]
 }

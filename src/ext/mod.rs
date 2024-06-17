@@ -23,9 +23,42 @@ pub mod webidl;
 #[cfg(feature = "io")]
 pub mod io;
 
+#[derive(Debug)]
+pub struct ExtensionOptions {
+    /// Options specific to the deno_web, deno_fetch and deno_net extensions
+    #[cfg(feature = "web")]
+    pub web: web::WebOptions,
+
+    /// Optional seed for the deno_crypto extension
+    #[cfg(feature = "crypto")]
+    pub crypto_seed: Option<u64>,
+
+    /// Configures the stdin/out/err pipes for the deno_io extension
+    #[cfg(feature = "io")]
+    pub io_pipes: Option<deno_io::Stdio>,
+}
+
+impl Default for ExtensionOptions {
+    fn default() -> Self {
+        Self {
+            #[cfg(feature = "web")]
+            web: web::WebOptions::default(),
+
+            #[cfg(feature = "crypto")]
+            crypto_seed: None,
+
+            #[cfg(feature = "io")]
+            io_pipes: deno_io::Stdio::Default(),
+        }
+    }
+}
+
 ///
 /// Add up all required extensions
-pub fn all_extensions(user_extensions: Vec<Extension>) -> Vec<Extension> {
+pub fn all_extensions(
+    user_extensions: Vec<Extension>,
+    options: ExtensionOptions,
+) -> Vec<Extension> {
     let mut extensions = rustyscript::extensions();
 
     #[cfg(feature = "console")]
@@ -41,13 +74,13 @@ pub fn all_extensions(user_extensions: Vec<Extension>) -> Vec<Extension> {
     extensions.extend(web_stub::extensions());
 
     #[cfg(feature = "web")]
-    extensions.extend(web::extensions());
+    extensions.extend(web::extensions(options.web));
 
     #[cfg(feature = "crypto")]
-    extensions.extend(crypto::extensions());
+    extensions.extend(crypto::extensions(options.crypto_seed));
 
     #[cfg(feature = "io")]
-    extensions.extend(io::extensions());
+    extensions.extend(io::extensions(options.io_pipes));
 
     extensions.extend(user_extensions);
     extensions
@@ -55,7 +88,10 @@ pub fn all_extensions(user_extensions: Vec<Extension>) -> Vec<Extension> {
 
 ///
 /// Add up all required extensions, in snapshot mode
-pub fn all_snapshot_extensions(user_extensions: Vec<Extension>) -> Vec<Extension> {
+pub fn all_snapshot_extensions(
+    user_extensions: Vec<Extension>,
+    options: ExtensionOptions,
+) -> Vec<Extension> {
     let mut extensions = rustyscript::snapshot_extensions();
 
     #[cfg(feature = "console")]
@@ -71,13 +107,13 @@ pub fn all_snapshot_extensions(user_extensions: Vec<Extension>) -> Vec<Extension
     extensions.extend(web_stub::snapshot_extensions());
 
     #[cfg(feature = "web")]
-    extensions.extend(web::snapshot_extensions());
+    extensions.extend(web::snapshot_extensions(options.web));
 
     #[cfg(feature = "crypto")]
-    extensions.extend(crypto::snapshot_extensions());
+    extensions.extend(crypto::snapshot_extensions(options.crypto_seed));
 
     #[cfg(feature = "io")]
-    extensions.extend(io::snapshot_extensions());
+    extensions.extend(io::snapshot_extensions(options.io_pipes));
 
     extensions.extend(user_extensions);
     extensions

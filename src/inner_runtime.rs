@@ -26,6 +26,9 @@ pub struct InnerRuntimeOptions {
     /// A set of deno_core extensions to add to the runtime
     pub extensions: Vec<deno_core::Extension>,
 
+    /// Additional options for the built-in extensions
+    pub extension_options: ext::ExtensionOptions,
+
     /// Function to use as entrypoint if the module does not provide one
     pub default_entrypoint: Option<String>,
 
@@ -35,6 +38,10 @@ pub struct InnerRuntimeOptions {
     /// Optional cache provider for the module loader
     pub module_cache: Option<Box<dyn ModuleCacheProvider>>,
 
+    /// Optional snapshot to load into the runtime
+    /// This will reduce load times, but requires the same extensions to be loaded
+    /// as when the snapshot was created
+    /// If provided, user-supplied extensions must be instantiated with `init_ops` instead of `init_ops_and_esm`
     pub startup_snapshot: Option<&'static [u8]>,
 }
 
@@ -46,6 +53,8 @@ impl Default for InnerRuntimeOptions {
             timeout: Duration::MAX,
             module_cache: None,
             startup_snapshot: None,
+
+            extension_options: Default::default(),
         }
     }
 }
@@ -62,9 +71,9 @@ impl InnerRuntime {
 
         // If a snapshot is provided, do not reload ops
         let extensions = if options.startup_snapshot.is_some() {
-            ext::all_snapshot_extensions(options.extensions)
+            ext::all_snapshot_extensions(options.extensions, options.extension_options)
         } else {
-            ext::all_extensions(options.extensions)
+            ext::all_extensions(options.extensions, options.extension_options)
         };
 
         Ok(Self {

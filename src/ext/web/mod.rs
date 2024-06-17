@@ -76,22 +76,55 @@ extension!(
     esm = [ dir "src/ext/web", "init_net.js" ],
 );
 
-pub fn extensions() -> Vec<Extension> {
+#[derive(Debug, Default)]
+pub struct WebOptions {
+    /// Base URL for some deno_web OPs
+    pub base_url: Option<ModuleSpecifier>,
+
+    /// User agent to use for fetch
+    pub user_agent: String,
+
+    /// Root certificate store for TLS connections for fetches and network OPs
+    pub root_cert_store_provider: Option<Arc<dyn RootCertStoreProvider>>,
+
+    /// Proxy for fetch
+    pub proxy: Option<Proxy>,
+
+    /// Request builder hook for fetch
+    pub request_builder_hook: Option<fn(_: RequestBuilder) -> Result<RequestBuilder, AnyError>>,
+
+    /// If true, fetches and network OPs will ignore SSL errors
+    pub unsafely_ignore_certificate_errors: Option<Vec<String>>,
+
+    /// Client certificate and key for fetch
+    pub client_cert_chain_and_key: TlsKeys,
+
+    /// File fetch handler for fetch
+    pub file_fetch_handler: Rc<dyn FetchHandler>,
+}
+
+pub fn extensions(options: WebOptions) -> Vec<Extension> {
     vec![
-        deno_web::deno_web::init_ops_and_esm::<Permissions>(Default::default(), None),
-        deno_fetch::deno_fetch::init_ops_and_esm::<Permissions>(Default::default()),
-        deno_net::deno_net::init_ops_and_esm::<Permissions>(None, None),
+        deno_web::deno_web::init_ops_and_esm::<Permissions>(Default::default(), options.base_url),
+        deno_fetch::deno_fetch::init_ops_and_esm::<Permissions>(deno_fetch::Options { ..options }),
+        deno_net::deno_net::init_ops_and_esm::<Permissions>(
+            options.root_cert_store_provider,
+            options.unsafely_ignore_certificate_errors,
+        ),
         init_web::init_ops_and_esm(),
         init_fetch::init_ops_and_esm(),
         init_net::init_ops_and_esm(),
     ]
 }
 
-pub fn snapshot_extensions() -> Vec<Extension> {
+pub fn snapshot_extensions(options: RuntimeOptions) -> Vec<Extension> {
     vec![
-        deno_web::deno_web::init_ops::<Permissions>(Default::default(), None),
-        deno_fetch::deno_fetch::init_ops::<Permissions>(Default::default()),
-        deno_net::deno_net::init_ops::<Permissions>(None, None),
+        deno_web::deno_web::init_ops::<Permissions>(Default::default(), options.base_url),
+        deno_fetch::deno_fetch::init_ops::<Permissions>(deno_fetch::Options { ..options }),
+        deno_net::deno_net::init_ops::<Permissions>(
+            options.root_cert_store_provider,
+            options.unsafely_ignore_certificate_errors,
+        ),
         init_web::init_ops(),
         init_fetch::init_ops(),
         init_net::init_ops(),
