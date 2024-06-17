@@ -386,12 +386,17 @@ impl InnerRuntime {
         // Module-level if supplied, none otherwise
         let namespace: v8::Local<v8::Value> = match module_namespace {
             Some(namespace) => v8::Local::<v8::Object>::new(&mut scope, namespace).into(),
-            None => v8::undefined(&mut scope).into(),
+            None => {
+                // Create a new object to use as the namespace if none is provided
+                //let obj: v8::Local<v8::Value> = v8::Object::new(&mut scope).into();
+                let obj: v8::Local<v8::Value> = v8::undefined(&mut scope).into();
+                obj
+            }
         };
 
         let function_instance = function.open(&mut scope);
 
-        // Prep arguments
+        // Prep argumentsgit
         let f_args: Result<Vec<v8::Local<v8::Value>>, deno_core::serde_v8::Error> = args
             .iter()
             .map(|f| deno_core::serde_v8::to_v8(&mut scope, f))

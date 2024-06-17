@@ -11,7 +11,7 @@ categories = ["web-programming", "network-programming", "api-bindings", "compile
 readme = "readme.md"
 
 [features]
-default = ["worker", "console", "url", "crypto", "snapshot_builder"]
+default = ["worker", "console", "url", "crypto"]
 no_extensions = []
 all = ["web", "io"]
 
@@ -38,14 +38,14 @@ version-sync = "0.9.5"
 criterion = "0.5.1"
 
 [dependencies]
-deno_core = "0.288.0"
+deno_core = "0.289.0"
 deno_ast = { version = "0.39.2", features = ["transpiling"]}
 thiserror = "1.0.61"
 serde = "1.0.203"
 tokio = "1.38.0"
 
 # For URL imports
-reqwest = { version = "0.12.4", optional = true, default-features = false, features = ["blocking", "rustls-tls"] }
+reqwest = { version = "0.12.5", optional = true, default-features = false, features = ["blocking", "rustls-tls"] }
 
 # Extension features
 deno_url = {version = "0.156.0", optional = true}
@@ -64,10 +64,6 @@ nix = {version = "=0.29.0", optional = true}
 libc = {version = "0.2.155", optional = true}
 once_cell = {version = "1.19.0", optional = true}
 
-# To correct temporary issues with the deno extension crates
-# [patch.crates-io]
-# deno_permissions = { path = "../../temp_workspace/deno/runtime/permissions" }
-
 [[example]]
 name = "custom_threaded_worker"
 required-features = ["worker"]
@@ -75,6 +71,10 @@ required-features = ["worker"]
 [[example]]
 name = "default_threaded_worker"
 required-features = ["worker"]
+
+[[example]]
+name = "create_snapshot"
+required-features = ["snapshot_builder"]
 
 [[example]]
 name = "url_import"

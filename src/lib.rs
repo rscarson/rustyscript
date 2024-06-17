@@ -164,22 +164,23 @@
 //!
 //! Please note that the `web` feature will also enable fs_import and url_import, allowing arbitrary filesystem and network access for import statements
 //!
-//! | Feature     | Description                                                                                       | Preserves Sandbox | Dependencies                                                                   |  
-//! |-------------|---------------------------------------------------------------------------------------------------|------------------|---------------------------------------------------------------------------------|
-//! |console      |Provides `console.*` functionality from JS                                                         |yes               |deno_console                                                                     |
-//! |crypto       |Provides `crypto.*` functionality from JS                                                          |yes               |deno_crypto, deno_webidl                                                         |
-//! |url          |Provides the URL, and URLPattern APIs from within JS                                               |yes               |deno_webidl, deno_url                                                            |
-//! |io           |Provides IO primitives such as stdio streams and abstraction over File System files.               |**NO**            |deno_io, rustyline, winapi, nix, libc, once_cell
-//! |web          |Provides the Event, TextEncoder, TextDecoder, File, Web Cryptography, and fetch APIs from within JS|**NO**            |deno_webidl, deno_web, deno_crypto, deno_fetch, deno_url, deno_net               |
-//! |             |                                                                                                   |                  |                                                                                 |
-//! |default      |Provides only those extensions that preserve sandboxing                                            |yes               |deno_console, deno_crypto, deno_webidl, deno_url                                 |
-//! |no_extensions|Disables all extensions to the JS runtime - you can still add your own extensions in this mode     |yes               |None                                                                             |
-//! |all          |Provides all available functionality                                                               |**NO**            |deno_console, deno_webidl, deno_web, deno_net, deno_crypto, deno_fetch, deno_url |
-//! |             |                                                                                                   |                  |                                                                                 |
-//! |fs_import    | Enables importing arbitrary code from the filesystem through JS                                   |**NO**            |None                                                                             |
-//! |url_import   | Enables importing arbitrary code from network locations through JS                                |**NO**            |reqwest                                                                          |
-//! |             |                                                                                                   |                  |                                                                                 |
-//! |worker       | Enables access to the threaded worker API [rustyscript::worker]                                   |yes               |None                                                                             |
+//! | Feature        | Description                                                                                       | Preserves Sandbox | Dependencies                                                                   |  
+//! |----------------|---------------------------------------------------------------------------------------------------|------------------|---------------------------------------------------------------------------------|
+//! |console         |Provides `console.*` functionality from JS                                                         |yes               |deno_console                                                                     |
+//! |crypto          |Provides `crypto.*` functionality from JS                                                          |yes               |deno_crypto, deno_webidl                                                         |
+//! |url             |Provides the URL, and URLPattern APIs from within JS                                               |yes               |deno_webidl, deno_url                                                            |
+//! |io              |Provides IO primitives such as stdio streams and abstraction over File System files.               |**NO**            |deno_io, rustyline, winapi, nix, libc, once_cell
+//! |web             |Provides the Event, TextEncoder, TextDecoder, File, Web Cryptography, and fetch APIs from within JS|**NO**            |deno_webidl, deno_web, deno_crypto, deno_fetch, deno_url, deno_net               |
+//! |                |                                                                                                   |                  |                                                                                 |
+//! |default         |Provides only those extensions that preserve sandboxing                                            |yes               |deno_console, deno_crypto, deno_webidl, deno_url                                 |
+//! |no_extensions   |Disables all extensions to the JS runtime - you can still add your own extensions in this mode     |yes               |None                                                                             |
+//! |all             |Provides all available functionality                                                               |**NO**            |deno_console, deno_webidl, deno_web, deno_net, deno_crypto, deno_fetch, deno_url |
+//! |                |                                                                                                   |                  |                                                                                 |
+//! |fs_import       | Enables importing arbitrary code from the filesystem through JS                                   |**NO**            |None                                                                             |
+//! |url_import      | Enables importing arbitrary code from network locations through JS                                |**NO**            |reqwest                                                                          |
+//! |                |                                                                                                   |                  |                                                                                 |
+//! |worker          | Enables access to the threaded worker API [rustyscript::worker]                                   |yes               |None                                                                             |
+//! |snapshot_builder| Enables access to [rustyscript::SnapshotBuilder]                                                  |yes               |None                                                                             |
 //!
 //! There is also a `snapshot_builder` feature enables access to an alternative runtime
 //! used to create snapshots of the runtime for faster startup times. See [SnapshotBuilder] for more information
