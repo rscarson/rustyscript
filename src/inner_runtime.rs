@@ -13,10 +13,9 @@ use std::{collections::HashMap, pin::Pin, rc::Rc, time::Duration};
 pub type RsFunction = fn(&FunctionArguments, &mut OpState) -> Result<serde_json::Value, Error>;
 
 /// Callback type for async rust callback functions
-pub type RsAsyncFunction =
-    fn(
-        Vec<serde_json::Value>,
-    ) -> Pin<Box<dyn std::future::Future<Output = Result<serde_json::Value, Error>>>>;
+pub type RsAsyncFunction = Box<dyn Fn(
+    Vec<serde_json::Value>,
+) -> Pin<Box<dyn std::future::Future<Output=Result<serde_json::Value, Error>>>>>;
 
 /// Type required to pass arguments to JsFunctions
 pub type FunctionArguments = [serde_json::Value];
