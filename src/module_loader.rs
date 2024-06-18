@@ -130,6 +130,7 @@ impl InnerRustyLoader {
     }
 }
 
+/// The default module loader used by this crate.
 pub struct RustyLoader {
     inner: Rc<InnerRustyLoader>,
 }
@@ -168,9 +169,11 @@ impl ModuleLoader for RustyLoader {
             }
 
             _ => {
-                return Err(anyhow!(
-                    "unrecognized schema for module import: {specifier}"
-                ));
+                //return Err(anyhow!(
+                //    "unrecognized schema for module import: {specifier}"
+                //));
+                
+                // As far as I can tell, this wasn't needed since unrecognized schemes are also handled by load()...?
             }
         }
 

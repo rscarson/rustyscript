@@ -37,7 +37,10 @@ pub struct InnerRuntimeOptions {
 
     /// Optional cache provider for the module loader
     pub module_cache: Option<Box<dyn ModuleCacheProvider>>,
-
+ 
+    /// Optional custom module loader
+    pub module_loader: Option<Rc<dyn deno_core::ModuleLoader>>,
+ 
     /// Optional snapshot to load into the runtime
     /// This will reduce load times, but requires the same extensions to be loaded
     /// as when the snapshot was created
@@ -52,6 +55,7 @@ impl Default for InnerRuntimeOptions {
             default_entrypoint: Default::default(),
             timeout: Duration::MAX,
             module_cache: None,
+            module_loader: None,
             startup_snapshot: None,
 
             extension_options: Default::default(),
@@ -67,7 +71,17 @@ pub struct InnerRuntime {
 }
 impl InnerRuntime {
     pub fn new(options: InnerRuntimeOptions) -> Result<Self, Error> {
-        let loader = Rc::new(RustyLoader::new(options.module_cache));
+        // Use RustyLoader if a module loader is not provided
+        let loader: Rc<dyn deno_core::ModuleLoader>;
+        let source_map_getter: Rc<dyn deno_core::SourceMapGetter>;
+        if options.module_loader.is_some() {
+            loader = options.module_loader.unwrap();
+            source_map_getter = Rc::new(RustyLoader::new(options.module_cache));
+        } else {
+            let rustyloader = Rc::new( RustyLoader::new(options.module_cache) );
+            loader = rustyloader.clone();
+            source_map_getter = rustyloader;
+        }
 
         // If a snapshot is provided, do not reload ops
         let extensions = if options.startup_snapshot.is_some() {
@@ -78,13 +92,13 @@ impl InnerRuntime {
 
         Ok(Self {
             deno_runtime: JsRuntime::try_new(RuntimeOptions {
-                module_loader: Some(loader.clone()),
+                module_loader: Some(loader),
 
                 extension_transpiler: Some(Rc::new(|specifier, code| {
                     transpile_extension(specifier, code)
                 })),
 
-                source_map_getter: Some(loader),
+                source_map_getter: Some(source_map_getter),
 
                 startup_snapshot: options.startup_snapshot,
                 extensions,

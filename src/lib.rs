@@ -236,6 +236,7 @@ pub use module_handle::ModuleHandle;
 pub use module_wrapper::ModuleWrapper;
 pub use runtime::{Runtime, RuntimeOptions, Undefined};
 pub use utilities::{evaluate, import, resolve_path, validate};
+pub use module_loader::RustyLoader;
 
 #[cfg(test)]
 mod test {
