@@ -2868,6 +2868,7 @@ dependencies = [
  "deno_fetch",
  "deno_io",
  "deno_net",
+ "deno_tls",
  "deno_url",
  "deno_web",
  "deno_webidl",

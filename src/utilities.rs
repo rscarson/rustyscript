@@ -166,7 +166,7 @@ mod runtime_macros {
     /// ```
     #[macro_export]
     macro_rules! async_callback {
-        (($($arg:ident: $arg_ty:ty),*) -> $ret_ty:ty $body:block) => {
+        (($($arg:ident: $arg_ty:ty),*) $body:block) => {
             Box::pin(move |args: Vec<$crate::serde_json::Value>| {
                 let mut args = args.iter();
                 $(

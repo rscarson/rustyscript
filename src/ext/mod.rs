@@ -24,7 +24,6 @@ pub mod webidl;
 pub mod io;
 
 /// Options for configuring extensions
-#[derive(Debug)]
 pub struct ExtensionOptions {
     /// Options specific to the deno_web, deno_fetch and deno_net extensions
     #[cfg(feature = "web")]
@@ -49,7 +48,7 @@ impl Default for ExtensionOptions {
             crypto_seed: None,
 
             #[cfg(feature = "io")]
-            io_pipes: deno_io::Stdio::Default(),
+            io_pipes: Some(Default::default()),
         }
     }
 }

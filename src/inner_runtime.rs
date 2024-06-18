@@ -1,7 +1,8 @@
 use crate::{
+    cache_provider::ModuleCacheProvider,
     ext,
     js_function::JsFunction,
-    module_loader::{ModuleCacheProvider, RustyLoader},
+    module_loader::RustyLoader,
     traits::{ToDefinedValue, ToModuleSpecifier, ToV8String},
     transpiler::{self, transpile_extension},
     Error, Module, ModuleHandle,
@@ -13,10 +14,11 @@ use std::{collections::HashMap, pin::Pin, rc::Rc, time::Duration};
 pub type RsFunction = fn(&FunctionArguments, &mut OpState) -> Result<serde_json::Value, Error>;
 
 /// Callback type for async rust callback functions
-pub type RsAsyncFunction =
+pub type RsAsyncFunction = Box<
     dyn Fn(
         Vec<serde_json::Value>,
-    ) -> Pin<Box<dyn std::future::Future<Output = Result<serde_json::Value, Error>>>>;
+    ) -> Pin<Box<dyn std::future::Future<Output = Result<serde_json::Value, Error>>>>,
+>;
 
 /// Type required to pass arguments to JsFunctions
 pub type FunctionArguments = [serde_json::Value];
@@ -139,7 +141,7 @@ impl InnerRuntime {
     pub fn register_async_function(
         &mut self,
         name: &str,
-        callback: Box<RsAsyncFunction>,
+        callback: RsAsyncFunction,
     ) -> Result<(), Error> {
         self.register_function_generic(name, callback)
     }

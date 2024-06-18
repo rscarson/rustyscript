@@ -213,7 +213,7 @@ impl Runtime {
     pub fn register_async_function(
         &mut self,
         name: &str,
-        callback: Box<RsAsyncFunction>,
+        callback: RsAsyncFunction,
     ) -> Result<(), Error> {
         self.0.register_async_function(name, callback)
     }

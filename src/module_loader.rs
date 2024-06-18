@@ -1,56 +1,18 @@
-use crate::transpiler;
+use crate::{
+    cache_provider::{ClonableSource, ModuleCacheProvider},
+    transpiler,
+};
 use deno_core::{
     anyhow::{self, anyhow},
     futures::FutureExt,
-    ModuleCodeBytes, ModuleLoadResponse, ModuleLoader, ModuleSource, ModuleSourceCode,
-    ModuleSpecifier, ModuleType, SourceCodeCacheInfo, SourceMapGetter,
+    ModuleLoadResponse, ModuleLoader, ModuleSource, ModuleSourceCode, ModuleSpecifier, ModuleType,
+    SourceMapGetter,
 };
 use std::{
     cell::RefCell,
     collections::{HashMap, HashSet},
     rc::Rc,
 };
-
-/// Module cache provider trait
-/// Implement this trait to provide a custom module cache
-/// You will need to use interior due to the deno's loader trait
-/// Default cache for the loader is in-memory
-pub trait ModuleCacheProvider {
-    fn set(&self, specifier: &ModuleSpecifier, source: ModuleSource);
-    fn get(&self, specifier: &ModuleSpecifier) -> Option<ModuleSource>;
-
-    fn clone_source(&self, specifier: &ModuleSpecifier, source: &ModuleSource) -> ModuleSource {
-        ModuleSource::new(
-            source.module_type.clone(),
-            match &source.code {
-                ModuleSourceCode::String(s) => ModuleSourceCode::String(s.to_string().into()),
-                ModuleSourceCode::Bytes(b) => {
-                    ModuleSourceCode::Bytes(ModuleCodeBytes::Boxed(b.to_vec().into()))
-                }
-            },
-            specifier,
-            source.code_cache.as_ref().map(|c| SourceCodeCacheInfo {
-                hash: c.hash,
-                data: c.data.clone(),
-            }),
-        )
-    }
-}
-
-/// Default in-memory module cache provider
-#[derive(Default)]
-pub struct MemoryModuleCacheProvider(RefCell<HashMap<ModuleSpecifier, ModuleSource>>);
-impl ModuleCacheProvider for MemoryModuleCacheProvider {
-    fn set(&self, specifier: &ModuleSpecifier, source: ModuleSource) {
-        self.0.borrow_mut().insert(specifier.clone(), source);
-    }
-
-    fn get(&self, specifier: &ModuleSpecifier) -> Option<ModuleSource> {
-        let cache = self.0.borrow();
-        let source = cache.get(specifier)?;
-        Some(Self::clone_source(self, specifier, source))
-    }
-}
 
 type SourceMapCache = HashMap<String, (String, Vec<u8>)>;
 
@@ -115,10 +77,7 @@ impl InnerRustyLoader {
                 }
 
                 if let Some(p) = cache_provider {
-                    p.set(
-                        &module_specifier,
-                        p.clone_source(&module_specifier, &source),
-                    );
+                    p.set(&module_specifier, source.clone(&module_specifier));
                 }
                 Ok(source)
             }
@@ -268,7 +227,10 @@ impl SourceMapGetter for RustyLoader {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::traits::ToModuleSpecifier;
+    use crate::{
+        cache_provider::{ClonableSource, MemoryModuleCacheProvider},
+        traits::ToModuleSpecifier,
+    };
 
     #[tokio::test]
     async fn test_loader() {
@@ -281,7 +243,7 @@ mod test {
             None,
         );
 
-        cache_provider.set(&specifier, cache_provider.clone_source(&specifier, &source));
+        cache_provider.set(&specifier, source.clone(&specifier));
         let cached_source = cache_provider
             .get(&specifier)
             .expect("Expected to get cached source");

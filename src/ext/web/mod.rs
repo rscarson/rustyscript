@@ -1,4 +1,5 @@
-use deno_core::{extension, Extension};
+use deno_core::{extension, Extension, ModuleSpecifier};
+use std::{rc::Rc, sync::Arc};
 
 #[derive(Clone)]
 pub struct Permissions;
@@ -77,7 +78,6 @@ extension!(
 );
 
 /// Options for configuring the web related extensions
-#[derive(Debug, Default)]
 pub struct WebOptions {
     /// Base URL for some deno_web OPs
     pub base_url: Option<ModuleSpecifier>,
@@ -86,46 +86,84 @@ pub struct WebOptions {
     pub user_agent: String,
 
     /// Root certificate store for TLS connections for fetches and network OPs
-    pub root_cert_store_provider: Option<Arc<dyn RootCertStoreProvider>>,
+    pub root_cert_store_provider: Option<Arc<dyn deno_tls::RootCertStoreProvider>>,
 
     /// Proxy for fetch
-    pub proxy: Option<Proxy>,
+    pub proxy: Option<deno_tls::Proxy>,
 
     /// Request builder hook for fetch
-    pub request_builder_hook: Option<fn(_: RequestBuilder) -> Result<RequestBuilder, AnyError>>,
+    pub request_builder_hook: Option<
+        fn(
+            _: deno_fetch::reqwest::RequestBuilder,
+        ) -> Result<deno_fetch::reqwest::RequestBuilder, deno_core::error::AnyError>,
+    >,
 
     /// If true, fetches and network OPs will ignore SSL errors
     pub unsafely_ignore_certificate_errors: Option<Vec<String>>,
 
     /// Client certificate and key for fetch
-    pub client_cert_chain_and_key: TlsKeys,
+    pub client_cert_chain_and_key: deno_tls::TlsKeys,
 
     /// File fetch handler for fetch
-    pub file_fetch_handler: Rc<dyn FetchHandler>,
+    pub file_fetch_handler: Rc<dyn deno_fetch::FetchHandler>,
+}
+
+impl Default for WebOptions {
+    fn default() -> Self {
+        Self {
+            base_url: None,
+            user_agent: "".to_string(),
+            root_cert_store_provider: None,
+            proxy: None,
+            request_builder_hook: None,
+            unsafely_ignore_certificate_errors: None,
+            client_cert_chain_and_key: deno_tls::TlsKeys::Null,
+            file_fetch_handler: Rc::new(deno_fetch::DefaultFileFetchHandler),
+        }
+    }
 }
 
 pub fn extensions(options: WebOptions) -> Vec<Extension> {
     vec![
-        deno_web::deno_web::init_ops_and_esm::<Permissions>(Default::default(), options.base_url),
-        deno_fetch::deno_fetch::init_ops_and_esm::<Permissions>(deno_fetch::Options { ..options }),
-        deno_net::deno_net::init_ops_and_esm::<Permissions>(
-            options.root_cert_store_provider,
-            options.unsafely_ignore_certificate_errors,
+        deno_web::deno_web::init_ops_and_esm::<Permissions>(
+            Default::default(),
+            options.base_url.clone(),
         ),
+        deno_net::deno_net::init_ops_and_esm::<Permissions>(
+            options.root_cert_store_provider.clone(),
+            options.unsafely_ignore_certificate_errors.clone(),
+        ),
+        deno_fetch::deno_fetch::init_ops_and_esm::<Permissions>(deno_fetch::Options {
+            user_agent: options.user_agent,
+            root_cert_store_provider: options.root_cert_store_provider,
+            proxy: options.proxy,
+            request_builder_hook: options.request_builder_hook,
+            unsafely_ignore_certificate_errors: options.unsafely_ignore_certificate_errors,
+            client_cert_chain_and_key: options.client_cert_chain_and_key,
+            file_fetch_handler: options.file_fetch_handler,
+        }),
         init_web::init_ops_and_esm(),
         init_fetch::init_ops_and_esm(),
         init_net::init_ops_and_esm(),
     ]
 }
 
-pub fn snapshot_extensions(options: RuntimeOptions) -> Vec<Extension> {
+pub fn snapshot_extensions(options: WebOptions) -> Vec<Extension> {
     vec![
-        deno_web::deno_web::init_ops::<Permissions>(Default::default(), options.base_url),
-        deno_fetch::deno_fetch::init_ops::<Permissions>(deno_fetch::Options { ..options }),
+        deno_web::deno_web::init_ops::<Permissions>(Default::default(), options.base_url.clone()),
         deno_net::deno_net::init_ops::<Permissions>(
-            options.root_cert_store_provider,
-            options.unsafely_ignore_certificate_errors,
+            options.root_cert_store_provider.clone(),
+            options.unsafely_ignore_certificate_errors.clone(),
         ),
+        deno_fetch::deno_fetch::init_ops::<Permissions>(deno_fetch::Options {
+            user_agent: options.user_agent,
+            root_cert_store_provider: options.root_cert_store_provider,
+            proxy: options.proxy,
+            request_builder_hook: options.request_builder_hook,
+            unsafely_ignore_certificate_errors: options.unsafely_ignore_certificate_errors,
+            client_cert_chain_and_key: options.client_cert_chain_and_key,
+            file_fetch_handler: options.file_fetch_handler,
+        }),
         init_web::init_ops(),
         init_fetch::init_ops(),
         init_net::init_ops(),

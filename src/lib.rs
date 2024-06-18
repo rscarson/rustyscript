@@ -203,6 +203,8 @@ mod snapshot_builder;
 #[cfg(feature = "snapshot_builder")]
 pub use snapshot_builder::SnapshotBuilder;
 
+pub mod cache_provider;
+
 mod error;
 mod ext;
 mod inner_runtime;
@@ -222,6 +224,9 @@ pub mod worker;
 // Expose a few dependencies that could be useful
 pub use deno_core;
 pub use deno_core::serde_json;
+
+#[cfg(feature = "web")]
+pub use deno_tls;
 
 #[cfg(feature = "web")]
 pub use ext::web::WebOptions;
