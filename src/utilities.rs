@@ -130,14 +130,14 @@ mod runtime_macros {
     /// ```rust
     /// use rustyscript::{ Error, sync_callback };
     /// let add = sync_callback!(
-    ///     (a: i64, b: i64) -> i64 {
+    ///     (a: i64, b: i64) {
     ///         Ok::<i64, Error>(a + b)
     ///     }
     /// );
     /// ```
     #[macro_export]
     macro_rules! sync_callback {
-        (($($arg:ident: $arg_ty:ty),*) -> $ret_ty:ty $body:block) => {
+        (($($arg:ident: $arg_ty:ty),*) $body:block) => {
             |args: &[$crate::serde_json::Value], _state| {
                 let mut args = args.iter();
                 $(
@@ -146,7 +146,7 @@ mod runtime_macros {
                         None => return Err($crate::Error::Runtime("Invalid number of arguments".to_string())),
                     };
                 )*
-                let result: $ret_ty = $body?;
+                let result = $body?;
                 Ok($crate::serde_json::Value::try_from(result).map_err(|e| $crate::Error::Runtime(e.to_string()))?)
             }
         }
@@ -159,7 +159,7 @@ mod runtime_macros {
     /// ```rust
     /// use rustyscript::{ Error, sync_callback };
     /// let add = async_callback!(
-    ///     (a: i64, b: i64) -> i64 {
+    ///     (a: i64, b: i64) {
     ///         Ok::<i64, Error>(a + b)
     ///     }
     /// );
@@ -167,7 +167,7 @@ mod runtime_macros {
     #[macro_export]
     macro_rules! async_callback {
         (($($arg:ident: $arg_ty:ty),*) -> $ret_ty:ty $body:block) => {
-            |args: Vec<$crate::serde_json::Value>| {
+            Box::pin(move |args: Vec<$crate::serde_json::Value>| {
                 let mut args = args.iter();
                 $(
                     let $arg: $arg_ty = match args.next() {
@@ -175,9 +175,9 @@ mod runtime_macros {
                         None => return Err($crate::Error::Runtime("Invalid number of arguments".to_string())),
                     };
                 )*
-                let result: $ret_ty = $body?;
+                let result = $body?;
                 Ok($crate::serde_json::Value::try_from(result).map_err(|e| $crate::Error::Runtime(e.to_string()))?)
-            }
+            })
         }
     }
 }
@@ -190,13 +190,13 @@ mod test_runtime {
     #[test]
     fn test_callback() {
         let add = sync_callback!(
-            (a: i64, b: i64) -> i64 {
+            (a: i64, b: i64) {
                 Ok::<i64, Error>(a + b)
             }
         );
 
         let add2 = async_callback!(
-            (a: i64, b: i64) -> i64 {
+            (a: i64, b: i64) {
                 Ok::<i64, Error>(a + b)
             }
         );

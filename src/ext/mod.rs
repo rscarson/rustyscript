@@ -23,6 +23,7 @@ pub mod webidl;
 #[cfg(feature = "io")]
 pub mod io;
 
+/// Options for configuring extensions
 #[derive(Debug)]
 pub struct ExtensionOptions {
     /// Options specific to the deno_web, deno_fetch and deno_net extensions

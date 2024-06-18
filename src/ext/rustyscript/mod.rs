@@ -41,8 +41,8 @@ fn call_registered_function_async(
     #[serde] args: Vec<serde_json::Value>,
     state: &mut OpState,
 ) -> impl std::future::Future<Output = Result<serde_json::Value, Error>> {
-    if state.has::<HashMap<String, RsAsyncFunction>>() {
-        let table = state.borrow_mut::<HashMap<String, RsAsyncFunction>>();
+    if state.has::<HashMap<String, Box<RsAsyncFunction>>>() {
+        let table = state.borrow_mut::<HashMap<String, Box<RsAsyncFunction>>>();
         if let Some(callback) = table.get(&name) {
             return callback(args);
         }

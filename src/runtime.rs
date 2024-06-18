@@ -199,14 +199,13 @@ impl Runtime {
     /// use rustyscript::{ Runtime, Module, serde_json::Value };
     ///
     /// # fn main() -> Result<(), rustyscript::Error> {
-    /// let module = Module::new("test.js", " rustyscript.async_functions.foo(); ");
+    /// let module = Module::new("test.js", " rustyscript.async_functions.add(1, 2); ");
     /// let mut runtime = Runtime::new(Default::default())?;
-    /// runtime.register_async_function("foo", async |args| {
-    ///    if let Some(value) = args.get(0) {
-    ///         println!("called with: {}", value);
-    ///    }
-    ///    Ok(Value::Null)
-    /// })?;
+    /// runtime.register_async_function("add", async_callback!(
+    ///     (a: i64, b: i64) -> i64 {
+    ///         Ok::<i64, Error>(a + b)
+    ///     }
+    /// ))?;
     ///
     /// # Ok(())
     /// # }
@@ -214,7 +213,7 @@ impl Runtime {
     pub fn register_async_function(
         &mut self,
         name: &str,
-        callback: RsAsyncFunction,
+        callback: Box<RsAsyncFunction>,
     ) -> Result<(), Error> {
         self.0.register_async_function(name, callback)
     }

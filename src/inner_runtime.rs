@@ -14,7 +14,7 @@ pub type RsFunction = fn(&FunctionArguments, &mut OpState) -> Result<serde_json:
 
 /// Callback type for async rust callback functions
 pub type RsAsyncFunction =
-    fn(
+    dyn Fn(
         Vec<serde_json::Value>,
     ) -> Pin<Box<dyn std::future::Future<Output = Result<serde_json::Value, Error>>>>;
 
@@ -139,7 +139,7 @@ impl InnerRuntime {
     pub fn register_async_function(
         &mut self,
         name: &str,
-        callback: RsAsyncFunction,
+        callback: Box<RsAsyncFunction>,
     ) -> Result<(), Error> {
         self.register_function_generic(name, callback)
     }
@@ -422,18 +422,20 @@ impl InnerRuntime {
                 let e = scope.message().unwrap();
 
                 let filename = e.get_script_resource_name(&mut scope);
+                let linenumber = e.get_line_number(&mut scope).unwrap_or_default();
                 let filename = if let Some(v) = filename {
-                    v.to_rust_string_lossy(&mut scope)
+                    let filename = v.to_rust_string_lossy(&mut scope);
+                    format!("{filename}:{linenumber}: ")
                 } else if let Some(module_context) = module_context {
-                    module_context.module().filename().to_string()
+                    let filename = module_context.module().filename().to_string();
+                    format!("{filename}:{linenumber}: ")
                 } else {
-                    "unknown".to_string()
+                    "".to_string()
                 };
 
-                let linenumber = e.get_line_number(&mut scope).unwrap_or_default();
                 let msg = e.get(&mut scope).to_rust_string_lossy(&mut scope);
 
-                let s = format!("{filename}:{linenumber}: {msg}");
+                let s = format!("{filename}{msg}");
                 Err(Error::Runtime(s))
             }
             None => Err(Error::Runtime(

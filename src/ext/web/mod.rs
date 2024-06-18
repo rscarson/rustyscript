@@ -76,6 +76,7 @@ extension!(
     esm = [ dir "src/ext/web", "init_net.js" ],
 );
 
+/// Options for configuring the web related extensions
 #[derive(Debug, Default)]
 pub struct WebOptions {
     /// Base URL for some deno_web OPs
