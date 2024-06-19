@@ -3,6 +3,9 @@ use std::collections::HashMap;
 use crate::{error::Error, RsAsyncFunction, RsFunction};
 use deno_core::{extension, op2, serde_json, v8, Extension, OpState};
 
+type FnCache = HashMap<String, Box<dyn RsFunction>>;
+type AsyncFnCache = HashMap<String, Box<dyn RsAsyncFunction>>;
+
 #[op2]
 /// Registers a JS function with the runtime as being the entrypoint for the module
 ///
@@ -24,10 +27,10 @@ fn call_registered_function(
     #[serde] args: Vec<serde_json::Value>,
     state: &mut OpState,
 ) -> Result<serde_json::Value, Error> {
-    if state.has::<HashMap<String, RsFunction>>() {
-        let table = state.borrow_mut::<HashMap<String, RsFunction>>();
+    if state.has::<FnCache>() {
+        let table = state.borrow_mut::<FnCache>();
         if let Some(callback) = table.get(&name) {
-            return callback(&args, state);
+            return callback(&args);
         }
     }
 
@@ -41,8 +44,8 @@ fn call_registered_function_async(
     #[serde] args: Vec<serde_json::Value>,
     state: &mut OpState,
 ) -> impl std::future::Future<Output = Result<serde_json::Value, Error>> {
-    if state.has::<HashMap<String, Box<RsAsyncFunction>>>() {
-        let table = state.borrow_mut::<HashMap<String, Box<RsAsyncFunction>>>();
+    if state.has::<AsyncFnCache>() {
+        let table = state.borrow_mut::<AsyncFnCache>();
         if let Some(callback) = table.get(&name) {
             return callback(args);
         }

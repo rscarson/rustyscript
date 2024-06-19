@@ -137,8 +137,8 @@ mod runtime_macros {
     /// ```
     #[macro_export]
     macro_rules! sync_callback {
-        (($($arg:ident: $arg_ty:ty),*) $body:block) => {
-            |args: &[$crate::serde_json::Value], _state| {
+        (|$($arg:ident: $arg_ty:ty),*| $body:block) => {
+            |args: &[$crate::serde_json::Value]| {
                 let mut args = args.iter();
                 $(
                     let $arg: $arg_ty = match args.next() {
@@ -166,17 +166,19 @@ mod runtime_macros {
     /// ```
     #[macro_export]
     macro_rules! async_callback {
-        (($($arg:ident: $arg_ty:ty),*) $body:block) => {
-            Box::pin(move |args: Vec<$crate::serde_json::Value>| {
+        (|$($arg:ident: $arg_ty:ty),*| $body:block) => {
+            |args: Vec<$crate::serde_json::Value>| Box::pin(async move {
                 let mut args = args.iter();
                 $(
                     let $arg: $arg_ty = match args.next() {
-                        Some(arg) => $crate::serde_json::from_value(arg.clone())?,
+                        Some(arg) => $crate::serde_json::from_value(arg.clone()).map_err(|e| $crate::Error::Runtime(e.to_string()))?,
                         None => return Err($crate::Error::Runtime("Invalid number of arguments".to_string())),
                     };
                 )*
-                let result = $body?;
-                Ok($crate::serde_json::Value::try_from(result).map_err(|e| $crate::Error::Runtime(e.to_string()))?)
+
+                // Now consume the future to inject JSON serialization
+                let result = $body.await?;
+                $crate::serde_json::Value::try_from(result).map_err(|e| $crate::Error::Runtime(e.to_string()))
             })
         }
     }
@@ -185,30 +187,22 @@ mod runtime_macros {
 #[cfg(test)]
 mod test_runtime {
     use super::*;
-    use deno_core::serde_json;
+    use deno_core::{futures::FutureExt, serde_json};
 
     #[test]
     fn test_callback() {
-        let add = sync_callback!(
-            (a: i64, b: i64) {
-                Ok::<i64, Error>(a + b)
-            }
-        );
+        let add = sync_callback!(|a: i64, b: i64| { Ok::<i64, Error>(a + b) });
 
-        let add2 = async_callback!(
-            (a: i64, b: i64) {
-                Ok::<i64, Error>(a + b)
-            }
-        );
+        let add2 = async_callback!(|a: i64, b: i64| { async move { Ok::<i64, Error>(a + b) } });
 
         let args = vec![
             serde_json::Value::Number(5.into()),
             serde_json::Value::Number(5.into()),
         ];
-        let result = add(&args, &mut ()).unwrap();
+        let result = add(&args).unwrap();
         assert_eq!(serde_json::Value::Number(10.into()), result);
 
-        let result = add2(args).unwrap();
+        let result = add2(args).now_or_never().unwrap().unwrap();
         assert_eq!(serde_json::Value::Number(10.into()), result);
     }
 

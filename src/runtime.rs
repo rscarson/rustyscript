@@ -1,6 +1,6 @@
 use crate::{
-    inner_runtime::{InnerRuntime, InnerRuntimeOptions, RsAsyncFunction},
-    Error, FunctionArguments, JsFunction, Module, ModuleHandle, RsFunction,
+    inner_runtime::{InnerRuntime, InnerRuntimeOptions, RsAsyncFunction, RsFunction},
+    Error, FunctionArguments, JsFunction, Module, ModuleHandle,
 };
 use deno_core::serde_json;
 
@@ -190,7 +190,10 @@ impl Runtime {
     /// # Ok(())
     /// # }
     /// ```
-    pub fn register_function(&mut self, name: &str, callback: RsFunction) -> Result<(), Error> {
+    pub fn register_function<F>(&mut self, name: &str, callback: F) -> Result<(), Error>
+    where
+        F: RsFunction,
+    {
         self.0.register_function(name, callback)
     }
 
@@ -210,11 +213,10 @@ impl Runtime {
     /// # Ok(())
     /// # }
     /// ```
-    pub fn register_async_function(
-        &mut self,
-        name: &str,
-        callback: RsAsyncFunction,
-    ) -> Result<(), Error> {
+    pub fn register_async_function<F>(&mut self, name: &str, callback: F) -> Result<(), Error>
+    where
+        F: RsAsyncFunction,
+    {
         self.0.register_async_function(name, callback)
     }
 

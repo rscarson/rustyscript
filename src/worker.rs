@@ -224,13 +224,6 @@ impl InnerWorker for DefaultWorker {
         match query {
             DefaultWorkerQuery::Stop => Self::Response::Ok(()),
 
-            DefaultWorkerQuery::RegisterFunction(name, func) => {
-                match runtime.register_function(&name, func) {
-                    Ok(_) => Self::Response::Ok(()),
-                    Err(e) => Self::Response::Error(e),
-                }
-            }
-
             DefaultWorkerQuery::Eval(code) => match runtime.eval(&code) {
                 Ok(v) => Self::Response::Value(v),
                 Err(e) => Self::Response::Error(e),
@@ -336,14 +329,6 @@ impl DefaultWorker {
     pub fn stop(self) -> Result<(), Error> {
         self.0.send(DefaultWorkerQuery::Stop)?;
         self.0.join()
-    }
-
-    /// Register a rust function with the worker
-    /// This function will be callable from javascript
-    pub fn register_function(&self, name: String, func: crate::RsFunction) -> Result<(), Error> {
-        self.0
-            .send_and_await(DefaultWorkerQuery::RegisterFunction(name, func))?;
-        Ok(())
     }
 
     /// Evaluate a string of javascript code
@@ -481,9 +466,6 @@ pub struct DefaultWorkerOptions {
 pub enum DefaultWorkerQuery {
     /// Stops the worker
     Stop,
-
-    /// Registers a function with the worker
-    RegisterFunction(String, crate::RsFunction),
 
     /// Evaluates a string of javascript code
     Eval(String),

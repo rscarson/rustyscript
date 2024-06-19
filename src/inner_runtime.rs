@@ -7,18 +7,31 @@ use crate::{
     transpiler::{self, transpile_extension},
     Error, Module, ModuleHandle,
 };
-use deno_core::{serde_json, v8, JsRuntime, OpState, PollEventLoopOptions, RuntimeOptions};
+use deno_core::{serde_json, v8, JsRuntime, PollEventLoopOptions, RuntimeOptions};
 use std::{collections::HashMap, pin::Pin, rc::Rc, time::Duration};
 
-/// Callback type for rust callback functions
-pub type RsFunction = fn(&FunctionArguments, &mut OpState) -> Result<serde_json::Value, Error>;
+/// Represents a function that can be registered with the runtime
+pub trait RsFunction: Fn(&FunctionArguments) -> Result<serde_json::Value, Error> + 'static {}
+impl<F> RsFunction for F where
+    F: Fn(&FunctionArguments) -> Result<serde_json::Value, Error> + 'static
+{
+}
 
-/// Callback type for async rust callback functions
-pub type RsAsyncFunction = Box<
-    dyn Fn(
+/// Represents an async function that can be registered with the runtime
+pub trait RsAsyncFunction:
+    Fn(
         Vec<serde_json::Value>,
-    ) -> Pin<Box<dyn std::future::Future<Output = Result<serde_json::Value, Error>>>>,
->;
+    ) -> Pin<Box<dyn std::future::Future<Output = Result<serde_json::Value, Error>>>>
+    + 'static
+{
+}
+impl<F> RsAsyncFunction for F where
+    F: Fn(
+            Vec<serde_json::Value>,
+        ) -> Pin<Box<dyn std::future::Future<Output = Result<serde_json::Value, Error>>>>
+        + 'static
+{
+}
 
 /// Type required to pass arguments to JsFunctions
 pub type FunctionArguments = [serde_json::Value];
@@ -138,37 +151,43 @@ impl InnerRuntime {
     /// Register an async rust function
     /// The function must return a Future that resolves to a serde_json::Value
     /// and accept a vec of serde_json::Value as arguments
-    pub fn register_async_function(
-        &mut self,
-        name: &str,
-        callback: RsAsyncFunction,
-    ) -> Result<(), Error> {
-        self.register_function_generic(name, callback)
+    pub fn register_async_function<F>(&mut self, name: &str, callback: F) -> Result<(), Error>
+    where
+        F: RsAsyncFunction,
+    {
+        let state = self.deno_runtime().op_state();
+        let mut state = state.try_borrow_mut()?;
+
+        if !state.has::<HashMap<String, Box<dyn RsAsyncFunction>>>() {
+            state.put(HashMap::<String, Box<dyn RsAsyncFunction>>::new());
+        }
+
+        // Insert the callback into the state
+        state
+            .borrow_mut::<HashMap<String, Box<dyn RsAsyncFunction>>>()
+            .insert(name.to_string(), Box::new(callback));
+
+        Ok(())
     }
 
     /// Register a rust function
     /// The function must return a serde_json::Value
     /// and accept a slice of serde_json::Value as arguments
-    pub fn register_function(&mut self, name: &str, callback: RsFunction) -> Result<(), Error> {
-        self.register_function_generic(name, callback)
-    }
-
-    /// Register a rust function
-    fn register_function_generic<F>(&mut self, name: &str, callback: F) -> Result<(), Error>
+    pub fn register_function<F>(&mut self, name: &str, callback: F) -> Result<(), Error>
     where
-        F: 'static,
+        F: RsFunction,
     {
         let state = self.deno_runtime().op_state();
         let mut state = state.try_borrow_mut()?;
 
-        if !state.has::<HashMap<String, F>>() {
-            state.put(HashMap::<String, F>::new());
+        if !state.has::<HashMap<String, Box<dyn RsFunction>>>() {
+            state.put(HashMap::<String, Box<dyn RsFunction>>::new());
         }
 
         // Insert the callback into the state
         state
-            .borrow_mut::<HashMap<String, F>>()
-            .insert(name.to_string(), callback);
+            .borrow_mut::<HashMap<String, Box<dyn RsFunction>>>()
+            .insert(name.to_string(), Box::new(callback));
 
         Ok(())
     }

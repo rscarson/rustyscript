@@ -36,6 +36,10 @@ pub struct ExtensionOptions {
     /// Configures the stdin/out/err pipes for the deno_io extension
     #[cfg(feature = "io")]
     pub io_pipes: Option<deno_io::Stdio>,
+
+    /// Optional path to the directory where the webstorage extension will store its data
+    #[cfg(feature = "webstorage")]
+    pub webstorage_origin_storage_dir: Option<PathBuf>,
 }
 
 impl Default for ExtensionOptions {
