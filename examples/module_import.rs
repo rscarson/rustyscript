@@ -33,7 +33,10 @@ fn main() -> Result<(), Error> {
 
     // Functions can even be stored for later!
     // They can only be used on the runtime that made them, however
-    let function: JsFunction = module.get("listBooks")?;
+    let mut function: JsFunction = module.get("listBooks")?;
+
+    // This is required to make sure the function remains callable
+    function.stabilize(module.get_runtime());
 
     // The stored function can then be called!
     // Any serializable type can be retrieved as a function result or value

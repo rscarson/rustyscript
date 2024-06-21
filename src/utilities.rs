@@ -130,7 +130,7 @@ mod runtime_macros {
     /// ```rust
     /// use rustyscript::{ Error, sync_callback };
     /// let add = sync_callback!(
-    ///     (a: i64, b: i64) {
+    ///     |a: i64, b: i64| {
     ///         Ok::<i64, Error>(a + b)
     ///     }
     /// );
@@ -157,9 +157,9 @@ mod runtime_macros {
     ///
     /// # Example
     /// ```rust
-    /// use rustyscript::{ Error, sync_callback };
+    /// use rustyscript::{ Error, async_callback };
     /// let add = async_callback!(
-    ///     (a: i64, b: i64) {
+    ///     |a: i64, b: i64| async move {
     ///         Ok::<i64, Error>(a + b)
     ///     }
     /// );
