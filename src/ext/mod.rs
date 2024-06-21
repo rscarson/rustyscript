@@ -39,7 +39,7 @@ pub struct ExtensionOptions {
 
     /// Optional path to the directory where the webstorage extension will store its data
     #[cfg(feature = "webstorage")]
-    pub webstorage_origin_storage_dir: Option<PathBuf>,
+    pub webstorage_origin_storage_dir: Option<std::path::PathBuf>,
 }
 
 impl Default for ExtensionOptions {
@@ -53,6 +53,9 @@ impl Default for ExtensionOptions {
 
             #[cfg(feature = "io")]
             io_pipes: Some(Default::default()),
+
+            #[cfg(feature = "webstorage")]
+            webstorage_origin_storage_dir: None,
         }
     }
 }

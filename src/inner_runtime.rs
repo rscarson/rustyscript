@@ -921,7 +921,7 @@ mod test_inner_runtime {
 
         structure
             .func
-            .into_global(&mut runtime.deno_runtime.handle_scope());
+            .as_global(&mut runtime.deno_runtime.handle_scope());
 
         // Mess with the locals table
         let c = runtime

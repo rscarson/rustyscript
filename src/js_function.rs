@@ -40,13 +40,13 @@ impl<'s> JsFunction<'s> {
     /// WARNING: This must be called -immediately- after this JsFunction is created
     /// and before any other operations are performed on the source Runtime
     pub fn stabilize(&mut self, runtime: &mut Runtime) {
-        self.into_global(&mut runtime.deno_runtime().handle_scope())
+        self.as_global(&mut runtime.deno_runtime().handle_scope())
     }
 
     /// Convert this function to a global function
     /// WARNING: This must be called -immediately- after this JsFunction is created
     /// and before any other operations are performed on the source Runtime
-    pub(crate) fn into_global(&mut self, scope: &mut HandleScope) {
+    pub(crate) fn as_global(&mut self, scope: &mut HandleScope) {
         match self {
             Self::Local(local) => *self = Self::Global(v8::Global::new(scope, *local)),
             Self::Global(_) => (),

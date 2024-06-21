@@ -199,7 +199,7 @@ impl Runtime {
 
     /// Register a non-blocking rust function to be callable from JS
     /// ```rust
-    /// use rustyscript::{ Runtime, Module, serde_json::Value, async_callback };
+    /// use rustyscript::{ Runtime, Module, serde_json::Value, async_callback, Error };
     ///
     /// # fn main() -> Result<(), rustyscript::Error> {
     /// let module = Module::new("test.js", " rustyscript.async_functions.add(1, 2); ");
