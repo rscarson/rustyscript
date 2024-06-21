@@ -9,6 +9,8 @@ use crate::{
 };
 use deno_core::{serde, serde_json, v8, JsRuntime, PollEventLoopOptions, RuntimeOptions};
 use std::{collections::HashMap, pin::Pin, rc::Rc, time::Duration};
+use deno_core::v8::{Function, Global, Value};
+use serde::de::DeserializeOwned;
 
 /// Represents a function that can be registered with the runtime
 pub trait RsFunction: Fn(&FunctionArguments) -> Result<serde_json::Value, Error> + 'static {}
@@ -632,7 +634,7 @@ impl SyncInnerRuntime for InnerRuntime {
     where
         T: serde::de::DeserializeOwned,
     {
-        let value = self.get_value_ref(module_context, name)?;
+        let value = SyncInnerRuntime::get_value_ref(self, module_context, name)?;
         let mut scope = self.deno_runtime.handle_scope();
         let value = v8::Local::<v8::Value>::new(&mut scope, value);
         Ok(deno_core::serde_v8::from_v8(&mut scope, value)?)
@@ -648,7 +650,7 @@ impl SyncInnerRuntime for InnerRuntime {
         T: serde::de::DeserializeOwned,
     {
         let function = function.to_v8_global(&mut self.deno_runtime.handle_scope());
-        self.call_function_by_ref(module_context, function, args)
+        SyncInnerRuntime::call_function_by_ref(self, module_context, function, args)
     }
 
     fn call_function<T>(
@@ -661,7 +663,7 @@ impl SyncInnerRuntime for InnerRuntime {
         T: serde::de::DeserializeOwned,
     {
         let function = self.get_function_by_name(module_context, name)?;
-        self.call_function_by_ref(module_context, function, args)
+        SyncInnerRuntime::call_function_by_ref(self, module_context, function, args)
     }
 
     fn call_function_by_ref<T>(
@@ -706,9 +708,181 @@ impl SyncInnerRuntime for InnerRuntime {
 }
 
 #[cfg(feature = "async")]
-impl InnerRuntime {}
+pub trait AsyncInnerRuntime {
+    /// Load one or more modules
+    ///
+    /// Will return a handle to the main module, or the last
+    /// side-module
+    async fn load_modules(
+        &mut self,
+        main_module: Option<&Module>,
+        side_modules: Vec<&Module>,
+    ) -> Result<ModuleHandle, Error>;
 
-#[cfg(test)]
+    /// Get a value from a runtime instance
+    ///
+    /// # Arguments
+    /// * `module_context` - A module handle to use for context, to find exports
+    /// * `name` - A string representing the name of the value to find
+    ///
+    /// # Returns
+    /// A `Result` containing the deserialized result or an error (`Error`) if the
+    /// value cannot be found, if there are issues with, or if the result cannot be
+    /// deserialized.
+    async fn get_value<T>(
+        &mut self,
+        module_context: Option<&ModuleHandle>,
+        name: &str,
+    ) -> Result<T, Error>
+    where
+        T: serde::de::DeserializeOwned;
+
+    /// Calls a stored javascript function and deserializes its return value.
+    ///
+    /// # Arguments
+    /// * `module_context` - A module handle to use for context, to find exports
+    /// * `function` - A function object
+    ///
+    /// # Returns
+    /// A `Result` containing the deserialized result of the function call (`T`)
+    /// or an error (`Error`) if the function cannot be found, if there are issues with
+    /// calling the function, or if the result cannot be deserialized.
+    async fn call_stored_function<T>(
+        &mut self,
+        module_context: Option<&ModuleHandle>,
+        function: &JsFunction,
+        args: &FunctionArguments,
+    ) -> Result<T, Error>
+    where
+        T: serde::de::DeserializeOwned;
+
+    /// Calls a javascript function within the Deno runtime by its name and deserializes its return value.
+    ///
+    /// # Arguments
+    /// * `module_context` - A module handle to use for context, to find exports
+    /// * `name` - A string representing the name of the javascript function to call.
+    ///
+    /// # Returns
+    /// A `Result` containing the deserialized result of the function call (`T`)
+    /// or an error (`Error`) if the function cannot be found, if there are issues with
+    /// calling the function, or if the result cannot be deserialized.
+    async fn call_function<T>(
+        &mut self,
+        module_context: Option<&ModuleHandle>,
+        name: &str,
+        args: &FunctionArguments,
+    ) -> Result<T, Error>
+    where
+        T: serde::de::DeserializeOwned;
+
+    async fn call_function_by_ref<T>(
+        &mut self,
+        module_context: Option<&ModuleHandle>,
+        function: v8::Global<v8::Function>,
+        args: &FunctionArguments,
+    ) -> Result<T, Error>
+    where
+        T: serde::de::DeserializeOwned;
+
+    async fn get_value_ref(
+        &mut self,
+        module_context: Option<&ModuleHandle>,
+        name: &str,
+    ) -> Result<v8::Global<v8::Value>, Error>;
+}
+
+#[cfg(feature = "async-tokio")]
+use tokio::time::{timeout as tokio_timeout};
+
+#[cfg(feature = "async")]
+impl AsyncInnerRuntime for InnerRuntime {
+    async fn load_modules(&mut self, main_module: Option<&Module>, side_modules: Vec<&Module>) -> Result<ModuleHandle, Error> {
+        let timeout = self.options.timeout;
+        let default_entrypoint = self.options.default_entrypoint.clone();
+
+        if main_module.is_none() && side_modules.is_empty() {
+            return Err(Error::Runtime(
+                "Internal error: attempt to load no modules".to_string(),
+            ));
+        }
+
+        let module_handle_stub = self.load_modules_stub(main_module, side_modules);
+
+        let module_handle_stub = if cfg!(feature = "async-tokio") {
+            tokio_timeout(timeout, module_handle_stub).await??
+        } else {
+            module_handle_stub.await?
+        };
+
+        // Try to get an entrypoint
+        let state = self.deno_runtime().op_state();
+        let mut deep_state = state.try_borrow_mut()?;
+        let f_entrypoint = match deep_state.try_take::<v8::Global<v8::Function>>() {
+            Some(entrypoint) => Some(entrypoint),
+            None => default_entrypoint.and_then(|default_entrypoint| {
+                self.get_function_by_name(Some(&module_handle_stub), &default_entrypoint)
+                    .ok()
+            }),
+        };
+
+        Ok(ModuleHandle::new(
+            module_handle_stub.module(),
+            module_handle_stub.id(),
+            f_entrypoint,
+        ))
+    }
+
+    async fn get_value<T>(&mut self, module_context: Option<&ModuleHandle>, name: &str) -> Result<T, Error>
+    where
+        T: DeserializeOwned,
+    {
+        let value = AsyncInnerRuntime::get_value_ref(self, module_context, name).await?;
+        let mut scope = self.deno_runtime.handle_scope();
+        let value = v8::Local::<v8::Value>::new(&mut scope, value);
+        Ok(deno_core::serde_v8::from_v8(&mut scope, value)?)
+    }
+
+    async fn call_stored_function<T>(&mut self, module_context: Option<&ModuleHandle>, function: &JsFunction<'_>, args: &FunctionArguments) -> Result<T, Error>
+    where
+        T: DeserializeOwned,
+    {
+        let function = function.to_v8_global(&mut self.deno_runtime.handle_scope());
+        AsyncInnerRuntime::call_function_by_ref(self, module_context, function, args).await
+    }
+
+    async fn call_function<T>(&mut self, module_context: Option<&ModuleHandle>, name: &str, args: &FunctionArguments) -> Result<T, Error>
+    where
+        T: DeserializeOwned,
+    {
+        let function = self.get_function_by_name(module_context, name)?;
+        AsyncInnerRuntime::call_function_by_ref(self, module_context, function, args).await
+    }
+
+    async fn call_function_by_ref<T>(&mut self, module_context: Option<&ModuleHandle>, function: Global<Function>, args: &FunctionArguments) -> Result<T, Error>
+    where
+        T: DeserializeOwned,
+    {
+        let timeout = self.options.timeout;
+        let ret = self.call_function_by_ref_async(module_context, function, args);
+        if cfg!(feature = "tokio-async") {
+            tokio_timeout(timeout, ret).await?
+        } else {
+            ret.await
+        }
+    }
+
+    async fn get_value_ref(&mut self, module_context: Option<&ModuleHandle>, name: &str) -> Result<Global<Value>, Error> {
+        let timeout = self.options.timeout;
+        let ret = self.get_value_ref_async(module_context, name);
+        if cfg!(feature = "tokio-async") {
+            tokio_timeout(timeout, ret).await?
+        } else {
+            ret.await
+        }
+    }
+}
+
+#[cfg(all(test, feature = "sync"))]
 mod test_inner_runtime {
     use serde::Deserialize;
 
