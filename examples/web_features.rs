@@ -38,18 +38,19 @@ fn main() -> Result<(), Error> {
 
     // We add a timeout to the runtime anytime async might be used
     let mut runtime = Runtime::new(RuntimeOptions {
-        timeout: Duration::from_millis(1000),
+        timeout: Duration::from_millis(10000),
         ..Default::default()
     })?;
 
     // The async function
     let module_handle = runtime.load_module(&module)?;
     let value: usize = runtime.call_function(Some(&module_handle), "test", json_args!())?;
+    println!("Got value: {}", value);
     assert_eq!(value, 2);
 
     // Fetch example
     let data: rustyscript::serde_json::Value =
         runtime.call_function(Some(&module_handle), "fetch_example", json_args!())?;
-    println!("{:?}", data);
+    println!("Got {:?} bytes", data.to_string().len());
     Ok(())
 }

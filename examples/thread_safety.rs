@@ -6,6 +6,9 @@
 /// Use this method with extreme caution, and only if you understand
 /// how it works
 ///
+/// See `examples/default_threaded_worker` and `examples/custom_threaded_worker`
+/// for a more robust way to run rustyscript in a threaded environment
+///
 use rustyscript::{json_args, module, Error, Runtime, StaticModule};
 use std::cell::{OnceCell, RefCell};
 
