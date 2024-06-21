@@ -217,6 +217,8 @@ mod module_loader;
 mod module_wrapper;
 #[cfg(feature = "sync")]
 pub mod runtime;
+#[cfg(feature = "async")]
+pub mod async_runtime;
 mod traits;
 mod transpiler;
 mod utilities;
@@ -236,7 +238,11 @@ pub use ext::web::WebOptions;
 pub use ext::ExtensionOptions;
 
 #[cfg(feature = "sync")]
-pub use runtime::{Runtime, RuntimeOptions, Undefined};
+pub use runtime::{Runtime, RuntimeOptions};
+#[cfg(feature = "async")]
+pub use async_runtime::{AsyncRuntime, AsyncRuntimeOptions};
+
+pub type Undefined = serde_json::Value;
 
 // Expose some important stuff from us
 pub use error::Error;
