@@ -1,5 +1,5 @@
 use crate::{
-    inner_runtime::{InnerRuntime, InnerRuntimeOptions, RsAsyncFunction, RsFunction},
+    inner_runtime::{InnerRuntime, InnerRuntimeOptions, RsAsyncFunction, RsFunction, SyncInnerRuntime},
     Error, FunctionArguments, JsFunction, Module, ModuleHandle,
 };
 use deno_core::serde_json;
@@ -443,7 +443,7 @@ impl Runtime {
         T: deno_core::serde::de::DeserializeOwned,
     {
         if let Some(entrypoint) = module_context.entrypoint() {
-            let value: serde_json::Value = self.0.call_function_by_ref_async(
+            let value: serde_json::Value = self.0.call_function_by_ref(
                 Some(module_context),
                 entrypoint.clone(),
                 args,
@@ -513,7 +513,7 @@ mod test_runtime {
             extensions: vec![test_extension::init_ops_and_esm()],
             ..Default::default()
         })
-        .expect("Could not create runtime with extensions");
+            .expect("Could not create runtime with extensions");
     }
 
     #[test]
@@ -602,7 +602,7 @@ mod test_runtime {
             timeout: Duration::from_millis(50),
             ..Default::default()
         })
-        .expect("Could not create the runtime");
+            .expect("Could not create the runtime");
         let module = Module::new(
             "test.js",
             "
@@ -654,7 +654,7 @@ mod test_runtime {
             timeout: Duration::from_millis(50),
             ..Default::default()
         })
-        .expect("Could not create the runtime");
+            .expect("Could not create the runtime");
         let module = Module::new(
             "test.js",
             "
@@ -687,7 +687,7 @@ mod test_runtime {
             default_entrypoint: Some("load".to_string()),
             ..Default::default()
         })
-        .expect("Could not create the runtime");
+            .expect("Could not create the runtime");
         let module = Module::new(
             "test.js",
             "

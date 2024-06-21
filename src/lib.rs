@@ -90,7 +90,7 @@
 //! runtime.call_entrypoint::<Undefined>(&module_handle, json_args!(2))?;
 //!
 //! // Functions don't need to be the entrypoint to be callable!
-//! let internal_value: i64 = runtime.call_function(&module_handle, "getValue", json_args!())?;
+//! let internal_value: i64 = runtime.call_function(Some(&module_handle), "getValue", json_args!())?;
 //! # Ok(())
 //! # }
 //! ```
@@ -201,6 +201,7 @@ mod v8_serializer;
 
 #[cfg(feature = "snapshot_builder")]
 mod snapshot_builder;
+
 #[cfg(feature = "snapshot_builder")]
 pub use snapshot_builder::SnapshotBuilder;
 
@@ -214,7 +215,8 @@ mod module;
 mod module_handle;
 mod module_loader;
 mod module_wrapper;
-mod runtime;
+#[cfg(feature = "sync")]
+pub mod runtime;
 mod traits;
 mod transpiler;
 mod utilities;
@@ -233,6 +235,9 @@ pub use deno_tls;
 pub use ext::web::WebOptions;
 pub use ext::ExtensionOptions;
 
+#[cfg(feature = "sync")]
+pub use runtime::{Runtime, RuntimeOptions, Undefined};
+
 // Expose some important stuff from us
 pub use error::Error;
 pub use inner_runtime::{FunctionArguments, RsAsyncFunction, RsFunction};
@@ -240,7 +245,6 @@ pub use js_function::JsFunction;
 pub use module::{Module, StaticModule};
 pub use module_handle::ModuleHandle;
 pub use module_wrapper::ModuleWrapper;
-pub use runtime::{Runtime, RuntimeOptions, Undefined};
 pub use utilities::{evaluate, import, resolve_path, validate};
 
 #[cfg(test)]
