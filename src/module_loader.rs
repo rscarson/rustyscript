@@ -25,7 +25,6 @@ struct InnerRustyLoader {
     source_map_cache: Rc<RefCell<SourceMapCache>>,
 }
 
-#[allow(dead_code)]
 impl InnerRustyLoader {
     fn new(cache_provider: Option<Box<dyn ModuleCacheProvider>>) -> Self {
         Self {
@@ -93,7 +92,6 @@ impl InnerRustyLoader {
 }
 
 pub trait ImportProvider {
-    #[allow(async_fn_in_trait)]
     fn import(
         &self,
         specifier: ModuleSpecifier,
