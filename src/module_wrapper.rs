@@ -80,7 +80,6 @@ impl ModuleWrapper {
     /// `true` if the value is callable as a JavaScript function, `false` otherwise.
     pub fn is_callable(&mut self, name: &str) -> bool {
         let test = self.get::<JsFunction>(name);
-        println!("{:?}", test);
         test.is_ok()
     }
 
@@ -106,13 +105,13 @@ impl ModuleWrapper {
     /// as a JsFunction object
     ///
     /// # Arguments
-    ///
     /// * `function` - The JsFunction to call.
     /// * `args` - The arguments to pass to the function.
     ///
     /// # Returns
-    ///
     /// A `Result` containing the deserialized result of type `T` on success or an `Error` on failure.
+    ///
+    /// Note: [JsFunction::stabilize] should be called on the `JsFunction` before calling this method.
     pub fn call_stored<T>(
         &mut self,
         function: &JsFunction,

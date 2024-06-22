@@ -180,7 +180,7 @@ impl Runtime {
     /// # fn main() -> Result<(), rustyscript::Error> {
     /// let module = Module::new("test.js", " rustyscript.functions.foo(); ");
     /// let mut runtime = Runtime::new(Default::default())?;
-    /// runtime.register_function("foo", |args, _state| {
+    /// runtime.register_function("foo", |args| {
     ///     if let Some(value) = args.get(0) {
     ///         println!("called with: {}", value);
     ///     }
@@ -199,13 +199,13 @@ impl Runtime {
 
     /// Register a non-blocking rust function to be callable from JS
     /// ```rust
-    /// use rustyscript::{ Runtime, Module, serde_json::Value };
+    /// use rustyscript::{ Runtime, Module, serde_json::Value, async_callback, Error };
     ///
     /// # fn main() -> Result<(), rustyscript::Error> {
     /// let module = Module::new("test.js", " rustyscript.async_functions.add(1, 2); ");
     /// let mut runtime = Runtime::new(Default::default())?;
     /// runtime.register_async_function("add", async_callback!(
-    ///     (a: i64, b: i64) -> i64 {
+    ///     |a: i64, b: i64| async move {
     ///         Ok::<i64, Error>(a + b)
     ///     }
     /// ))?;
@@ -261,6 +261,8 @@ impl Runtime {
     /// A `Result` containing the deserialized result of the function call (`T`)
     /// or an error (`Error`) if the function cannot be found, if there are issues with
     /// calling the function, or if the result cannot be deserialized.
+    ///
+    /// Note: [JsFunction::stabilize] should be called on the `JsFunction` before calling this method.
     pub fn call_stored_function<T>(
         &mut self,
         module_context: Option<&ModuleHandle>,
@@ -294,7 +296,7 @@ impl Runtime {
     /// let mut runtime = Runtime::new(Default::default())?;
     /// let module = Module::new("/path/to/module.js", "export function f() { return 2; };");
     /// let module = runtime.load_module(&module)?;
-    /// let value: usize = runtime.call_function(&module, "f", json_args!())?;
+    /// let value: usize = runtime.call_function(Some(&module), "f", json_args!())?;
     /// # Ok(())
     /// # }
     /// ```
@@ -330,7 +332,7 @@ impl Runtime {
     /// let mut runtime = Runtime::new(Default::default())?;
     /// let module = Module::new("/path/to/module.js", "globalThis.my_value = 2;");
     /// let module = runtime.load_module(&module)?;
-    /// let value: usize = runtime.get_value(&module, "my_value")?;
+    /// let value: usize = runtime.get_value(Some(&module), "my_value")?;
     /// # Ok(())
     /// # }
     /// ```

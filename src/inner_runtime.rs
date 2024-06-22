@@ -254,6 +254,8 @@ impl InnerRuntime {
     /// A `Result` containing the deserialized result of the function call (`T`)
     /// or an error (`Error`) if the function cannot be found, if there are issues with
     /// calling the function, or if the result cannot be deserialized.
+    ///
+    /// Note: [JsFunction::stabilize] should be called on the `JsFunction` before calling this method.
     pub fn call_stored_function<T>(
         &mut self,
         module_context: Option<&ModuleHandle>,
@@ -433,7 +435,7 @@ impl InnerRuntime {
 
         let function_instance = function.open(&mut scope);
 
-        // Prep argumentsgit
+        // Prep argument
         let f_args: Result<Vec<v8::Local<v8::Value>>, deno_core::serde_v8::Error> = args
             .iter()
             .map(|f| deno_core::serde_v8::to_v8(&mut scope, f))
@@ -920,18 +922,39 @@ mod test_inner_runtime {
             name: String,
             func: JsFunction<'a>,
         }
-        let structure: TestStruct = runtime
+        let mut structure: TestStruct = runtime
             .get_value(Some(&module), "test")
             .expect("Could not get object");
 
-        let value: usize = runtime
-            .call_stored_function(Some(&module), &structure.func, json_args!(2))
-            .expect("could not call function");
-        assert_eq!(7, value);
+        structure
+            .func
+            .as_global(&mut runtime.deno_runtime.handle_scope());
+
+        // Mess with the locals table
+        let c = runtime
+            .load_modules(
+                None,
+                vec![&Module::new(
+                    "test2.js",
+                    "
+                export const test = (x) => 2*x+1;
+            ",
+                )],
+            )
+            .unwrap();
+        runtime
+            .call_function::<i64>(Some(&c), "test", json_args!(2))
+            .unwrap();
+        // End mess
 
         let value: usize = runtime
             .call_stored_function(None, &structure.func, json_args!(2))
             .expect("could not call function");
+        assert_eq!(7, value);
+
+        let value: usize = runtime
+            .call_stored_function(Some(&module), &structure.func, json_args!(2))
+            .expect("could not call function twice");
         assert_eq!(7, value);
     }
 

@@ -24,7 +24,7 @@ jobs:
       run: cargo test --verbose
 
     - name: Run clippy
-      run: cargo clippy
+      run: cargo clippy --all-features
 
     - name: Run fmt
       run: cargo fmt --check
@@ -37,6 +37,59 @@ jobs:
 
     - name: Run web tests
       run: cargo test --features "web"
+
+  # Now we run the examples
+
+    - name: web_features
+      run: cargo run --example web_features --features "web"
+
+    - name: url_imports
+      run: cargo run --example url_import `--features="fs_import url_import"
+
+    - name: typescript_modules
+      run: cargo run --example typescript_modules
+
+    - name: thread_safety
+      run: cargo run --example thread_safety
+
+    - name: serialized_types
+      run: cargo run --example serialized_types
+
+    - name: runtime_extensions
+      run: cargo run --example runtime_extensions
+
+    - name: multiple_modules
+      run: cargo run --example multiple_modules
+
+    - name: module_import
+      run: cargo run --example module_import
+
+    - name: interactive_prompt
+      run: cargo run --example interactive_prompt -- 5+5
+
+    - name: hello_world
+      run: cargo run --example hello_world
+
+    - name: functions_and_values
+      run: cargo run --example functions_and_values
+
+    - name: extending_runtime
+      run: cargo run --example extending_runtime
+
+    - name: entrypoint_functions
+      run: cargo run --example entrypoint_functions
+
+    - name: default_threaded_worker
+      run: cargo run --example default_threaded_worker
+
+    - name: custom_threaded_worker
+      run: cargo run --example custom_threaded_worker
+
+    - name: create_snapshot
+      run: cargo run --example create_snapshot
+
+    - name: call_rust_from_js
+      run: cargo run --example call_rust_from_js
 
     - name: Check if the README is up to date.
       run: |

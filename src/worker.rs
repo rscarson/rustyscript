@@ -10,13 +10,7 @@
 //!         timeout: Duration::from_secs(5),
 //!     })?;
 //!
-//!     worker.register_function("add".to_string(), |args, _state| {
-//!         let a = args[0].as_i64().unwrap();
-//!         let b = args[1].as_i64().unwrap();
-//!         let result = a + b;
-//!         Ok(result.into())
-//!     })?;
-//!     let result: i32 = worker.eval("add(5, 5)".to_string())?;
+//!     let result: i32 = worker.eval("5 + 5".to_string())?;
 //!     assert_eq!(result, 10);
 //!     Ok(())
 //! }

@@ -26,9 +26,6 @@ fn main() -> Result<(), Error> {
 
         // Importing a module from the web - requires 'web' or 'url_import' crate feature
         import * as json from 'https://deno.land/std@0.206.0/json/common.ts';
-
-        // Importing from loaded extensions
-        import { nonEnumerable } from 'ext:rustyscript/rustyscript.js';
         ",
     );
     let module2 = Module::new("test2.js", "");

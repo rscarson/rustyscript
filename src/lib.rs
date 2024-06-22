@@ -90,7 +90,7 @@
 //! runtime.call_entrypoint::<Undefined>(&module_handle, json_args!(2))?;
 //!
 //! // Functions don't need to be the entrypoint to be callable!
-//! let internal_value: i64 = runtime.call_function(&module_handle, "getValue", json_args!())?;
+//! let internal_value: i64 = runtime.call_function(Some(&module_handle), "getValue", json_args!())?;
 //! # Ok(())
 //! # }
 //! ```
@@ -102,7 +102,7 @@
 //! # fn main() -> Result<(), rustyscript::Error> {
 //! let module = Module::new("test.js", " rustyscript.functions.foo(); ");
 //! let mut runtime = Runtime::new(Default::default())?;
-//! runtime.register_function("foo", |args, _state| {
+//! runtime.register_function("foo", |args| {
 //!     if let Some(value) = args.get(0) {
 //!         println!("called with: {}", value);
 //!     }
@@ -137,13 +137,7 @@
 //!         timeout: Duration::from_secs(5),
 //!     })?;
 //!
-//!     worker.register_function("add".to_string(), |args, _state| {
-//!         let a = args[0].as_i64().unwrap();
-//!         let b = args[1].as_i64().unwrap();
-//!         let result = a + b;
-//!         Ok(result.into())
-//!     })?;
-//!     let result: i32 = worker.eval("add(5, 5)".to_string())?;
+//!     let result: i32 = worker.eval("5 + 5".to_string())?;
 //!     assert_eq!(result, 10);
 //!     Ok(())
 //! }

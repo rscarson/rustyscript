@@ -58,9 +58,9 @@ impl SnapshotBuilder {
 
         // If a snapshot is provided, do not reload ops
         let extensions = if options.startup_snapshot.is_some() {
-            ext::all_snapshot_extensions(options.extensions)
+            ext::all_snapshot_extensions(options.extensions, options.extension_options)
         } else {
-            ext::all_extensions(options.extensions)
+            ext::all_extensions(options.extensions, options.extension_options)
         };
 
         Ok(Self {

@@ -130,14 +130,14 @@ mod runtime_macros {
     /// ```rust
     /// use rustyscript::{ Error, sync_callback };
     /// let add = sync_callback!(
-    ///     (a: i64, b: i64) {
+    ///     |a: i64, b: i64| {
     ///         Ok::<i64, Error>(a + b)
     ///     }
     /// );
     /// ```
     #[macro_export]
     macro_rules! sync_callback {
-        (|$($arg:ident: $arg_ty:ty),*| $body:block) => {
+        (|$($arg:ident: $arg_ty:ty),*| $body:expr) => {
             |args: &[$crate::serde_json::Value]| {
                 let mut args = args.iter();
                 $(
@@ -157,16 +157,16 @@ mod runtime_macros {
     ///
     /// # Example
     /// ```rust
-    /// use rustyscript::{ Error, sync_callback };
+    /// use rustyscript::{ Error, async_callback };
     /// let add = async_callback!(
-    ///     (a: i64, b: i64) {
+    ///     |a: i64, b: i64| async move {
     ///         Ok::<i64, Error>(a + b)
     ///     }
     /// );
     /// ```
     #[macro_export]
     macro_rules! async_callback {
-        (|$($arg:ident: $arg_ty:ty),*| $body:block) => {
+        (|$($arg:ident: $arg_ty:ty),*| $body:expr) => {
             |args: Vec<$crate::serde_json::Value>| Box::pin(async move {
                 let mut args = args.iter();
                 $(
@@ -193,7 +193,7 @@ mod test_runtime {
     fn test_callback() {
         let add = sync_callback!(|a: i64, b: i64| { Ok::<i64, Error>(a + b) });
 
-        let add2 = async_callback!(|a: i64, b: i64| { async move { Ok::<i64, Error>(a + b) } });
+        let add2 = async_callback!(|a: i64, b: i64| async move { Ok::<i64, Error>(a + b) });
 
         let args = vec![
             serde_json::Value::Number(5.into()),
