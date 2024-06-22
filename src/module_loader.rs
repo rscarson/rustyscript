@@ -23,6 +23,7 @@ struct InnerRustyLoader {
     source_map_cache: Rc<RefCell<SourceMapCache>>,
 }
 
+#[allow(dead_code)]
 impl InnerRustyLoader {
     fn new(cache_provider: Option<Box<dyn ModuleCacheProvider>>) -> Self {
         Self {
@@ -89,10 +90,43 @@ impl InnerRustyLoader {
     }
 }
 
+pub trait ImportProvider {
+    #[allow(async_fn_in_trait)]
+    fn import(&self, specifier: ModuleSpecifier) -> Result<String, anyhow::Error>;
+}
+pub struct DefaultImporter;
+impl ImportProvider for DefaultImporter {
+    fn import(&self, specifier: ModuleSpecifier) -> Result<String, anyhow::Error> {
+        match specifier.scheme() {
+            #[cfg(not(feature = "url_import"))]
+            "https" | "http" => {
+                return Err(anyhow!("web imports are not allowed here: {specifier}"));
+            }
+            #[cfg(feature = "url_import")]
+            "https" | "http" => {
+                let response = reqwest::blocking::get(specifier)?;
+                Ok(response.text()?)
+            }
+            #[cfg(not(feature = "fs_import"))]
+            "file" => Err(anyhow!(
+                "filesystem imports are not allowed here: {specifier}"
+            )),
+            #[cfg(feature = "fs_import")]
+            "file" => {
+                let path = specifier
+                    .to_file_path()
+                    .map_err(|_| anyhow!("`{specifier}` is not a valid file URL."))?;
+                Ok(std::fs::read_to_string(path)?)
+            }
+            _ => Err(anyhow!("unsupported scheme for module import: {specifier}")),
+        }
+    }
+}
+
 pub struct RustyLoader {
     inner: Rc<InnerRustyLoader>,
+    import_provider: Rc<Box<dyn ImportProvider>>,
 }
-#[allow(unreachable_code)]
 impl ModuleLoader for RustyLoader {
     fn resolve(
         &self,
@@ -122,14 +156,9 @@ impl ModuleLoader for RustyLoader {
                 }
             }
 
-            _ if specifier.starts_with("ext:") => {
-                // Extension import - allow
-            }
-
             _ => {
-                return Err(anyhow!(
-                    "unrecognized schema for module import: {specifier}"
-                ));
+                // Allow all other imports
+                // The responsibility of rejecting unrecognized schemes lies with ImportProvider
             }
         }
 
@@ -145,51 +174,32 @@ impl ModuleLoader for RustyLoader {
     ) -> deno_core::ModuleLoadResponse {
         let inner = self.inner.clone();
         let module_specifier = module_specifier.clone();
-        // We check permissions first
-        match module_specifier.scheme() {
-            // Remote fetch imports
-            #[cfg(feature = "url_import")]
-            "https" | "http" => ModuleLoadResponse::Async(
-                async move {
-                    inner
-                        .load(module_specifier, |specifier| async move {
-                            let response = reqwest::get(specifier).await?;
-                            Ok(response.text().await?)
-                        })
-                        .await
-                }
-                .boxed_local(),
-            ),
-
-            // FS imports
-            "file" => ModuleLoadResponse::Async(
-                async move {
-                    inner
-                        .load(module_specifier, |specifier| async move {
-                            let path = specifier
-                                .to_file_path()
-                                .map_err(|_| anyhow!("`{specifier}` is not a valid file URL."))?;
-                            Ok(tokio::fs::read_to_string(path).await?)
-                        })
-                        .await
-                }
-                .boxed_local(),
-            ),
-
-            _ => ModuleLoadResponse::Sync(Err(anyhow!(
-                "{} imports are not allowed here: {}",
-                module_specifier.scheme(),
-                module_specifier.as_str()
-            ))),
-        }
+        let import_provider = self.import_provider.clone();
+        ModuleLoadResponse::Async(
+            async move {
+                inner
+                    .load(module_specifier, |specifier| async {
+                        import_provider.as_ref().import(specifier)
+                    })
+                    .await
+            }
+            .boxed_local(),
+        )
     }
 }
 
 #[allow(dead_code)]
 impl RustyLoader {
-    pub fn new(cache_provider: Option<Box<dyn ModuleCacheProvider>>) -> Self {
+    pub fn new(
+        cache_provider: Option<Box<dyn ModuleCacheProvider>>,
+        import_provider: Option<Box<dyn ImportProvider>>,
+    ) -> Self {
         Self {
             inner: Rc::new(InnerRustyLoader::new(cache_provider)),
+            import_provider: Rc::new(match import_provider {
+                Some(p) => p,
+                None => Box::new(DefaultImporter),
+            }),
         }
     }
 
@@ -248,7 +258,7 @@ mod test {
             .get(&specifier)
             .expect("Expected to get cached source");
 
-        let loader = RustyLoader::new(Some(Box::new(cache_provider)));
+        let loader = RustyLoader::new(Some(Box::new(cache_provider)), None);
         let response = loader.load(
             &specifier,
             None,

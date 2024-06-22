@@ -240,6 +240,7 @@ pub use js_function::JsFunction;
 pub use module::{Module, StaticModule};
 pub use module_handle::ModuleHandle;
 pub use module_wrapper::ModuleWrapper;
+pub use module_loader::{ImportProvider, DefaultImporter};
 pub use runtime::{Runtime, RuntimeOptions, Undefined};
 pub use utilities::{evaluate, import, resolve_path, validate};
 
