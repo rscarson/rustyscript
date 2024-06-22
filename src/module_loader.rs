@@ -207,14 +207,11 @@ impl ModuleLoader for RustyLoader {
 impl RustyLoader {
     pub fn new(
         cache_provider: Option<Box<dyn ModuleCacheProvider>>,
-        import_provider: Option<Box<dyn ImportProvider>>,
+        import_provider: Box<dyn ImportProvider>,
     ) -> Self {
         Self {
             inner: Rc::new(InnerRustyLoader::new(cache_provider)),
-            import_provider: Rc::new(match import_provider {
-                Some(p) => p,
-                None => Box::new(DefaultImporter),
-            }),
+            import_provider: Rc::new(import_provider),
         }
     }
 
@@ -273,7 +270,7 @@ mod test {
             .get(&specifier)
             .expect("Expected to get cached source");
 
-        let loader = RustyLoader::new(Some(Box::new(cache_provider)), None);
+        let loader = RustyLoader::new(Some(Box::new(cache_provider)), Box::new(DefaultImporter));
         let response = loader.load(
             &specifier,
             None,

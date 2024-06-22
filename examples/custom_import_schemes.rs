@@ -36,7 +36,7 @@ impl ImportProvider for CustomImporter {
 
 fn main() -> Result<(), anyhow::Error> {
     let options = RuntimeOptions {
-        import_provider: Some(Box::new(CustomImporter::new())),
+        import_provider: Box::new(CustomImporter::new()),
         ..Default::default()
     };
     let mut runtime = Runtime::new(options)?;
