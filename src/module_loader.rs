@@ -108,7 +108,7 @@ impl ImportProvider for DefaultImporter {
         match specifier.scheme() {
             #[cfg(not(feature = "url_import"))]
             "https" | "http" => async move {
-                Err(anyhow!("web imports are not allowed here: {specifier}"));
+                Err(anyhow!("web imports are not allowed here: {specifier}"))
             }
             .boxed_local(),
             #[cfg(feature = "url_import")]
