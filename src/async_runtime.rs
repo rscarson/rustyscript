@@ -21,6 +21,8 @@ impl AsyncRuntime {
 
     /// Creates a new instance of the runtime with the provided options.
     ///
+    /// The async runtime must run in a single threaded Tokio runtime
+    ///
     /// # Arguments
     /// * `options` - A `RuntimeOptions` struct that specifies the configuration options for the runtime.
     ///
