@@ -11,6 +11,8 @@ use deno_core::{
 use std::{
     cell::RefCell,
     collections::{HashMap, HashSet},
+    future::Future,
+    pin::Pin,
     rc::Rc,
 };
 
@@ -92,33 +94,46 @@ impl InnerRustyLoader {
 
 pub trait ImportProvider {
     #[allow(async_fn_in_trait)]
-    fn import(&self, specifier: ModuleSpecifier) -> Result<String, anyhow::Error>;
+    fn import(
+        &self,
+        specifier: ModuleSpecifier,
+    ) -> Pin<Box<dyn Future<Output = Result<String, anyhow::Error>>>>;
 }
 pub struct DefaultImporter;
 impl ImportProvider for DefaultImporter {
-    fn import(&self, specifier: ModuleSpecifier) -> Result<String, anyhow::Error> {
+    fn import(
+        &self,
+        specifier: ModuleSpecifier,
+    ) -> Pin<Box<dyn Future<Output = Result<String, anyhow::Error>>>> {
         match specifier.scheme() {
             #[cfg(not(feature = "url_import"))]
-            "https" | "http" => {
-                return Err(anyhow!("web imports are not allowed here: {specifier}"));
+            "https" | "http" => async move {
+                Err(anyhow!("web imports are not allowed here: {specifier}"));
             }
+            .boxed_local(),
             #[cfg(feature = "url_import")]
-            "https" | "http" => {
-                let response = reqwest::blocking::get(specifier)?;
-                Ok(response.text()?)
+            "https" | "http" => async move {
+                let response = reqwest::get(specifier).await?;
+                Ok(response.text().await?)
             }
+            .boxed_local(),
             #[cfg(not(feature = "fs_import"))]
-            "file" => Err(anyhow!(
-                "filesystem imports are not allowed here: {specifier}"
-            )),
+            "file" => async move {
+                Err(anyhow!(
+                    "filesystem imports are not allowed here: {specifier}"
+                ))
+            }
+            .boxed_local(),
             #[cfg(feature = "fs_import")]
-            "file" => {
+            "file" => async move {
                 let path = specifier
                     .to_file_path()
                     .map_err(|_| anyhow!("`{specifier}` is not a valid file URL."))?;
-                Ok(std::fs::read_to_string(path)?)
+                Ok(tokio::fs::read_to_string(path).await?)
             }
-            _ => Err(anyhow!("unsupported scheme for module import: {specifier}")),
+            .boxed_local(),
+            _ => async move { Err(anyhow!("unsupported scheme for module import: {specifier}")) }
+                .boxed_local(),
         }
     }
 }
@@ -179,7 +194,7 @@ impl ModuleLoader for RustyLoader {
             async move {
                 inner
                     .load(module_specifier, |specifier| async {
-                        import_provider.as_ref().import(specifier)
+                        import_provider.as_ref().import(specifier).await
                     })
                     .await
             }
