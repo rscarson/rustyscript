@@ -15,8 +15,5 @@ pub fn extensions() -> Vec<Extension> {
 }
 
 pub fn snapshot_extensions() -> Vec<Extension> {
-    vec![
-        deno_url::deno_url::init_ops(),
-        init_url::init_ops(),
-    ]
+    vec![deno_url::deno_url::init_ops(), init_url::init_ops()]
 }
