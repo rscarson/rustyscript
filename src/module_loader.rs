@@ -92,7 +92,14 @@ impl InnerRustyLoader {
     }
 }
 
+/// This trait can be implemented in order to override or extend the default import behavior
 pub trait ImportProvider {
+    /// Resolve an incoming import's specifier to an absolute URL to be used in the `import` method
+    /// * `url`: The specifier of the file to be imported
+    /// * `referrer`: The specifier of the script calling import
+    /// * `import_kind`: An enum representing what kind of import statement was used
+    ///
+    /// The provided method uses deno_core's implementation of [this algorithm](https://html.spec.whatwg.org/multipage/webappapis.html#resolve-a-module-specifier).
     fn resolve(
         &self,
         url: &str,
@@ -104,11 +111,29 @@ pub trait ImportProvider {
             Err(err) => Err(anyhow::Error::from(err)),
         }
     }
+    /// Retrieve the source code as text from a URL in a (pinned & boxed) future
+    /// ```rust
+    /// fn import(&self, specifier: ModuleSpecifier) -> Pin<Box<dyn Future<Output = Result<String, anyhow::Error>> + Send>> {
+    ///     // ...
+    ///     async move {
+    ///         // ...
+    ///         Ok(/* await-ed source code as String */)
+    ///     }.boxed_local()
+    /// }
+    /// ```
     fn import(
         &self,
         specifier: ModuleSpecifier,
     ) -> Pin<Box<dyn Future<Output = Result<String, anyhow::Error>>>>;
 }
+
+/// This struct implements the `ImportProvider` trait, and contains the default importing behavior
+///
+/// URL schemes handled by this module are: 
+/// * `file:///` (if `fs_import` feature is enabled)
+/// * `http://` (if `url_import` feature is enabled)
+/// * `https://` (if `url_import` feature is enabled)
+/// * `ext:` (if the runtime has been configured to use extensions)
 pub struct DefaultImporter;
 impl ImportProvider for DefaultImporter {
     fn import(
