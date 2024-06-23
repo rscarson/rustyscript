@@ -5,6 +5,7 @@ use crate::{
 use deno_core::{
     anyhow::{self, anyhow},
     futures::FutureExt,
+    url::Url,
     ModuleLoadResponse, ModuleLoader, ModuleSource, ModuleSourceCode, ModuleSpecifier, ModuleType,
     SourceMapGetter,
 };
@@ -92,6 +93,17 @@ impl InnerRustyLoader {
 }
 
 pub trait ImportProvider {
+    fn resolve(
+        &self,
+        url: &str,
+        referrer: &str,
+        _import_kind: deno_core::ResolutionKind,
+    ) -> Result<Url, anyhow::Error> {
+        match deno_core::resolve_import(url, referrer) {
+            Ok(url) => Ok(url),
+            Err(err) => Err(anyhow::Error::from(err)),
+        }
+    }
     fn import(
         &self,
         specifier: ModuleSpecifier,
@@ -145,9 +157,11 @@ impl ModuleLoader for RustyLoader {
         &self,
         specifier: &str,
         referrer: &str,
-        _kind: deno_core::ResolutionKind,
+        kind: deno_core::ResolutionKind,
     ) -> Result<ModuleSpecifier, anyhow::Error> {
-        let url = deno_core::resolve_import(specifier, referrer)?;
+        // Use the import resolution from ImportProvider
+        let url = self.import_provider.resolve(specifier, referrer, kind)?;
+
         if referrer == "." {
             self.whitelist_add(url.as_str());
         }
@@ -169,9 +183,15 @@ impl ModuleLoader for RustyLoader {
                 }
             }
 
+            _ if specifier.starts_with("ext:") => {
+                // Extension import - allow
+            }
+
             _ => {
-                // Allow all other imports
-                // The responsibility of rejecting unrecognized schemes lies with ImportProvider
+                #[cfg(not(feature = "nonstandard_import_urls"))]
+                return Err(anyhow!(
+                    "unrecognized schema for module import: {specifier}"
+                ));
             }
         }
 
