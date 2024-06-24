@@ -92,7 +92,6 @@ impl InnerRustyLoader {
 pub struct RustyLoader {
     inner: Rc<InnerRustyLoader>,
 }
-#[allow(unreachable_code)]
 impl ModuleLoader for RustyLoader {
     fn resolve(
         &self,

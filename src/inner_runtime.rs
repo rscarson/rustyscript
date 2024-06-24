@@ -7,7 +7,10 @@ use crate::{
     transpiler::{self, transpile_extension},
     Error, Module, ModuleHandle,
 };
-use deno_core::{serde_json, v8, JsRuntime, PollEventLoopOptions, RuntimeOptions};
+use deno_core::{
+    serde_json, serde_v8::from_v8, v8, JsRuntime, PollEventLoopOptions, RuntimeOptions,
+};
+use serde::de::DeserializeOwned;
 use std::{collections::HashMap, pin::Pin, rc::Rc, time::Duration};
 
 /// Represents a function that can be registered with the runtime
@@ -78,6 +81,7 @@ impl Default for InnerRuntimeOptions {
 /// by the public-facing Runtime API
 pub struct InnerRuntime {
     pub deno_runtime: JsRuntime,
+    pub tokio_runtime: Rc<tokio::runtime::Runtime>,
     pub options: InnerRuntimeOptions,
 }
 impl InnerRuntime {
@@ -106,6 +110,13 @@ impl InnerRuntime {
 
                 ..Default::default()
             })?,
+
+            tokio_runtime: Rc::new(
+                tokio::runtime::Builder::new_current_thread()
+                    .enable_all()
+                    .thread_keep_alive(options.timeout)
+                    .build()?,
+            ),
 
             options: InnerRuntimeOptions {
                 timeout: options.timeout,
@@ -208,12 +219,40 @@ impl InnerRuntime {
         name: &str,
     ) -> Result<T, Error>
     where
-        T: serde::de::DeserializeOwned,
+        T: DeserializeOwned,
     {
-        let value = self.get_value_ref_async(module_context, name)?;
-        let mut scope = self.deno_runtime.handle_scope();
-        let value = v8::Local::<v8::Value>::new(&mut scope, value);
-        Ok(deno_core::serde_v8::from_v8(&mut scope, value)?)
+        let timeout = self.options.timeout;
+        let rt = self.tokio_runtime.clone();
+        Self::run_async_task(
+            async move {
+                let value = self.get_value_ref_async(module_context, name).await?;
+                let mut scope = self.deno_runtime.handle_scope();
+                let result = v8::Local::<v8::Value>::new(&mut scope, value);
+                Ok(from_v8(&mut scope, result)?)
+            },
+            timeout,
+            rt,
+        )
+    }
+
+    /// Get a function from a runtime instance
+    ///
+    /// # Arguments
+    /// * `module_context` - A module handle to use for context, to find exports
+    /// * `name` - A string representing the name of the value to find
+    ///
+    /// # Returns
+    /// A `Result` containing the deserialized result or an error (`Error`) if the
+    /// value cannot be found, if there are issues with, or if the result cannot be
+    /// deserialized.
+    pub fn get_function<'a>(
+        &mut self,
+        module_context: Option<&ModuleHandle>,
+        name: &str,
+    ) -> Result<JsFunction<'a>, Error> {
+        let mut f: JsFunction = self.get_value(module_context, name)?;
+        f._stabilize(&mut self.deno_runtime().handle_scope());
+        Ok(f)
     }
 
     /// Evaluate a piece of non-ECMAScript-module JavaScript code
@@ -228,13 +267,35 @@ impl InnerRuntime {
     /// result cannot be deserialized.
     pub fn eval<T>(&mut self, expr: &str) -> Result<T, Error>
     where
-        T: serde::de::DeserializeOwned,
+        T: DeserializeOwned,
     {
         let result = self.deno_runtime().execute_script("", expr.to_string())?;
 
         let mut scope = self.deno_runtime.handle_scope();
         let result = v8::Local::new(&mut scope, result);
-        Ok(deno_core::serde_v8::from_v8(&mut scope, result)?)
+        Ok(from_v8(&mut scope, result)?)
+    }
+
+    pub async fn call_stored_async_function<T>(
+        &mut self,
+        module_context: Option<&ModuleHandle>,
+        function: &JsFunction<'_>,
+        args: &FunctionArguments,
+    ) -> Result<T, Error>
+    where
+        T: DeserializeOwned,
+    {
+        match function {
+            JsFunction::Stable(function) => {
+                self.call_function_by_ref_async(module_context, function.clone(), args)
+                    .await
+            }
+
+            _ => Err(Error::Runtime(
+                "Call `JsFunction::stabilize` first to prevent garbage collection from occuring. This should be done immediately after creation."
+                    .to_string(),
+            )),
+        }
     }
 
     /// Calls a stored javascript function and deserializes its return value.
@@ -252,17 +313,51 @@ impl InnerRuntime {
     pub fn call_stored_function<T>(
         &mut self,
         module_context: Option<&ModuleHandle>,
-        function: &JsFunction,
+        function: &JsFunction<'_>,
         args: &FunctionArguments,
     ) -> Result<T, Error>
     where
-        T: deno_core::serde::de::DeserializeOwned,
+        T: DeserializeOwned,
     {
-        let function = function.to_v8_global(&mut self.deno_runtime.handle_scope());
-        self.call_function_by_ref_async(module_context, function, args)
+        let timeout = self.options.timeout;
+        let rt = self.tokio_runtime.clone();
+        Self::run_async_task(
+            async move {
+                self.call_stored_async_function(module_context, function, args)
+                    .await
+            },
+            timeout,
+            rt,
+        )
     }
 
     /// Calls a javascript function within the Deno runtime by its name and deserializes its return value.
+    /// Returns a future that resolves to the deserialized result of the function call.
+    ///
+    /// # Arguments
+    /// * `module_context` - A module handle to use for context, to find exports
+    /// * `name` - A string representing the name of the javascript function to call.
+    ///
+    /// # Returns
+    /// A `Result` containing the deserialized result of the function call (`T`)
+    /// or an error (`Error`) if the function cannot be found, if there are issues with
+    /// calling the function, or if the result cannot be deserialized.
+    pub async fn call_async_function<T>(
+        &mut self,
+        module_context: Option<&ModuleHandle>,
+        name: &str,
+        args: &FunctionArguments,
+    ) -> Result<T, Error>
+    where
+        T: DeserializeOwned,
+    {
+        let function = self.get_function_by_name(module_context, name)?;
+        self.call_function_by_ref_async(module_context, function, args)
+            .await
+    }
+
+    /// Calls a javascript function within the Deno runtime by its name and deserializes its return value.
+    /// Blocks until the function call is complete.
     ///
     /// # Arguments
     /// * `module_context` - A module handle to use for context, to find exports
@@ -279,10 +374,15 @@ impl InnerRuntime {
         args: &FunctionArguments,
     ) -> Result<T, Error>
     where
-        T: deno_core::serde::de::DeserializeOwned,
+        T: DeserializeOwned,
     {
-        let function = self.get_function_by_name(module_context, name)?;
-        self.call_function_by_ref_async(module_context, function, args)
+        let timeout = self.options.timeout;
+        let rt = self.tokio_runtime.clone();
+        Self::run_async_task(
+            async move { self.call_async_function(module_context, name, args).await },
+            timeout,
+            rt,
+        )
     }
 
     /// Attempt to get a value out of the global context (globalThis.name)
@@ -358,30 +458,24 @@ impl InnerRuntime {
             .map_err(|_| Error::ValueNotFound(name.to_string()))
     }
 
-    pub fn get_value_ref_async(
+    pub async fn get_value_ref_async(
         &mut self,
         module_context: Option<&ModuleHandle>,
         name: &str,
     ) -> Result<v8::Global<v8::Value>, Error> {
-        let timeout = self.options.timeout;
-        Self::run_async_task(
-            async move {
-                let result = self.get_value_ref_sync(module_context, name)?;
-                let future = self.deno_runtime.resolve(result);
-                let result = self
-                    .deno_runtime
-                    .with_event_loop_future(future, Default::default())
-                    .await?;
+        let result = self.get_value_ref_sync(module_context, name)?;
+        let future = self.deno_runtime.resolve(result);
+        let result = self
+            .deno_runtime
+            .with_event_loop_future(future, Default::default())
+            .await?;
 
-                let mut scope = self.deno_runtime.handle_scope();
-                let result = v8::Local::new(&mut scope, result);
+        let mut scope = self.deno_runtime.handle_scope();
+        let result = v8::Local::new(&mut scope, result);
 
-                // Decode value
-                let value = v8::Global::new(&mut scope, result);
-                Ok::<v8::Global<v8::Value>, Error>(value)
-            },
-            timeout,
-        )
+        // Decode value
+        let value = v8::Global::new(&mut scope, result);
+        Ok::<v8::Global<v8::Value>, Error>(value)
     }
 
     /// This method takes a javascript function and invokes it within the Deno runtime.
@@ -496,46 +590,43 @@ impl InnerRuntime {
         Ok(v8::Global::<v8::Function>::new(&mut scope, f))
     }
 
-    pub fn call_function_by_ref_async<T>(
+    pub async fn call_function_by_ref_async<T>(
         &mut self,
         module_context: Option<&ModuleHandle>,
         function: v8::Global<v8::Function>,
         args: &FunctionArguments,
     ) -> Result<T, Error>
     where
-        T: deno_core::serde::de::DeserializeOwned,
+        T: DeserializeOwned,
     {
-        let timeout = self.options.timeout;
-        Self::run_async_task(
-            async move {
-                let result = self.call_function_by_ref_sync(module_context, function, args)?;
-                let future = self.deno_runtime.resolve(result);
-                let result = self
-                    .deno_runtime
-                    .with_event_loop_future(future, Default::default())
-                    .await?;
+        let result = self.call_function_by_ref_sync(module_context, function, args)?;
+        let future = self.deno_runtime.resolve(result);
 
-                //let result = self.deno_runtime.resolve(result).await?;
+        // Inject decode into the future
+        let result = self
+            .deno_runtime
+            .with_event_loop_future(future, Default::default())
+            .await?;
 
-                let mut scope = self.deno_runtime.handle_scope();
-                let result = v8::Local::new(&mut scope, result);
+        let mut scope = self.deno_runtime.handle_scope();
+        let result = v8::Local::new(&mut scope, result);
 
-                // Decode value
-                let value: T = deno_core::serde_v8::from_v8(&mut scope, result)?;
-                Ok::<T, Error>(value)
-            },
-            timeout,
-        )
+        // Decode value
+        Ok(from_v8(&mut scope, result)?)
     }
 
-    pub fn run_async_task<T, F>(f: F, timeout: Duration) -> Result<T, Error>
+    pub fn run_async_task<T, F>(
+        f: F,
+        timeout: Duration,
+        tokio_runtime: Rc<tokio::runtime::Runtime>,
+    ) -> Result<T, Error>
     where
         F: tokio::macros::support::Future + std::future::Future<Output = Result<T, Error>>,
     {
-        let tokio_runtime = tokio::runtime::Builder::new_current_thread()
-            .enable_all()
-            .thread_keep_alive(timeout)
-            .build()?;
+        ////  let tokio_runtime = tokio::runtime::Builder::new_current_thread()
+        //     .enable_all()
+        //      .thread_keep_alive(timeout)
+        //      .build()?;
 
         tokio_runtime.block_on(async move {
             let _f = tokio::time::timeout(timeout, f);
@@ -544,15 +635,16 @@ impl InnerRuntime {
     }
 
     /// Load one or more modules
+    /// Returns a future that resolves to a handle to the main module, or the last
+    /// side-module
     ///
     /// Will return a handle to the main module, or the last
     /// side-module
-    pub fn load_modules(
+    pub async fn load_modules_async(
         &mut self,
         main_module: Option<&Module>,
         side_modules: Vec<&Module>,
     ) -> Result<ModuleHandle, Error> {
-        let timeout = self.options.timeout;
         let default_entrypoint = self.options.default_entrypoint.clone();
 
         if main_module.is_none() && side_modules.is_empty() {
@@ -561,55 +653,48 @@ impl InnerRuntime {
             ));
         }
 
-        let deno_runtime = &mut self.deno_runtime();
-        let module_handle_stub = Self::run_async_task(
-            async move {
-                let mut module_handle_stub = Default::default();
+        let mut module_handle_stub = Default::default();
 
-                // Get additional modules first
-                for side_module in side_modules {
-                    let module_specifier = side_module.filename().to_module_specifier()?;
-                    let (code, _) =
-                        transpiler::transpile(&module_specifier, side_module.contents())?;
-                    let code = deno_core::FastString::from(code);
+        // Get additional modules first
+        for side_module in side_modules {
+            let module_specifier = side_module.filename().to_module_specifier()?;
+            let (code, _) = transpiler::transpile(&module_specifier, side_module.contents())?;
+            let code = deno_core::FastString::from(code);
 
-                    let s_modid = deno_runtime
-                        .load_side_es_module_from_code(&module_specifier, code)
-                        .await?;
-                    let result = deno_runtime.mod_evaluate(s_modid);
-                    deno_runtime
-                        .run_event_loop(PollEventLoopOptions::default())
-                        .await?;
-                    result.await?;
-                    module_handle_stub = ModuleHandle::new(side_module, s_modid, None);
-                }
+            let s_modid = self
+                .deno_runtime
+                .load_side_es_module_from_code(&module_specifier, code)
+                .await?;
+            let result = self.deno_runtime.mod_evaluate(s_modid);
+            self.deno_runtime
+                .run_event_loop(PollEventLoopOptions::default())
+                .await?;
+            result.await?;
+            module_handle_stub = ModuleHandle::new(side_module, s_modid, None);
+        }
 
-                // Load main module
-                if let Some(module) = main_module {
-                    let module_specifier = module.filename().to_module_specifier()?;
-                    let (code, _) = transpiler::transpile(&module_specifier, module.contents())?;
-                    let code = deno_core::FastString::from(code);
+        // Load main module
+        if let Some(module) = main_module {
+            let module_specifier = module.filename().to_module_specifier()?;
+            let (code, _) = transpiler::transpile(&module_specifier, module.contents())?;
+            let code = deno_core::FastString::from(code);
 
-                    let module_id = deno_runtime
-                        .load_main_es_module_from_code(&module_specifier, code)
-                        .await?;
+            let module_id = self
+                .deno_runtime
+                .load_main_es_module_from_code(&module_specifier, code)
+                .await?;
 
-                    // Finish execution
-                    let result = deno_runtime.mod_evaluate(module_id);
-                    deno_runtime
-                        .run_event_loop(PollEventLoopOptions {
-                            wait_for_inspector: false,
-                            ..Default::default()
-                        })
-                        .await?;
-                    result.await?;
-                    module_handle_stub = ModuleHandle::new(module, module_id, None);
-                }
-
-                Ok::<ModuleHandle, Error>(module_handle_stub)
-            },
-            timeout,
-        )?;
+            // Finish execution
+            let result = self.deno_runtime.mod_evaluate(module_id);
+            self.deno_runtime
+                .run_event_loop(PollEventLoopOptions {
+                    wait_for_inspector: false,
+                    ..Default::default()
+                })
+                .await?;
+            result.await?;
+            module_handle_stub = ModuleHandle::new(module, module_id, None);
+        }
 
         // Try to get an entrypoint
         let state = self.deno_runtime().op_state();
@@ -627,6 +712,25 @@ impl InnerRuntime {
             module_handle_stub.id(),
             f_entrypoint,
         ))
+    }
+
+    /// Load one or more modules
+    /// Blocks until the modules are loaded
+    ///
+    /// Will return a handle to the main module, or the last
+    /// side-module
+    pub fn load_modules(
+        &mut self,
+        main_module: Option<&Module>,
+        side_modules: Vec<&Module>,
+    ) -> Result<ModuleHandle, Error> {
+        let timeout = self.options.timeout;
+        let rt = self.tokio_runtime.clone();
+        Self::run_async_task(
+            async move { self.load_modules_async(main_module, side_modules).await },
+            timeout,
+            rt,
+        )
     }
 }
 
@@ -670,36 +774,6 @@ mod test_inner_runtime {
             .expect_err("Could not detect null");
         runtime
             .get_value::<Undefined>(Some(&module), "d")
-            .expect_err("Could not detect undeclared");
-    }
-
-    #[test]
-    fn test_get_value_by_ref() {
-        let module = Module::new(
-            "test.js",
-            "
-            globalThis.a = 2;
-            export const b = 'test';
-            export const fnc = null;
-        ",
-        );
-
-        let mut runtime = InnerRuntime::new(Default::default()).expect("Could not load runtime");
-        let module = runtime
-            .load_modules(Some(&module), vec![])
-            .expect("Could not load module");
-
-        runtime
-            .get_value_ref_async(Some(&module), "a")
-            .expect("Could not find global");
-        runtime
-            .get_value_ref_async(Some(&module), "b")
-            .expect("Could not find export");
-        runtime
-            .get_value_ref_async(Some(&module), "c")
-            .expect_err("Could not detect null");
-        runtime
-            .get_value_ref_async(Some(&module), "d")
             .expect_err("Could not detect undeclared");
     }
 
@@ -915,13 +989,14 @@ mod test_inner_runtime {
             name: String,
             func: JsFunction<'a>,
         }
+
         let mut structure: TestStruct = runtime
             .get_value(Some(&module), "test")
             .expect("Could not get object");
 
         structure
             .func
-            .as_global(&mut runtime.deno_runtime.handle_scope());
+            ._stabilize(&mut runtime.deno_runtime.handle_scope());
 
         // Mess with the locals table
         let c = runtime
@@ -966,10 +1041,9 @@ mod test_inner_runtime {
             .expect("Could not load module");
 
         let function: JsFunction = runtime
-            .get_value(Some(&module), "test")
+            .get_function(Some(&module), "test")
             .expect("Could not get function");
 
-        println!("Deserialized");
         let value: usize = runtime
             .call_stored_function(Some(&module), &function, json_args!(2))
             .expect("could not call function");

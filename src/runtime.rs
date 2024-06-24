@@ -251,6 +251,35 @@ impl Runtime {
     }
 
     /// Calls a stored javascript function and deserializes its return value.
+    /// Returns a future that resolves when the function has completed.
+    ///
+    /// # Arguments
+    /// * `module_context` - Optional handle to a module providing global context for the function
+    /// * `function` - A The function object
+    /// * `args` - The arguments to pass to the function
+    ///
+    /// # Returns
+    /// A `Result` containing the deserialized result of the function call (`T`)
+    /// or an error (`Error`) if the function cannot be found, if there are issues with
+    /// calling the function, or if the result cannot be deserialized.
+    ///
+    /// Note: [JsFunction::stabilize] should be called on the `JsFunction` before calling this method.
+    pub async fn call_stored_async_function<T>(
+        &mut self,
+        module_context: Option<&ModuleHandle>,
+        function: &JsFunction<'_>,
+        args: &FunctionArguments,
+    ) -> Result<T, Error>
+    where
+        T: serde::de::DeserializeOwned,
+    {
+        self.0
+            .call_stored_async_function(module_context, function, args)
+            .await
+    }
+
+    /// Calls a stored javascript function and deserializes its return value.
+    /// Blocks until the function has completed.
     ///
     /// # Arguments
     /// * `module_context` - Optional handle to a module providing global context for the function
@@ -276,6 +305,45 @@ impl Runtime {
     }
 
     /// Calls a javascript function within the Deno runtime by its name and deserializes its return value.
+    /// Returns a future that resolves when the function has completed.
+    ///
+    /// # Arguments
+    /// * `module_context` - Optional handle to a module to search - if None, or if the search fails, the global context is used
+    /// * `name` - A string representing the name of the javascript function to call.
+    /// * `args` - The arguments to pass to the function
+    ///
+    /// # Returns
+    /// A `Result` containing the deserialized result of the function call (`T`)
+    /// or an error (`Error`) if the function cannot be found, if there are issues with
+    /// calling the function, or if the result cannot be deserialized.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rustyscript::{ json_args, Runtime, Module, Error };
+    ///
+    /// # fn main() -> Result<(), Error> {
+    /// let mut runtime = Runtime::new(Default::default())?;
+    /// let module = Module::new("/path/to/module.js", "export function f() { return 2; };");
+    /// let module = runtime.load_module(&module)?;
+    /// let value: usize = runtime.call_function(Some(&module), "f", json_args!())?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub async fn call_async_function<T>(
+        &mut self,
+        module_context: Option<&ModuleHandle>,
+        name: &str,
+        args: &FunctionArguments,
+    ) -> Result<T, Error>
+    where
+        T: deno_core::serde::de::DeserializeOwned,
+    {
+        self.0.call_async_function(module_context, name, args).await
+    }
+
+    /// Calls a javascript function within the Deno runtime by its name and deserializes its return value.
+    /// Blocks until the function has completed.
     ///
     /// # Arguments
     /// * `module_context` - Optional handle to a module to search - if None, or if the search fails, the global context is used
@@ -347,6 +415,24 @@ impl Runtime {
         self.0.get_value(module_context, name)
     }
 
+    /// Get a function from a runtime instance
+    ///
+    /// # Arguments
+    /// * `module_context` - A module handle to use for context, to find exports
+    /// * `name` - A string representing the name of the value to find
+    ///
+    /// # Returns
+    /// A `Result` containing the deserialized result or an error (`Error`) if the
+    /// value cannot be found, if there are issues with, or if the result cannot be
+    /// deserialized.
+    pub fn get_function<'a>(
+        &mut self,
+        module_context: Option<&ModuleHandle>,
+        name: &str,
+    ) -> Result<JsFunction<'a>, Error> {
+        self.0.get_function(module_context, name)
+    }
+
     /// Executes the given module, and returns a handle allowing you to extract values
     /// And call functions
     ///
@@ -412,6 +498,7 @@ impl Runtime {
     }
 
     /// Executes the entrypoint function of a module within the Deno runtime.
+    /// Blocks until the function has completed.
     ///
     /// # Arguments
     /// * `module_context` - A handle returned by loading a module into the runtime
@@ -445,12 +532,57 @@ impl Runtime {
         T: deno_core::serde::de::DeserializeOwned,
     {
         if let Some(entrypoint) = module_context.entrypoint() {
-            let value: serde_json::Value = self.0.call_function_by_ref_async(
-                Some(module_context),
-                entrypoint.clone(),
-                args,
-            )?;
-            Ok(serde_json::from_value(value)?)
+            let js_fn = JsFunction::new(entrypoint.clone());
+            let result: T = self
+                .0
+                .call_stored_function(Some(module_context), &js_fn, args)?;
+            Ok(result)
+        } else {
+            Err(Error::MissingEntrypoint(module_context.module().clone()))
+        }
+    }
+
+    /// Executes the entrypoint function of a module within the Deno runtime.
+    /// Blocks until the function has completed.
+    ///
+    /// # Arguments
+    /// * `module_context` - A handle returned by loading a module into the runtime
+    ///
+    /// # Returns
+    /// A `Result` containing the deserialized result of the entrypoint execution (`T`)
+    /// if successful, or an error (`Error`) if the entrypoint is missing, the execution fails,
+    /// or the result cannot be deserialized.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rustyscript::{json_args, Runtime, Module, Error};
+    ///
+    /// # fn main() -> Result<(), Error> {
+    /// let mut runtime = Runtime::new(Default::default())?;
+    /// let module = Module::new("test.js", "rustyscript.register_entrypoint(() => 'test')");
+    /// let module = runtime.load_module(&module)?;
+    ///
+    /// // Run the entrypoint and handle the result
+    /// let value: String = runtime.call_entrypoint(&module, json_args!())?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub async fn call_async_entrypoint<T>(
+        &mut self,
+        module_context: &ModuleHandle,
+        args: &FunctionArguments,
+    ) -> Result<T, Error>
+    where
+        T: deno_core::serde::de::DeserializeOwned,
+    {
+        if let Some(entrypoint) = module_context.entrypoint() {
+            let js_fn = JsFunction::new(entrypoint.clone());
+            let result: T = self
+                .0
+                .call_stored_async_function(Some(module_context), &js_fn, args)
+                .await?;
+            Ok(result)
         } else {
             Err(Error::MissingEntrypoint(module_context.module().clone()))
         }

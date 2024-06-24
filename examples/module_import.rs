@@ -36,6 +36,7 @@ fn main() -> Result<(), Error> {
     let mut function: JsFunction = module.get("listBooks")?;
 
     // This is required to make sure the function remains callable
+    // (due to the way garbage collection works in the V8 engine)
     function.stabilize(module.get_runtime());
 
     // The stored function can then be called!
