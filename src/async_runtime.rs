@@ -158,14 +158,16 @@ impl AsyncRuntime {
     /// calling the function, or if the result cannot be deserialized.
     pub async fn call_function<T>(
         &mut self,
-        module_context: Option<&ModuleHandle>,
+        module_context: Option<ModuleHandle>,
         name: &str,
-        args: &FunctionArguments,
+        args: Box<FunctionArguments>,
     ) -> Result<T, Error>
     where
         T: deno_core::serde::de::DeserializeOwned,
     {
-        self.0.call_function(module_context, name, args).await
+        let module_context = module_context;
+        let module_context = module_context.as_ref().map(|m| m as &ModuleHandle);
+        self.0.call_function(module_context, name, &args).await
     }
 
     /// Get a value from a runtime instance
@@ -180,13 +182,15 @@ impl AsyncRuntime {
     ///  deserialized.
     pub async fn get_value<T>(
         &mut self,
-        module_context: Option<&ModuleHandle>,
+        module_context: Option<ModuleHandle>,
         name: &str,
     ) -> Result<T, Error>
     where
         T: serde::de::DeserializeOwned,
     {
-        self.0.get_value(module_context, name).await
+        let m = module_context;
+        let m = m.as_ref();
+        self.0.get_value(m, name).await
     }
 
     /// Executes the given module, and returns a handle allowing you to extract values

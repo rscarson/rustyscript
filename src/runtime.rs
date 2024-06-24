@@ -14,10 +14,6 @@ pub type Undefined = serde_json::Value;
 pub struct Runtime(InnerRuntime);
 
 impl Runtime {
-    /// The lack of any arguments - used to simplify calling functions
-    /// Prevents you from needing to specify the type using ::<serde_json::Value>
-    pub const EMPTY_ARGS: &'static FunctionArguments = &[];
-
     /// Creates a new instance of the runtime with the provided options.
     ///
     /// # Arguments
@@ -98,7 +94,7 @@ impl Runtime {
     where
         A: serde::Serialize,
     {
-        Ok(serde_json::to_value(value)?)
+        crate::utilities::arg(value)
     }
 
     /// Encode a primitive as a json value for use as a function argument
@@ -130,7 +126,7 @@ impl Runtime {
     where
         serde_json::Value: From<A>,
     {
-        serde_json::Value::from(value)
+        crate::utilities::into_arg(value)
     }
 
     /// Remove and return a value from the state, if one exists

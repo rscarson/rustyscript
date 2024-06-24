@@ -221,7 +221,8 @@ pub mod runtime;
 pub mod async_runtime;
 mod traits;
 mod transpiler;
-mod utilities;
+
+pub mod utilities;
 
 #[cfg(feature = "worker")]
 pub mod worker;
@@ -237,10 +238,11 @@ pub use deno_tls;
 pub use ext::web::WebOptions;
 pub use ext::ExtensionOptions;
 
+pub use inner_runtime::{InnerRuntimeOptions as RuntimeOptions};
 #[cfg(feature = "sync")]
-pub use runtime::{Runtime, RuntimeOptions};
+pub use runtime::Runtime;
 #[cfg(feature = "async")]
-pub use async_runtime::{AsyncRuntime, AsyncRuntimeOptions};
+pub use async_runtime::AsyncRuntime;
 
 pub type Undefined = serde_json::Value;
 
@@ -250,8 +252,11 @@ pub use inner_runtime::{FunctionArguments, RsAsyncFunction, RsFunction};
 pub use js_function::JsFunction;
 pub use module::{Module, StaticModule};
 pub use module_handle::ModuleHandle;
+
+#[cfg(feature = "sync")]
 pub use module_wrapper::ModuleWrapper;
-pub use utilities::{evaluate, import, resolve_path, validate};
+#[cfg(feature = "sync")]
+pub use utilities::sync::{evaluate, import, resolve_path, validate};
 
 #[cfg(test)]
 mod test {

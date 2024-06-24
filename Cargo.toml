@@ -11,7 +11,7 @@ categories = ["web-programming", "network-programming", "api-bindings", "compile
 readme = "readme.md"
 
 [features]
-default = ["worker", "console", "url", "crypto"]
+default = ["console", "url", "crypto"]
 no_extensions = []
 all = ["web", "io"]
 
@@ -31,12 +31,13 @@ url_import = ["reqwest"]
 # Enables the use of the SnapshotBuilder
 snapshot_builder = []
 
-# Enables the threaded worker API
-worker = []
-
 sync = ["tokio/default"]
-async = []
-async-tokio = ["async", "tokio/time"]
+async = ["tokio/time"]
+
+# Enables the threaded worker API
+worker = ["dashmap"]
+sync-worker = ["worker", "sync"]
+async-worker = ["worker", "async", "tokio/default"]
 
 [dev-dependencies]
 version-sync = "0.9.5"
@@ -72,6 +73,11 @@ winapi = { version = "=0.3.9", optional = true, features = ["commapi", "knownfol
 nix = { version = "=0.29.0", optional = true, features = ["term"] }
 libc = { version = "0.2.155", optional = true }
 once_cell = { version = "1.19.0", optional = true }
+
+
+async-trait = "0.1.80"
+dashmap = { version =  "5.5.3", optional = true }
+log = "0.4.21"
 
 [[example]]
 name = "custom_threaded_worker"

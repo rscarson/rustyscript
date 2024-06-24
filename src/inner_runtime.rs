@@ -791,7 +791,7 @@ pub trait AsyncInnerRuntime {
     ) -> Result<v8::Global<v8::Value>, Error>;
 }
 
-#[cfg(feature = "async-tokio")]
+#[cfg(feature = "async")]
 use tokio::time::{timeout as tokio_timeout};
 
 #[cfg(feature = "async")]
@@ -808,7 +808,7 @@ impl AsyncInnerRuntime for InnerRuntime {
 
         let module_handle_stub = self.load_modules_stub(main_module, side_modules);
 
-        let module_handle_stub = if cfg!(feature = "async-tokio") {
+        let module_handle_stub = if cfg!(feature = "async") {
             tokio_timeout(timeout, module_handle_stub).await??
         } else {
             module_handle_stub.await?

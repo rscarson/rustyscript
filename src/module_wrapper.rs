@@ -1,13 +1,18 @@
 use deno_core::{serde_json, v8::GetPropertyNamesArgs};
 
-use crate::{Error, JsFunction, Module, ModuleHandle, Runtime, RuntimeOptions};
+use crate::{Error, JsFunction, Module, ModuleHandle};
+
+#[cfg(feature = "sync")]
+use crate::{Runtime, RuntimeOptions};
 
 /// A wrapper type representing a runtime instance loaded with a single module
+#[cfg(feature = "sync")]
 pub struct ModuleWrapper {
     module_context: ModuleHandle,
     runtime: Runtime,
 }
 
+#[cfg(feature = "sync")]
 impl ModuleWrapper {
     /// Creates a new `ModuleWrapper` from a given module and runtime options.
     ///
@@ -158,6 +163,7 @@ impl ModuleWrapper {
 }
 
 #[cfg(test)]
+#[cfg(feature = "sync")]
 mod test_runtime {
     use super::*;
     use crate::json_args;
