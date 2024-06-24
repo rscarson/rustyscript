@@ -581,11 +581,11 @@ pub mod async_worker {
 
         fn send(&self, query: Self::Query) -> Result<(), Error>;
 
-        async fn send_async(&self, query: Self::Query) -> Result<(), Error>;
+        fn send_async(&self, query: Self::Query) -> impl Future<Output=Result<(), Error>> + Send;
 
-        async fn receive(&self) -> Result<Self::Response, Error>;
+        fn receive(&self) -> impl Future<Output=Result<Self::Response, Error>> + Send;
 
-        async fn send_and_await(&self, query: Self::Query) -> Result<Self::Response, Error>;
+        fn send_and_await(&self, query: Self::Query) -> impl Future<Output=Result<Self::Response, Error>> + Send;
 
         /// Create a new worker instance
         fn new_inner(options: Self::RuntimeOptions) -> impl Future<Output=Result<InnerWorker<Self>, Error>>;
