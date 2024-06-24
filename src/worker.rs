@@ -1,5 +1,5 @@
-use std::sync::mpsc::{Receiver, Sender};
-use std::thread::JoinHandle;
+use std::thread::{JoinHandle, spawn};
+use std::time::Duration;
 use crate::Error;
 
 /// A worker thread that can be used to run javascript code in a separate thread
@@ -14,8 +14,9 @@ where
     W: CommonWorker + ?Sized,
 {
     handle: JoinHandle<()>,
-    tx: Sender<W::Query>,
-    rx: Receiver<W::Response>,
+    tx: W::Sender<W::Query>,
+    rx: W::Receiver<W::Response>,
+    timeout: Duration,
 }
 
 /// An implementation of the worker trait for a specific runtime
@@ -42,36 +43,16 @@ where
     /// The type of response that can be received from the worker
     /// This should be an enum that contains all possible responses
     type Response;
+
+    type Sender<Q>;
+
+    type Receiver<R>;
 }
 
 impl<W> InnerWorker<W>
 where
     W: CommonWorker + ?Sized,
 {
-    /// Send a request to the worker
-    /// This will not block the current thread
-    /// Will return an error if the worker has stopped or panicked
-    pub fn send(&self, query: W::Query) -> Result<(), Error> {
-        self.tx
-            .send(query)
-            .map_err(|e| Error::Runtime(e.to_string()))
-    }
-
-    /// Receive a response from the worker
-    /// This will block the current thread until a response is received
-    /// Will return an error if the worker has stopped or panicked
-    pub fn receive(&self) -> Result<W::Response, Error> {
-        self.rx.recv().map_err(|e| Error::Runtime(e.to_string()))
-    }
-
-    /// Send a request to the worker and wait for a response
-    /// This will block the current thread until a response is received
-    /// Will return an error if the worker has stopped or panicked
-    pub fn send_and_await(&self, query: W::Query) -> Result<W::Response, Error> {
-        self.send(query)?;
-        self.receive()
-    }
-
     /// Consume the worker and wait for the thread to finish
     /// WARNING: This will block the current thread until the worker has finished
     ///          Make sure to send a stop message to the worker before calling this!
@@ -90,7 +71,7 @@ pub struct DefaultWorkerOptions {
     pub default_entrypoint: Option<String>,
 
     /// The timeout to use for the runtime
-    pub timeout: std::time::Duration,
+    pub timeout: Duration,
 }
 
 /// Query types for the default worker
@@ -181,6 +162,8 @@ pub mod sync_worker {
         type RuntimeOptions = DefaultWorkerOptions;
         type Query = DefaultWorkerQuery;
         type Response = DefaultWorkerResponse;
+        type Sender<Q> = Sender<Self::Query>;
+        type Receiver<R> = Receiver<Self::Response>;
     }
 
     pub trait SyncWorker: CommonWorker
@@ -191,6 +174,21 @@ pub mod sync_worker {
         /// The type of runtime used by this worker
         /// This can just be `rustyscript::Runtime` if you don't need to use a custom runtime
         type Runtime;
+
+        /// Send a request to the worker
+        /// This will not block the current thread
+        /// Will return an error if the worker has stopped or panicked
+        fn send(&self, query: Self::Query) -> Result<(), Error>;
+
+        /// Receive a response from the worker
+        /// This will block the current thread until a response is received
+        /// Will return an error if the worker has stopped or panicked
+        fn receive(&self) -> Result<Self::Response, Error>;
+
+        /// Send a request to the worker and wait for a response
+        /// This will block the current thread until a response is received
+        /// Will return an error if the worker has stopped or panicked
+        fn send_and_await(&self, query: Self::Query) -> Result<Self::Response, Error>;
 
         /// Create a new worker instance
         fn new_inner(options: Self::RuntimeOptions) -> Result<InnerWorker<Self>, Error>;
@@ -224,10 +222,27 @@ pub mod sync_worker {
             HashMap<deno_core::ModuleId, crate::ModuleHandle>,
         );
 
+        fn send(&self, query: Self::Query) -> Result<(), Error> {
+            self.0.tx
+                .send(query)
+                .map_err(|e| Error::Runtime(e.to_string()))
+        }
+
+        fn receive(&self) -> Result<Self::Response, Error> {
+            self.0.rx.recv().map_err(|e| Error::Runtime(e.to_string()))
+        }
+
+        fn send_and_await(&self, query: Self::Query) -> Result<Self::Response, Error> {
+            self.send(query)?;
+            self.receive()
+        }
+
         fn new_inner(options: Self::RuntimeOptions) -> Result<InnerWorker<Self>, Error> {
             let (qtx, qrx) = channel();
             let (rtx, rrx) = channel();
             let (init_tx, init_rx) = channel::<Option<Error>>();
+
+            let timeout = options.timeout;
 
             let handle = spawn(move || {
                 let rx = qrx;
@@ -250,6 +265,7 @@ pub mod sync_worker {
                 handle,
                 tx: qtx,
                 rx: rrx,
+                timeout,
             };
 
             // Wait for initialization to complete
@@ -403,8 +419,8 @@ pub mod sync_worker {
 
         /// Stop the worker and wait for it to finish
         /// Consumes the worker and returns an error if the worker panicked
-        pub fn stop(self) -> Result<(), Error> {
-            self.0.send(DefaultWorkerQuery::Stop)?;
+        pub fn stop(mut self) -> Result<(), Error> {
+            self.send(DefaultWorkerQuery::Stop)?;
             self.0.join()
         }
 
@@ -414,7 +430,7 @@ pub mod sync_worker {
         where
             T: serde::de::DeserializeOwned,
         {
-            match self.0.send_and_await(DefaultWorkerQuery::Eval(code))? {
+            match self.send_and_await_sync(DefaultWorkerQuery::Eval(code))? {
                 DefaultWorkerResponse::Value(v) => Ok(crate::serde_json::from_value(v)?),
                 DefaultWorkerResponse::Error(e) => Err(e),
                 _ => Err(Error::Runtime(
@@ -428,7 +444,7 @@ pub mod sync_worker {
         pub fn load_main_module(&self, module: crate::Module) -> Result<deno_core::ModuleId, Error> {
             match self
                 .0
-                .send_and_await(DefaultWorkerQuery::LoadMainModule(module))?
+                .send_and_await_sync(DefaultWorkerQuery::LoadMainModule(module))?
             {
                 DefaultWorkerResponse::ModuleId(id) => Ok(id),
                 DefaultWorkerResponse::Error(e) => Err(e),
@@ -443,7 +459,7 @@ pub mod sync_worker {
         pub fn load_module(&self, module: crate::Module) -> Result<deno_core::ModuleId, Error> {
             match self
                 .0
-                .send_and_await(DefaultWorkerQuery::LoadModule(module))?
+                .send_and_await_sync(DefaultWorkerQuery::LoadModule(module))?
             {
                 DefaultWorkerResponse::ModuleId(id) => Ok(id),
                 DefaultWorkerResponse::Error(e) => Err(e),
@@ -466,7 +482,7 @@ pub mod sync_worker {
         {
             match self
                 .0
-                .send_and_await(DefaultWorkerQuery::CallEntrypoint(id, args))?
+                .send_and_await_sync(DefaultWorkerQuery::CallEntrypoint(id, args))?
             {
                 DefaultWorkerResponse::Value(v) => {
                     crate::serde_json::from_value(v).map_err(Error::from)
@@ -492,7 +508,7 @@ pub mod sync_worker {
         {
             match self
                 .0
-                .send_and_await(DefaultWorkerQuery::CallFunction(module_context, name, args))?
+                .send_and_await_sync(DefaultWorkerQuery::CallFunction(module_context, name, args))?
             {
                 DefaultWorkerResponse::Value(v) => {
                     crate::serde_json::from_value(v).map_err(Error::from)
@@ -516,7 +532,7 @@ pub mod sync_worker {
         {
             match self
                 .0
-                .send_and_await(DefaultWorkerQuery::GetValue(module_context, name))?
+                .send_and_await_sync(DefaultWorkerQuery::GetValue(module_context, name))?
             {
                 DefaultWorkerResponse::Value(v) => {
                     crate::serde_json::from_value(v).map_err(Error::from)
@@ -532,8 +548,11 @@ pub mod sync_worker {
 
 #[cfg(feature = "async-worker")]
 pub mod async_worker {
+    use std::future::Future;
     use crate::Error;
-    use std::sync::mpsc::{channel, Receiver, Sender};
+    use tokio::sync::{oneshot, Mutex};
+    use tokio::sync::mpsc::{unbounded_channel, UnboundedReceiver, UnboundedSender};
+    use std::sync::Arc;
     use std::thread::{spawn, JoinHandle};
     use dashmap::DashMap;
     use async_trait::async_trait;
@@ -548,6 +567,8 @@ pub mod async_worker {
         type RuntimeOptions = DefaultWorkerOptions;
         type Query = DefaultWorkerQuery;
         type Response = DefaultWorkerResponse;
+        type Sender<M> = UnboundedSender<M>;
+        type Receiver<M> = Arc<Mutex<UnboundedReceiver<M>>>;
     }
 
     pub trait AsyncWorker: CommonWorker
@@ -555,28 +576,65 @@ pub mod async_worker {
         Self: Send,
     {
         type Runtime;
+        type OneshotSender<M>;
+        type InnerReceiver<M>;
+
+        fn send(&self, query: Self::Query) -> Result<(), Error>;
+
+        async fn send_async(&self, query: Self::Query) -> Result<(), Error>;
+
+        async fn receive(&self) -> Result<Self::Response, Error>;
+
+        async fn send_and_await(&self, query: Self::Query) -> Result<Self::Response, Error>;
 
         /// Create a new worker instance
-        fn new_inner(options: Self::RuntimeOptions) -> Result<InnerWorker<Self>, Error>;
+        fn new_inner(options: Self::RuntimeOptions) -> impl Future<Output=Result<InnerWorker<Self>, Error>>;
 
         /// Handle a query sent to the worker
         /// Must always return a response of some kind
         // Returning a future which is not Send is okay here since it will be awaited on the same thread
-        fn handle_query(runtime: &mut Self::Runtime, query: Self::Query) -> impl std::future::Future<Output=Self::Response>;
+        fn handle_query(runtime: &mut Self::Runtime, query: Self::Query) -> impl Future<Output=Self::Response>;
 
         /// The main thread function that will be run by the worker
         /// This should handle all incoming queries and send responses back
         // Returning a future which is not Send is okay here since it will be awaited on the same thread
-        fn thread(options: Self::RuntimeOptions, rx: Receiver<Self::Query>, tx: Sender<Self::Response>, itx: Sender<Option<Error>>) -> impl std::future::Future<Output=Result<(), Error>>;
+        fn thread(options: Self::RuntimeOptions, rx: Self::InnerReceiver<Self::Query>, tx: Self::Sender<Self::Response>, itx: Self::OneshotSender<Option<Error>>) -> impl std::future::Future<Output=Result<(), Error>>;
     }
 
     impl AsyncWorker for DefaultWorker {
         type Runtime = (crate::AsyncRuntime, DashMap<deno_core::ModuleId, crate::ModuleHandle>);
+        type OneshotSender<M> = UnboundedSender<M>;
+        type InnerReceiver<M> = UnboundedReceiver<M>;
 
-        fn new_inner(options: Self::RuntimeOptions) -> Result<InnerWorker<Self>, Error> {
-            let (qtx, qrx) = channel();
-            let (rtx, rrx) = channel();
-            let (init_tx, init_rx) = channel::<Option<Error>>();
+        fn send(&self, query: Self::Query) -> Result<(), Error> {
+            self.0.tx
+                .send(query)
+                .map_err(|e| Error::Runtime(e.to_string()))
+        }
+
+        async fn send_async(&self, query: Self::Query) -> Result<(), Error> {
+            Err(Error::Runtime("Invalid channel call.".to_string()))
+        }
+
+        async fn receive(&self) -> Result<Self::Response, Error> {
+            let mut rx = self.0.rx.lock().await;
+            if let Some(result) = rx.recv().await {
+                return Ok(result);
+            }
+            Err(Error::Runtime("Channel closed".to_string()))
+        }
+
+        async fn send_and_await(&self, query: Self::Query) -> Result<Self::Response, Error> {
+            self.send(query)?;
+            self.receive().await
+        }
+
+        async fn new_inner(options: Self::RuntimeOptions) -> Result<InnerWorker<Self>, Error> {
+            let (qtx, qrx) = unbounded_channel();
+            let (rtx, rrx) = unbounded_channel();
+            let (init_tx, mut init_rx) = unbounded_channel::<Option<Error>>();
+
+            let timeout = options.timeout;
 
             let handle = spawn(move || {
                 let rx = qrx;
@@ -603,14 +661,15 @@ pub mod async_worker {
             let worker = InnerWorker {
                 handle,
                 tx: qtx,
-                rx: rrx,
+                rx: Arc::new(Mutex::new(rrx)),
+                timeout,
             };
 
-            match init_rx.recv() {
-                Ok(None) => Ok(worker),
+            match init_rx.recv().await {
+                Some(None) => Ok(worker),
 
                 // Initialization failed
-                Ok(Some(e)) => Err(e),
+                Some(Some(e)) => Err(e),
 
                 // Parser crashed on startup
                 _ => {
@@ -718,7 +777,7 @@ pub mod async_worker {
             }
         }
 
-        async fn thread(options: Self::RuntimeOptions, rx: Receiver<Self::Query>, tx: Sender<Self::Response>, itx: Sender<Option<Error>>) -> Result<(), Error> {
+        async fn thread(options: Self::RuntimeOptions, mut rx: Self::InnerReceiver<Self::Query>, tx: Self::Sender<Self::Response>, itx: Self::OneshotSender<Option<Error>>) -> Result<(), Error> {
             let runtime = crate::AsyncRuntime::new(crate::RuntimeOptions {
                 default_entrypoint: options.default_entrypoint.clone(),
                 timeout: options.timeout,
@@ -728,12 +787,7 @@ pub mod async_worker {
             let mut runtime = (runtime, modules);
             itx.send(None).unwrap();
 
-            loop {
-                let msg = match rx.recv() {
-                    Ok(msg) => msg,
-                    Err(_) => break,
-                };
-
+            while let Some(msg) = rx.recv().await {
                 let response = Self::handle_query(&mut runtime, msg).await;
 
                 if let Err(e) = tx.send(response) {
@@ -748,24 +802,24 @@ pub mod async_worker {
     // TODO: make it truly async
     impl DefaultWorker {
         /// Create a new worker instance
-        pub fn new(options: DefaultWorkerOptions) -> Result<Self, Error> {
-            Self::new_inner(options).map(Self)
+        pub async fn new(options: DefaultWorkerOptions) -> Result<Self, Error> {
+            Self::new_inner(options).await.map(Self)
         }
 
         /// Stop the worker and wait for it to finish
         /// Consumes the worker and returns an error if the worker panicked
         pub fn stop(self) -> Result<(), Error> {
-            self.0.send(DefaultWorkerQuery::Stop)?;
+            self.send(DefaultWorkerQuery::Stop)?;
             self.0.join()
         }
 
         /// Evaluate a string of javascript code
         /// Returns the result of the evaluation
-        pub fn eval<T>(&self, code: String) -> Result<T, Error>
+        pub async fn eval<T>(&self, code: String) -> Result<T, Error>
         where
             T: serde::de::DeserializeOwned,
         {
-            match self.0.send_and_await(DefaultWorkerQuery::Eval(code))? {
+            match self.send_and_await(DefaultWorkerQuery::Eval(code)).await? {
                 DefaultWorkerResponse::Value(v) => Ok(crate::serde_json::from_value(v)?),
                 DefaultWorkerResponse::Error(e) => Err(e),
                 _ => Err(Error::Runtime(
@@ -776,10 +830,9 @@ pub mod async_worker {
 
         /// Load a module into the worker as the main module
         /// Returns the module id of the loaded module
-        pub fn load_main_module(&self, module: crate::Module) -> Result<deno_core::ModuleId, Error> {
+        pub async fn load_main_module(&self, module: crate::Module) -> Result<deno_core::ModuleId, Error> {
             match self
-                .0
-                .send_and_await(DefaultWorkerQuery::LoadMainModule(module))?
+                .send_and_await(DefaultWorkerQuery::LoadMainModule(module)).await?
             {
                 DefaultWorkerResponse::ModuleId(id) => Ok(id),
                 DefaultWorkerResponse::Error(e) => Err(e),
@@ -791,10 +844,9 @@ pub mod async_worker {
 
         /// Load a module into the worker as a side module
         /// Returns the module id of the loaded module
-        pub fn load_module(&self, module: crate::Module) -> Result<deno_core::ModuleId, Error> {
+        pub async fn load_module(&self, module: crate::Module) -> Result<deno_core::ModuleId, Error> {
             match self
-                .0
-                .send_and_await(DefaultWorkerQuery::LoadModule(module))?
+                .send_and_await(DefaultWorkerQuery::LoadModule(module)).await?
             {
                 DefaultWorkerResponse::ModuleId(id) => Ok(id),
                 DefaultWorkerResponse::Error(e) => Err(e),
@@ -807,7 +859,7 @@ pub mod async_worker {
         /// Call the entrypoint function in a module
         /// Returns the result of the function call
         /// The module id must be the id of a module loaded with `load_main_module` or `load_module`
-        pub fn call_entrypoint<T>(
+        pub async fn call_entrypoint<T>(
             &self,
             id: deno_core::ModuleId,
             args: Vec<crate::serde_json::Value>,
@@ -816,8 +868,7 @@ pub mod async_worker {
             T: serde::de::DeserializeOwned,
         {
             match self
-                .0
-                .send_and_await(DefaultWorkerQuery::CallEntrypoint(id, args))?
+                .send_and_await(DefaultWorkerQuery::CallEntrypoint(id, args)).await?
             {
                 DefaultWorkerResponse::Value(v) => {
                     crate::serde_json::from_value(v).map_err(Error::from)
@@ -832,7 +883,7 @@ pub mod async_worker {
         /// Call a function in a module
         /// Returns the result of the function call
         /// The module id must be the id of a module loaded with `load_main_module` or `load_module`
-        pub fn call_function<T>(
+        pub async fn call_function<T>(
             &self,
             module_context: Option<deno_core::ModuleId>,
             name: String,
@@ -842,8 +893,7 @@ pub mod async_worker {
             T: serde::de::DeserializeOwned,
         {
             match self
-                .0
-                .send_and_await(DefaultWorkerQuery::CallFunction(module_context, name, args))?
+                .send_and_await(DefaultWorkerQuery::CallFunction(module_context, name, args)).await?
             {
                 DefaultWorkerResponse::Value(v) => {
                     crate::serde_json::from_value(v).map_err(Error::from)
@@ -857,7 +907,7 @@ pub mod async_worker {
 
         /// Get a value from a module
         /// The module id must be the id of a module loaded with `load_main_module` or `load_module`
-        pub fn get_value<T>(
+        pub async fn get_value<T>(
             &self,
             module_context: Option<deno_core::ModuleId>,
             name: String,
@@ -866,8 +916,7 @@ pub mod async_worker {
             T: serde::de::DeserializeOwned,
         {
             match self
-                .0
-                .send_and_await(DefaultWorkerQuery::GetValue(module_context, name))?
+                .send_and_await(DefaultWorkerQuery::GetValue(module_context, name)).await?
             {
                 DefaultWorkerResponse::Value(v) => {
                     crate::serde_json::from_value(v).map_err(Error::from)
