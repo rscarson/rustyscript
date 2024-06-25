@@ -531,15 +531,13 @@ impl Runtime {
     where
         T: deno_core::serde::de::DeserializeOwned,
     {
-        if let Some(entrypoint) = module_context.entrypoint() {
-            let js_fn = JsFunction::new(entrypoint.clone());
-            let result: T = self
-                .0
-                .call_stored_function(Some(module_context), &js_fn, args)?;
-            Ok(result)
-        } else {
-            Err(Error::MissingEntrypoint(module_context.module().clone()))
-        }
+        let timeout = self.options().timeout;
+        let rt = self.0.tokio_runtime.clone();
+        InnerRuntime::run_async_task(
+            async move { self.call_async_entrypoint(module_context, args).await },
+            timeout,
+            rt,
+        )
     }
 
     /// Executes the entrypoint function of a module within the Deno runtime.
@@ -577,7 +575,7 @@ impl Runtime {
         T: deno_core::serde::de::DeserializeOwned,
     {
         if let Some(entrypoint) = module_context.entrypoint() {
-            let js_fn = JsFunction::new(entrypoint.clone());
+            let js_fn = JsFunction::from_global(entrypoint.clone());
             let result: T = self
                 .0
                 .call_stored_async_function(Some(module_context), &js_fn, args)

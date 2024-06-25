@@ -203,7 +203,6 @@ pub mod cache_provider;
 mod error;
 mod ext;
 mod inner_runtime;
-mod js_function;
 mod module;
 mod module_handle;
 mod module_loader;
@@ -212,6 +211,7 @@ mod runtime;
 mod traits;
 mod transpiler;
 mod utilities;
+mod v8_value;
 
 #[cfg(feature = "worker")]
 pub mod worker;
@@ -230,12 +230,12 @@ pub use ext::ExtensionOptions;
 // Expose some important stuff from us
 pub use error::Error;
 pub use inner_runtime::{FunctionArguments, RsAsyncFunction, RsFunction};
-pub use js_function::JsFunction;
 pub use module::{Module, StaticModule};
 pub use module_handle::ModuleHandle;
 pub use module_wrapper::ModuleWrapper;
 pub use runtime::{Runtime, RuntimeOptions, Undefined};
 pub use utilities::{evaluate, import, resolve_path, validate};
+pub use v8_value::JsFunction;
 
 #[cfg(test)]
 mod test {

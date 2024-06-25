@@ -1,10 +1,10 @@
 use crate::{
     cache_provider::ModuleCacheProvider,
     ext,
-    js_function::JsFunction,
     module_loader::RustyLoader,
     traits::{ToDefinedValue, ToModuleSpecifier, ToV8String},
     transpiler::{self, transpile_extension},
+    v8_value::JsFunction,
     Error, Module, ModuleHandle,
 };
 use deno_core::{
@@ -251,7 +251,7 @@ impl InnerRuntime {
         name: &str,
     ) -> Result<JsFunction<'a>, Error> {
         let mut f: JsFunction = self.get_value(module_context, name)?;
-        f._stabilize(&mut self.deno_runtime().handle_scope());
+        f.into_global(&mut self.deno_runtime().handle_scope());
         Ok(f)
     }
 
@@ -286,7 +286,7 @@ impl InnerRuntime {
         T: DeserializeOwned,
     {
         match function {
-            JsFunction::Stable(function) => {
+            JsFunction::Global(function) => {
                 self.call_function_by_ref_async(module_context, function.clone(), args)
                     .await
             }
@@ -996,7 +996,7 @@ mod test_inner_runtime {
 
         structure
             .func
-            ._stabilize(&mut runtime.deno_runtime.handle_scope());
+            .into_global(&mut runtime.deno_runtime().handle_scope());
 
         // Mess with the locals table
         let c = runtime
