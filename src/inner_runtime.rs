@@ -203,6 +203,11 @@ impl InnerRuntime {
         Ok(())
     }
 
+    /// Run the JS event loop to completion
+    pub async fn await_event_loop(&mut self, options: PollEventLoopOptions) -> Result<(), Error> {
+        Ok(self.deno_runtime.run_event_loop(options).await?)
+    }
+
     /// Get a value from a runtime instance
     ///
     /// # Arguments

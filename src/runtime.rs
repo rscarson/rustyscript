@@ -62,9 +62,24 @@ impl Runtime {
         self.0.deno_runtime()
     }
 
+    /// Access the underlying tokio runtime used for blocking operations
+    pub fn tokio_runtime(&self) -> std::rc::Rc<tokio::runtime::Runtime> {
+        self.0.tokio_runtime.clone()
+    }
+
     /// Access the options used to create this runtime
     pub fn options(&self) -> &RuntimeOptions {
         &self.0.options
+    }
+
+    /// Run the JS event loop to completion
+    /// When using async functions, it is important to use this to
+    /// ensure that all events have been processed before the program exits
+    pub async fn await_event_loop(
+        &mut self,
+        options: deno_core::PollEventLoopOptions,
+    ) -> Result<(), Error> {
+        self.0.await_event_loop(options).await
     }
 
     /// Encode an argument as a json value for use as a function argument
