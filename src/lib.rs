@@ -219,6 +219,7 @@ pub mod worker;
 // Expose a few dependencies that could be useful
 pub use deno_core;
 pub use deno_core::serde_json;
+pub use tokio;
 
 #[cfg(feature = "web")]
 pub use deno_tls;

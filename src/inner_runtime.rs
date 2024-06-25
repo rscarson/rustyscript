@@ -351,7 +351,9 @@ impl InnerRuntime {
     where
         T: DeserializeOwned,
     {
-        let function = self.get_function_by_name(module_context, name)?;
+        let function = self
+            .get_function_by_name_async(module_context, name)
+            .await?;
         self.call_function_by_ref_async(module_context, function, args)
             .await
     }
@@ -578,6 +580,35 @@ impl InnerRuntime {
     ) -> Result<v8::Global<v8::Function>, Error> {
         // Get the value
         let value = self.get_value_ref_sync(module_context, name)?;
+
+        // Convert it into a function
+        let mut scope = self.deno_runtime.handle_scope();
+        let local_value = v8::Local::<v8::Value>::new(&mut scope, value);
+        let f: v8::Local<v8::Function> = local_value
+            .try_into()
+            .or::<Error>(Err(Error::ValueNotCallable(name.to_string())))?;
+
+        // Return it as a global
+        Ok(v8::Global::<v8::Function>::new(&mut scope, f))
+    }
+
+    /// Retrieves a javascript function by its name from the Deno runtime's global context.
+    ///
+    /// # Arguments
+    /// * `module_context` - A module handle to use for context, to find exports
+    /// * `name` - A string representing the name of the javascript function to retrieve.
+    ///
+    /// # Returns
+    /// A `Result` containing a `v8::Global<v8::Function>` if
+    /// the function is found, or an error (`Error`) if the function cannot be found or
+    /// if it is not a valid javascript function.
+    pub async fn get_function_by_name_async(
+        &mut self,
+        module_context: Option<&ModuleHandle>,
+        name: &str,
+    ) -> Result<v8::Global<v8::Function>, Error> {
+        // Get the value
+        let value = self.get_value_ref_async(module_context, name).await?;
 
         // Convert it into a function
         let mut scope = self.deno_runtime.handle_scope();
