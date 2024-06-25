@@ -49,6 +49,7 @@ use std::rc::Rc;
 /// ```
 pub struct SnapshotBuilder {
     deno_runtime: JsRuntimeForSnapshot,
+    tokio_runtime: Rc<tokio::runtime::Runtime>,
     options: InnerRuntimeOptions,
 }
 impl SnapshotBuilder {
@@ -78,6 +79,13 @@ impl SnapshotBuilder {
 
                 ..Default::default()
             })?,
+
+            tokio_runtime: Rc::new(
+                tokio::runtime::Builder::new_current_thread()
+                    .enable_all()
+                    .thread_keep_alive(options.timeout)
+                    .build()?,
+            ),
 
             options: InnerRuntimeOptions {
                 timeout: options.timeout,
@@ -127,6 +135,7 @@ impl SnapshotBuilder {
     pub fn load_module(&mut self, module: &Module) -> Result<ModuleId, Error> {
         let timeout = self.options.timeout;
         let deno_runtime = &mut self.deno_runtime;
+        let tokio_runtime = self.tokio_runtime.clone();
 
         InnerRuntime::run_async_task(
             async move {
@@ -145,6 +154,7 @@ impl SnapshotBuilder {
                 Ok::<ModuleId, Error>(modid)
             },
             timeout,
+            tokio_runtime,
         )
     }
 }
