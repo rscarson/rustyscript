@@ -238,6 +238,9 @@ pub use runtime::{Runtime, RuntimeOptions, Undefined};
 pub use utilities::{evaluate, import, resolve_path, validate};
 pub use v8_value::JsFunction;
 
+#[cfg(feature = "url_import")]
+pub use module_loader::ImportHandler;
+
 #[cfg(test)]
 mod test {
     #[test]

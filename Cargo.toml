@@ -27,6 +27,7 @@ web = ["console", "url", "crypto", "deno_web", "deno_tls", "deno_fetch", "url_im
 # Features for the module loader
 fs_import = []
 url_import = ["reqwest"]
+custom_import = []
 
 # Enables the use of the SnapshotBuilder
 snapshot_builder = []

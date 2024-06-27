@@ -11,6 +11,7 @@ use deno_core::{
 use std::{
     cell::RefCell,
     collections::{HashMap, HashSet},
+    pin::Pin,
     rc::Rc,
 };
 
@@ -89,8 +90,37 @@ impl InnerRustyLoader {
     }
 }
 
+/// Each ImportHandler is responsible for loading a type of module when imported.
+pub type ImportHandler = dyn Fn(
+    ModuleSpecifier,
+) -> Pin<
+    Box<dyn std::future::Future<Output = Result<String, deno_core::error::AnyError>>>,
+>;
+
+#[cfg(feature = "url_import")]
+fn http_import(
+    specifier: ModuleSpecifier,
+) -> impl std::future::Future<Output = Result<String, deno_core::error::AnyError>> {
+    async move {
+        let response = reqwest::get(specifier).await?;
+        Ok(response.text().await?)
+    }
+}
+
+fn fs_import(
+    specifier: ModuleSpecifier,
+) -> impl std::future::Future<Output = Result<String, deno_core::error::AnyError>> {
+    async move {
+        let path = specifier
+            .to_file_path()
+            .map_err(|_| anyhow!("`{specifier}` is not a valid file URL."))?;
+        Ok(tokio::fs::read_to_string(path).await?)
+    }
+}
+
 pub struct RustyLoader {
     inner: Rc<InnerRustyLoader>,
+    import_handlers: Rc<HashMap<String, Box<ImportHandler>>>,
 }
 impl ModuleLoader for RustyLoader {
     fn resolve(
@@ -143,33 +173,14 @@ impl ModuleLoader for RustyLoader {
         _requested_module_type: deno_core::RequestedModuleType,
     ) -> deno_core::ModuleLoadResponse {
         let inner = self.inner.clone();
+        let import_handlers = self.import_handlers.clone();
         let module_specifier = module_specifier.clone();
         // We check permissions first
-        match module_specifier.scheme() {
-            // Remote fetch imports
-            #[cfg(feature = "url_import")]
-            "https" | "http" => ModuleLoadResponse::Async(
+        match module_specifier.scheme().to_string() {
+            scheme if import_handlers.contains_key(&scheme) => ModuleLoadResponse::Async(
                 async move {
                     inner
-                        .load(module_specifier, |specifier| async move {
-                            let response = reqwest::get(specifier).await?;
-                            Ok(response.text().await?)
-                        })
-                        .await
-                }
-                .boxed_local(),
-            ),
-
-            // FS imports
-            "file" => ModuleLoadResponse::Async(
-                async move {
-                    inner
-                        .load(module_specifier, |specifier| async move {
-                            let path = specifier
-                                .to_file_path()
-                                .map_err(|_| anyhow!("`{specifier}` is not a valid file URL."))?;
-                            Ok(tokio::fs::read_to_string(path).await?)
-                        })
+                        .load(module_specifier, import_handlers.get(&scheme).unwrap())
                         .await
                 }
                 .boxed_local(),
@@ -186,9 +197,39 @@ impl ModuleLoader for RustyLoader {
 
 #[allow(dead_code)]
 impl RustyLoader {
-    pub fn new(cache_provider: Option<Box<dyn ModuleCacheProvider>>) -> Self {
+    pub fn new(
+        cache_provider: Option<Box<dyn ModuleCacheProvider>>,
+        import_handlers: Option<HashMap<String, Box<ImportHandler>>>,
+    ) -> Self {
+        #[cfg(not(feature = "custom_import"))]
+        if import_handlers.is_some() {
+            panic!(
+                "Providing `import_handlers` is not supported without the `custom_import` feature"
+            );
+        }
+        let mut import_handlers = import_handlers.unwrap_or(HashMap::new());
+
+        import_handlers.insert(
+            "file".to_string(),
+            Box::new(|specifier| fs_import(specifier).boxed_local()),
+        );
+
+        // Only include the http/https import handler if the `url_import` feature is enabled
+        #[cfg(feature = "url_import")]
+        {
+            import_handlers.insert(
+                "http".to_string(),
+                Box::new(|specifier| http_import(specifier).boxed_local()),
+            );
+            import_handlers.insert(
+                "https".to_string(),
+                Box::new(|specifier| http_import(specifier).boxed_local()),
+            );
+        }
+
         Self {
             inner: Rc::new(InnerRustyLoader::new(cache_provider)),
+            import_handlers: Rc::new(import_handlers),
         }
     }
 
@@ -247,7 +288,7 @@ mod test {
             .get(&specifier)
             .expect("Expected to get cached source");
 
-        let loader = RustyLoader::new(Some(Box::new(cache_provider)));
+        let loader = RustyLoader::new(Some(Box::new(cache_provider)), None);
         let response = loader.load(
             &specifier,
             None,
