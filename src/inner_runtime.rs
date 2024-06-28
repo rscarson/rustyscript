@@ -1,7 +1,7 @@
 use crate::{
     cache_provider::ModuleCacheProvider,
     ext,
-    module_loader::RustyLoader,
+    module_loader::{ImportProvider, RustyLoader},
     traits::{ToDefinedValue, ToModuleSpecifier, ToV8String},
     transpiler::{self, transpile_extension},
     v8_value::JsFunction,
@@ -55,6 +55,9 @@ pub struct InnerRuntimeOptions {
 
     /// Optional cache provider for the module loader
     pub module_cache: Option<Box<dyn ModuleCacheProvider>>,
+    
+    /// Optional import provider for the module loader
+    pub import_provider: Option<Box<dyn ImportProvider>>,
 
     /// Optional snapshot to load into the runtime
     /// This will reduce load times, but requires the same extensions to be loaded
@@ -70,6 +73,7 @@ impl Default for InnerRuntimeOptions {
             default_entrypoint: Default::default(),
             timeout: Duration::MAX,
             module_cache: None,
+            import_provider: None,
             startup_snapshot: None,
 
             extension_options: Default::default(),
@@ -86,7 +90,7 @@ pub struct InnerRuntime {
 }
 impl InnerRuntime {
     pub fn new(options: InnerRuntimeOptions) -> Result<Self, Error> {
-        let loader = Rc::new(RustyLoader::new(options.module_cache));
+        let loader = Rc::new(RustyLoader::new(options.module_cache, options.import_provider));
 
         // If a snapshot is provided, do not reload ops
         let extensions = if options.startup_snapshot.is_some() {
