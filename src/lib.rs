@@ -95,6 +95,11 @@
 //! # }
 //! ```
 //!
+//! There are also `_async` and `immediate` versions of most runtime functions;
+//! `_async` functions return a future that resolves to the result of the operation, while
+//! `immediate` functions will make no attempt to wait for the event loop, making them suitable
+//! for using [js_value::Promise]
+//!
 //! Rust functions can also be registered to be called from javascript:
 //! ```rust
 //! use rustyscript::{ Runtime, Module, serde_json::Value };
