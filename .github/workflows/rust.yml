@@ -80,16 +80,19 @@ jobs:
       run: cargo run --example entrypoint_functions
 
     - name: default_threaded_worker
-      run: cargo run --example default_threaded_worker
+      run: cargo run --example default_threaded_worker --features "worker"
 
     - name: custom_threaded_worker
-      run: cargo run --example custom_threaded_worker
+      run: cargo run --example custom_threaded_worker --features "worker"
 
     - name: create_snapshot
-      run: cargo run --example create_snapshot
+      run: cargo run --example create_snapshot --features "snapshot_builder"
 
     - name: call_rust_from_js
       run: cargo run --example call_rust_from_js
+
+    - name: async_javascript
+      run: cargo run --example async_javascript
 
     - name: Check if the README is up to date.
       run: |

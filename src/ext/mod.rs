@@ -14,6 +14,7 @@ pub mod url;
 #[cfg(feature = "web")]
 pub mod web;
 
+#[cfg(not(feature = "web"))]
 #[cfg(feature = "web_stub")]
 pub mod web_stub;
 
@@ -77,11 +78,12 @@ pub fn all_extensions(
     #[cfg(feature = "url")]
     extensions.extend(url::extensions());
 
-    #[cfg(feature = "web_stub")]
-    extensions.extend(web_stub::extensions());
-
     #[cfg(feature = "web")]
     extensions.extend(web::extensions(options.web));
+
+    #[cfg(not(feature = "web"))]
+    #[cfg(feature = "web_stub")]
+    extensions.extend(web_stub::extensions());
 
     #[cfg(feature = "crypto")]
     extensions.extend(crypto::extensions(options.crypto_seed));
@@ -110,11 +112,12 @@ pub fn all_snapshot_extensions(
     #[cfg(feature = "url")]
     extensions.extend(url::snapshot_extensions());
 
-    #[cfg(feature = "web_stub")]
-    extensions.extend(web_stub::snapshot_extensions());
-
     #[cfg(feature = "web")]
     extensions.extend(web::snapshot_extensions(options.web));
+
+    #[cfg(not(feature = "web"))]
+    #[cfg(feature = "web_stub")]
+    extensions.extend(web_stub::snapshot_extensions());
 
     #[cfg(feature = "crypto")]
     extensions.extend(crypto::snapshot_extensions(options.crypto_seed));

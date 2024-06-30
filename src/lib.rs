@@ -199,6 +199,7 @@ mod snapshot_builder;
 pub use snapshot_builder::SnapshotBuilder;
 
 pub mod cache_provider;
+pub mod js_value;
 
 mod error;
 mod ext;
@@ -211,7 +212,6 @@ mod runtime;
 mod traits;
 mod transpiler;
 mod utilities;
-mod v8_value;
 
 #[cfg(feature = "worker")]
 pub mod worker;
@@ -236,7 +236,6 @@ pub use module_handle::ModuleHandle;
 pub use module_wrapper::ModuleWrapper;
 pub use runtime::{Runtime, RuntimeOptions, Undefined};
 pub use utilities::{evaluate, import, resolve_path, validate};
-pub use v8_value::JsFunction;
 
 #[cfg(test)]
 mod test {

@@ -5,7 +5,7 @@
 /// and is meant to simplify usecases where multiple JS sources isn't
 /// needed
 ///
-use rustyscript::{json_args, Error, JsFunction, Undefined};
+use rustyscript::{js_value::Function, json_args, Error, Undefined};
 
 fn main() -> Result<(), Error> {
     let mut module = rustyscript::import("examples/javascript/example_module.js")?;
@@ -33,11 +33,7 @@ fn main() -> Result<(), Error> {
 
     // Functions can even be stored for later!
     // They can only be used on the runtime that made them, however
-    let mut function: JsFunction = module.get("listBooks")?;
-
-    // This is required to make sure the function remains callable
-    // (due to the way garbage collection works in the V8 engine)
-    function.stabilize(module.get_runtime());
+    let function: Function = module.get("listBooks")?;
 
     // The stored function can then be called!
     // Any serializable type can be retrieved as a function result or value
