@@ -1,6 +1,6 @@
 use deno_core::{serde_json, v8::GetPropertyNamesArgs};
 
-use crate::{Error, JsFunction, Module, ModuleHandle, Runtime, RuntimeOptions};
+use crate::{js_value::Function, Error, Module, ModuleHandle, Runtime, RuntimeOptions};
 
 /// A wrapper type representing a runtime instance loaded with a single module
 pub struct ModuleWrapper {
@@ -79,7 +79,7 @@ impl ModuleWrapper {
     ///
     /// `true` if the value is callable as a JavaScript function, `false` otherwise.
     pub fn is_callable(&mut self, name: &str) -> bool {
-        let test = self.get::<JsFunction>(name);
+        let test = self.get::<Function>(name);
         test.is_ok()
     }
 
@@ -102,19 +102,17 @@ impl ModuleWrapper {
     }
 
     /// Calls a function using the module's runtime that was previously stored
-    /// as a JsFunction object
+    /// as a Function object
     ///
     /// # Arguments
-    /// * `function` - The JsFunction to call.
+    /// * `function` - The Function to call.
     /// * `args` - The arguments to pass to the function.
     ///
     /// # Returns
     /// A `Result` containing the deserialized result of type `T` on success or an `Error` on failure.
-    ///
-    /// Note: [JsFunction::stabilize] should be called on the `JsFunction` before calling this method.
     pub fn call_stored<T>(
         &mut self,
-        function: &JsFunction,
+        function: &Function,
         args: &[serde_json::Value],
     ) -> Result<T, Error>
     where
