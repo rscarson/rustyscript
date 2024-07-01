@@ -239,6 +239,7 @@ pub use inner_runtime::{FunctionArguments, RsAsyncFunction, RsFunction};
 pub use module::{Module, StaticModule};
 pub use module_handle::ModuleHandle;
 pub use module_wrapper::ModuleWrapper;
+#[cfg(feature = "custom_import")]
 pub use module_loader::ImportProvider;
 pub use runtime::{Runtime, RuntimeOptions, Undefined};
 pub use utilities::{evaluate, import, resolve_path, validate};

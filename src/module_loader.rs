@@ -15,7 +15,6 @@ use std::{
 };
 
 #[allow(unused_variables)]
-#[cfg(feature = "custom_import")]
 pub trait ImportProvider {
     fn resolve(
         &mut self,
