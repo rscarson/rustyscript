@@ -3,7 +3,7 @@ use crate::{
     transpiler,
 };
 use deno_core::{
-    anyhow::{self, anyhow},
+    anyhow::{self, anyhow, Ok},
     futures::FutureExt,
     ModuleLoadResponse, ModuleLoader, ModuleSource, ModuleSourceCode, ModuleSpecifier, ModuleType,
     SourceMapGetter,
@@ -18,11 +18,11 @@ use std::{
 pub trait ImportProvider {
     fn resolve(
         &mut self,
-        specifier: &str,
+        specifier: &ModuleSpecifier,
         referrer: &str,
         kind: deno_core::ResolutionKind,
-    ) -> Result<ModuleSpecifier, anyhow::Error> {
-        Ok(deno_core::resolve_import(specifier, referrer)?)
+    ) -> Option<Result<ModuleSpecifier, anyhow::Error>> {
+        None
     }
     fn import(
         &mut self,
@@ -130,18 +130,17 @@ impl ModuleLoader for RustyLoader {
         referrer: &str,
         kind: deno_core::ResolutionKind,
     ) -> Result<ModuleSpecifier, anyhow::Error> {
-        let url: ModuleSpecifier = if self.inner.import_provider.is_some() {
-            let mut import_provider = self
-                .inner
-                .import_provider
-                .as_ref()
-                .as_ref()
-                .unwrap()
-                .borrow_mut();
-            import_provider.resolve(specifier, referrer, kind)?
-        } else {
-            deno_core::resolve_import(specifier, referrer)?
-        };
+        let url: ModuleSpecifier = deno_core::resolve_import(specifier, referrer)?;
+
+        #[cfg(feature = "custom_import")]
+        if let Some(import_provider) = self.inner.import_provider.as_ref().as_ref() {
+            let resolve_result = import_provider.borrow_mut().resolve(&url, referrer, kind);
+
+            // ImportProvider's resolve method should return None if default resolution is preferred, and Some(Err) if a url is not allowed
+            if let Some(result) = resolve_result {
+                return result;
+            }
+        }
 
         if referrer == "." {
             self.whitelist_add(url.as_str());
@@ -169,12 +168,8 @@ impl ModuleLoader for RustyLoader {
             }
 
             _ => {
-                #[cfg(feature = "custom_import")]
-                // Custom imports can handle any URL scheme
-                return Ok(url);
-                #[cfg(not(feature = "custom_import"))]
                 return Err(anyhow!(
-                        "unrecognized schema for module import: {specifier}"
+                    "unrecognized schema for module import: {specifier}"
                 ));
             }
         }
@@ -229,7 +224,8 @@ impl ModuleLoader for RustyLoader {
                         async move {
                             inner
                                 .load(module_specifier, |specifier| {
-                                    let import_provider = inner.import_provider.as_ref().as_ref().unwrap();
+                                    let import_provider =
+                                        inner.import_provider.as_ref().as_ref().unwrap();
                                     let maybe_referrer = maybe_referrer.clone();
                                     let requested_module_type = requested_module_type.clone();
                                     async move {

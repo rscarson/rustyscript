@@ -1,4 +1,4 @@
-use deno_core::{anyhow::Error, ModuleSpecifier, ResolutionKind};
+use deno_core::{ModuleSpecifier, ResolutionKind};
 use rustyscript::{ImportProvider, Runtime};
 
 struct MyImportProvider {
@@ -14,16 +14,16 @@ impl MyImportProvider {
 impl ImportProvider for MyImportProvider {
     fn resolve(
         &mut self,
-        specifier: &str,
-        referrer: &str,
+        specifier: &ModuleSpecifier,
+        _referrer: &str,
         _kind: ResolutionKind,
-    ) -> std::result::Result<ModuleSpecifier, Error> {
-        if specifier == "secret_special_specifier" {
+    ) -> std::option::Option<Result<ModuleSpecifier, deno_core::anyhow::Error>> {
+        if specifier.as_str() == "example:secret_special_specifier" {
             // Substitute another URL in certain situations...
-            Ok(ModuleSpecifier::parse(&self.replacement_specifier)?)
+            Some(ModuleSpecifier::parse(&self.replacement_specifier).map_err(|e| e.into()))
         } else {
-            // Or fall back to deno's import behavior (also used by rustyscript)
-            Ok(deno_core::resolve_import(specifier, referrer)?)
+            // Or fall back to the default resolve behavior
+            None
         }
     }
 }
@@ -37,7 +37,7 @@ fn main() {
     let module = rustyscript::Module::new(
         "custom_imports.js",
         "
-        import { assertEquals } from 'secret_special_specifier'
+        import { assertEquals } from 'example:secret_special_specifier'
         
         assertEquals(1, 1)
         ",
