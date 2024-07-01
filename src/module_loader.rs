@@ -54,10 +54,7 @@ impl InnerRustyLoader {
     ) -> Self {
         Self {
             cache_provider: Rc::new(cache_provider),
-            import_provider: Rc::new(match import_provider {
-                Some(p) => Some(RefCell::new(p)),
-                None => None,
-            }),
+            import_provider: Rc::new(import_provider.map(RefCell::new)),
             fs_whlist: Rc::new(RefCell::new(HashSet::new())),
             source_map_cache: Rc::new(RefCell::new(SourceMapCache::new())),
         }
