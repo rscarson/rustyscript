@@ -26,8 +26,8 @@ pub trait ImportProvider {
     }
     fn import(
         &mut self,
-        specifier: ModuleSpecifier,
-        referrer: Option<ModuleSpecifier>,
+        specifier: &ModuleSpecifier,
+        referrer: &Option<ModuleSpecifier>,
         is_dyn_import: bool,
         requested_module_type: deno_core::RequestedModuleType,
     ) -> Result<String, anyhow::Error> {
@@ -185,7 +185,6 @@ impl ModuleLoader for RustyLoader {
     ) -> deno_core::ModuleLoadResponse {
         let inner = self.inner.clone();
         let module_specifier = module_specifier.clone();
-        let maybe_referrer = maybe_referrer.cloned();
         // We check permissions first
         match module_specifier.scheme() {
             // Remote fetch imports
@@ -220,17 +219,18 @@ impl ModuleLoader for RustyLoader {
             _ => {
                 #[cfg(feature = "custom_import")]
                 if inner.import_provider.is_some() {
+                    let maybe_referrer = Rc::new(maybe_referrer.cloned());
                     return ModuleLoadResponse::Async(
                         async move {
                             inner
                                 .load(module_specifier, |specifier| {
                                     let import_provider =
                                         inner.import_provider.as_ref().as_ref().unwrap();
-                                    let maybe_referrer = maybe_referrer.clone();
+                                    let maybe_referrer = maybe_referrer.as_ref();
                                     let requested_module_type = requested_module_type.clone();
                                     async move {
                                         import_provider.borrow_mut().import(
-                                            specifier,
+                                            &specifier,
                                             maybe_referrer,
                                             is_dyn_import,
                                             requested_module_type,

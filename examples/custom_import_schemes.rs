@@ -14,8 +14,8 @@ impl MyImportProvider {
 impl ImportProvider for MyImportProvider {
     fn import(
             &mut self,
-            specifier: ModuleSpecifier,
-            _referrer: Option<ModuleSpecifier>,
+            specifier: &ModuleSpecifier,
+            _referrer: &Option<ModuleSpecifier>,
             _is_dyn_import: bool,
             _requested_module_type: deno_core::RequestedModuleType,
         ) -> Result<String, deno_core::anyhow::Error> {
