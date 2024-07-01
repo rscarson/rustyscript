@@ -27,7 +27,7 @@ web = ["console", "url", "crypto", "deno_web", "deno_tls", "deno_fetch", "url_im
 # Features for the module loader
 fs_import = []
 url_import = ["reqwest"]
-custom_import = []
+import_provider = []
 
 # Enables the use of the SnapshotBuilder
 snapshot_builder = []
@@ -87,11 +87,11 @@ required-features = ["fs_import", "url_import"]
 
 [[example]]
 name = "custom_import_resolution"
-required-features = ["custom_import", "url_import"]
+required-features = ["import_provider", "url_import"]
 
 [[example]]
 name = "custom_import_schemes"
-required-features = ["custom_import", "url_import"]
+required-features = ["import_provider", "url_import"]
 
 [[example]]
 name = "async_javascript"

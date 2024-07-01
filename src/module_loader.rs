@@ -129,7 +129,7 @@ impl ModuleLoader for RustyLoader {
     ) -> Result<ModuleSpecifier, anyhow::Error> {
         let url: ModuleSpecifier = deno_core::resolve_import(specifier, referrer)?;
 
-        #[cfg(feature = "custom_import")]
+        #[cfg(feature = "import_provider")]
         if let Some(import_provider) = self.inner.import_provider.as_ref().as_ref() {
             let resolve_result = import_provider.borrow_mut().resolve(&url, referrer, kind);
 
@@ -214,7 +214,7 @@ impl ModuleLoader for RustyLoader {
             ),
 
             _ => {
-                #[cfg(feature = "custom_import")]
+                #[cfg(feature = "import_provider")]
                 if inner.import_provider.is_some() {
                     let maybe_referrer = Rc::new(maybe_referrer.cloned());
                     return ModuleLoadResponse::Async(
