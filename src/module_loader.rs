@@ -301,6 +301,8 @@ impl SourceMapGetter for RustyLoader {
 
 #[cfg(test)]
 mod test {
+    use deno_core::ResolutionKind;
+
     use super::*;
     use crate::{
         cache_provider::{ClonableSource, MemoryModuleCacheProvider},
@@ -349,4 +351,75 @@ mod test {
             _ => panic!("Unexpected response"),
         }
     }
+    
+    #[cfg(feature = "import_provider")]
+    struct TestImportProvider { i: usize }
+    impl TestImportProvider {
+        fn new() -> Self {
+            Self { i: 0 }
+        }
+    }
+    impl ImportProvider for TestImportProvider {
+        fn resolve(
+            &mut self,
+            specifier: &ModuleSpecifier,
+            _referrer: &str,
+            _kind: deno_core::ResolutionKind,
+        ) -> Option<Result<ModuleSpecifier, deno_core::anyhow::Error>> {
+            match specifier.scheme() {
+                "test" => {
+                    self.i += 1;
+                    Some(Ok(ModuleSpecifier::parse(&format!("test://{}", self.i)).unwrap()))
+                },
+                _ => None,
+            }
+        }
+        fn import(
+            &mut self,
+            specifier: &ModuleSpecifier,
+            _referrer: &Option<ModuleSpecifier>,
+            _is_dyn_import: bool,
+            _requested_module_type: deno_core::RequestedModuleType,
+        ) -> Option<Result<String, deno_core::anyhow::Error>> {
+            match specifier.as_str() {
+                "test://1" => Some(Ok("console.log('Rock')".to_string())),
+                "test://2" => Some(Ok("console.log('Paper')".to_string())),
+                "test://3" => Some(Ok("console.log('Scissors')".to_string())),
+                _ => None,
+            }
+        }
+    }
+    
+    #[tokio::test]
+    #[cfg(feature = "import_provider")]
+    async fn test_import_provider() {
+        let loader = RustyLoader::new(None, Some(Box::new(TestImportProvider::new())));
+        let expected_responses = vec![
+            "console.log('Rock')".to_string(),
+            "console.log('Paper')".to_string(),
+            "console.log('Scissors')".to_string(),
+        ];
+        for i in 0..3 {
+            let specifier = loader.resolve("test://anything", "", ResolutionKind::Import).unwrap();
+            let response = loader.load(
+                &specifier,
+                None,
+                false,
+                deno_core::RequestedModuleType::None,
+            );
+            match response {
+                ModuleLoadResponse::Async(future) => {
+                    let source = future.await.expect("Expected to get source");
+                    let source = if let ModuleSourceCode::String(s) = source.code {
+                        s
+                    } else {
+                        panic!("Unexpected source code type");
+                    };
+                    assert_eq!(source, expected_responses[i].clone().into());
+                }
+                _ => panic!("Unexpected response"),
+            }
+        }
+    }
+
 }
