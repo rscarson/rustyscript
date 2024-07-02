@@ -30,10 +30,8 @@ pub trait ImportProvider {
         referrer: &Option<ModuleSpecifier>,
         is_dyn_import: bool,
         requested_module_type: deno_core::RequestedModuleType,
-    ) -> Result<String, anyhow::Error> {
-        return Err(anyhow!(
-            "unrecognized schema for module import: {specifier}"
-        ));
+    ) -> Option< Result<String, anyhow::Error> > {
+        None
     }
 }
 
@@ -226,12 +224,21 @@ impl ModuleLoader for RustyLoader {
                                     let maybe_referrer = maybe_referrer.as_ref();
                                     let requested_module_type = requested_module_type.clone();
                                     async move {
-                                        import_provider.borrow_mut().import(
+                                        let import = import_provider.borrow_mut().import(
                                             &specifier,
                                             maybe_referrer,
                                             is_dyn_import,
                                             requested_module_type,
-                                        )
+                                        );
+                                        if let Some(import) = import {
+                                            import
+                                        } else {
+                                            Err(anyhow!(
+                                                "{} imports are not allowed here: {}",
+                                                specifier.scheme(),
+                                                specifier.as_str()
+                                            ))
+                                        }
                                     }
                                 })
                                 .await
