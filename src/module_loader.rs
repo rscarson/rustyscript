@@ -357,11 +357,13 @@ mod test {
     
     #[cfg(feature = "import_provider")]
     struct TestImportProvider { i: usize }
+    #[cfg(feature = "import_provider")]
     impl TestImportProvider {
         fn new() -> Self {
             Self { i: 0 }
         }
     }
+    #[cfg(feature = "import_provider")]
     impl ImportProvider for TestImportProvider {
         fn resolve(
             &mut self,
