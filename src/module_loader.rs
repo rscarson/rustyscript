@@ -15,7 +15,9 @@ use std::{
 };
 
 #[allow(unused_variables)]
+/// A trait that can be implemented to provide custom import resolution. Passed to the runtime via `RuntimeOptions::import_provider`
 pub trait ImportProvider {
+    /// Resolve an import statement's specifier to a URL to later be imported
     fn resolve(
         &mut self,
         specifier: &ModuleSpecifier,
@@ -24,6 +26,7 @@ pub trait ImportProvider {
     ) -> Option<Result<ModuleSpecifier, anyhow::Error>> {
         None
     }
+    /// Retrieve a JavaScript/TypeScript module from a given URL and return it as a string.
     fn import(
         &mut self,
         specifier: &ModuleSpecifier,
