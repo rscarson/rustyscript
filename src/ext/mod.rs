@@ -1,3 +1,4 @@
+#![allow(unused_variables)]
 use deno_core::Extension;
 
 pub mod rustyscript;
@@ -15,7 +16,6 @@ pub mod url;
 pub mod web;
 
 #[cfg(not(feature = "web"))]
-#[cfg(feature = "web_stub")]
 pub mod web_stub;
 
 #[cfg(feature = "webidl")]
@@ -82,7 +82,6 @@ pub fn all_extensions(
     extensions.extend(web::extensions(options.web));
 
     #[cfg(not(feature = "web"))]
-    #[cfg(feature = "web_stub")]
     extensions.extend(web_stub::extensions());
 
     #[cfg(feature = "crypto")]
@@ -116,7 +115,6 @@ pub fn all_snapshot_extensions(
     extensions.extend(web::snapshot_extensions(options.web));
 
     #[cfg(not(feature = "web"))]
-    #[cfg(feature = "web_stub")]
     extensions.extend(web_stub::snapshot_extensions());
 
     #[cfg(feature = "crypto")]

@@ -11,7 +11,7 @@ categories = ["web-programming", "network-programming", "api-bindings", "compile
 readme = "readme.md"
 
 [features]
-default = ["worker", "console", "url", "crypto", "web_stub"]
+default = ["worker", "console", "url", "crypto"]
 no_extensions = []
 all = ["web", "io"]
 
@@ -20,8 +20,7 @@ webstorage = ["webidl", "deno_webstorage"]
 io = ["deno_web", "deno_io", "rustyline", "winapi", "nix", "libc", "once_cell"]
 url = ["deno_url", "webidl"]
 console = ["deno_console"]
-crypto = ["deno_crypto", "webidl", "web_stub"]
-web_stub = []
+crypto = ["deno_crypto", "webidl"]
 web = ["console", "url", "crypto", "deno_web", "deno_tls", "deno_fetch", "url_import", "fs_import", "deno_net"]
 
 # Features for the module loader
@@ -39,7 +38,7 @@ version-sync = "0.9.5"
 criterion = "0.5.1"
 
 [dependencies]
-deno_core = "0.290.0"
+deno_core = "0.292.0"
 deno_ast = { version = "0.39.2", features = ["transpiling"]}
 thiserror = "1.0.61"
 serde = "1.0.203"
@@ -83,10 +82,6 @@ required-features = ["snapshot_builder"]
 [[example]]
 name = "url_import"
 required-features = ["fs_import", "url_import"]
-
-[[example]]
-name = "async_javascript"
-required-features = ["web_stub"]
 
 [[bench]]
 name = "runtime"

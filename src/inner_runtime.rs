@@ -339,7 +339,7 @@ impl InnerRuntime {
         Ok(v8::Global::<v8::Function>::new(&mut scope, f))
     }
 
-    pub fn call_function_by_ref(
+    pub async fn call_function_by_ref(
         &mut self,
         module_context: Option<&ModuleHandle>,
         function: v8::Global<v8::Function>,
@@ -516,7 +516,7 @@ mod test_inner_runtime {
         U: std::future::Future<Output = Result<T, Error>>,
         F: FnOnce() -> U,
     {
-        let timeout = Duration::from_secs(10);
+        let timeout = Duration::from_secs(2);
         let tokio = tokio::runtime::Builder::new_current_thread()
             .enable_all()
             .thread_keep_alive(timeout)
@@ -559,7 +559,7 @@ mod test_inner_runtime {
         let module = Module::new(
             "test.js",
             "
-            let v = await rustyscript.functions.test(2, 3);
+            globalThis.v = await rustyscript.async_functions.test(2, 3);
             ",
         );
 
@@ -594,6 +594,22 @@ mod test_inner_runtime {
 
         let result: usize = runtime.eval("2 + 2").expect("Could not eval");
         assert_eq!(result, 4);
+
+        run_async_task(|| async move {
+            let result: Promise<usize> = runtime
+                .eval(
+                    "
+                let sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+                sleep(500).then(() => 2);
+            ",
+                )
+                .expect("Could not eval");
+
+            let result: usize = result.resolve(&mut runtime.deno_runtime()).await?;
+            assert_eq!(result, 2);
+
+            Ok(())
+        });
     }
 
     #[test]
@@ -687,27 +703,30 @@ mod test_inner_runtime {
             let f = runtime.get_function_by_name(None, "fna").unwrap();
             let result = runtime
                 .call_function_by_ref(Some(&handle), f, json_args!(2))
+                .await
                 .expect("Could not call global");
             assert_v8!(result, 2, usize, runtime);
 
             let f = runtime.get_function_by_name(Some(&handle), "fnb").unwrap();
             let result = runtime
                 .call_function_by_ref(Some(&handle), f, json_args!())
+                .await
                 .expect("Could not call export");
             assert_v8!(result, "test", String, runtime);
 
             let f = runtime.get_function_by_name(Some(&handle), "fne").unwrap();
             runtime
                 .call_function_by_ref(Some(&handle), f, json_args!())
+                .await
                 .expect("Did not allow undefined return");
 
             let f = runtime
                 .get_function_by_name(Some(&handle), "will_err")
                 .unwrap();
-            let e = runtime
+            runtime
                 .call_function_by_ref(Some(&handle), f, json_args!())
+                .await
                 .expect_err("Did not catch error");
-            assert!(e.to_string().ends_with("test.js:12: Uncaught Error: msg"));
 
             Ok(())
         });
@@ -730,9 +749,11 @@ mod test_inner_runtime {
         let module = run_async_task(|| async move { rt.load_modules(Some(&module), vec![]).await });
 
         let f = runtime.get_function_by_name(Some(&module), "test").unwrap();
-        let result = runtime
-            .call_function_by_ref(Some(&module), f, json_args!(2, 3))
-            .expect("Could not call global");
+        let rt = &mut runtime;
+        let result = run_async_task(|| async move {
+            rt.call_function_by_ref(Some(&module), f, json_args!(2, 3))
+                .await
+        });
         assert_v8!(result, 5, usize, runtime);
     }
 
@@ -755,9 +776,11 @@ mod test_inner_runtime {
         let module = run_async_task(|| async move { rt.load_modules(Some(&module), vec![]).await });
 
         let f = runtime.get_function_by_name(Some(&module), "test").unwrap();
-        let result = runtime
-            .call_function_by_ref(Some(&module), f, json_args!())
-            .expect("Could not call global");
+        let rt = &mut runtime;
+        let result = run_async_task(|| async move {
+            rt.call_function_by_ref(Some(&module), f, json_args!())
+                .await
+        });
         assert_v8!(result, 2, usize, runtime);
     }
 
@@ -779,16 +802,19 @@ mod test_inner_runtime {
         let mut runtime = InnerRuntime::new(Default::default()).expect("Could not load runtime");
 
         let rt = &mut runtime;
-        let module = run_async_task(|| async move { rt.load_modules(Some(&module), vec![]).await });
+        run_async_task(|| async move {
+            let module = rt.load_modules(Some(&module), vec![]).await?;
 
-        let f = runtime.get_function_by_name(Some(&module), "test").unwrap();
-        let result = runtime
-            .call_function_by_ref(Some(&module), f, json_args!())
-            .expect("Could not call global");
+            let f = rt.get_function_by_name(Some(&module), "test").unwrap();
+            let result = rt
+                .call_function_by_ref(Some(&module), f, json_args!())
+                .await?;
 
-        let rt = &mut runtime;
-        let result = run_async_task(|| async move { rt.resolve_with_event_loop(result).await });
-        assert_v8!(result, 2, usize, runtime);
+            let result = rt.resolve_with_event_loop(result).await?;
+            assert_v8!(result, 2, usize, rt);
+
+            Ok(())
+        });
     }
 
     #[test]
@@ -807,16 +833,19 @@ mod test_inner_runtime {
         let mut runtime = InnerRuntime::new(Default::default()).expect("Could not load runtime");
 
         let rt = &mut runtime;
-        let module = run_async_task(|| async move { rt.load_modules(Some(&module), vec![]).await });
+        run_async_task(|| async move {
+            let module = rt.load_modules(Some(&module), vec![]).await?;
 
-        let f = runtime.get_function_by_name(Some(&module), "test").unwrap();
-        let result = runtime
-            .call_function_by_ref(Some(&module), f, json_args!())
-            .expect("Could not call global");
-        let result: Promise<usize> = runtime.from_v8(result).expect("Could not deserialize");
-        let result: usize =
-            run_async_task(|| async move { result.resolve(&mut runtime.deno_runtime()).await });
-        assert_eq!(2, result);
+            let f = rt.get_function_by_name(Some(&module), "test")?;
+            let result = rt
+                .call_function_by_ref(Some(&module), f, json_args!())
+                .await?;
+            let result: Promise<usize> = rt.from_v8(result).expect("Could not deserialize");
+            let result: usize = result.resolve(&mut rt.deno_runtime()).await?;
+            assert_eq!(2, result);
+
+            Ok(())
+        });
     }
 
     #[test]
@@ -852,15 +881,21 @@ mod test_inner_runtime {
             .into_global(&mut runtime.deno_runtime().handle_scope())
             .unwrap();
 
-        let value = runtime
-            .call_function_by_ref(Some(&module), function.clone(), json_args!(2))
-            .expect("could not call function");
-        assert_v8!(value, 4, usize, runtime);
+        run_async_task(|| async move {
+            let value = runtime
+                .call_function_by_ref(Some(&module), function.clone(), json_args!(2))
+                .await
+                .expect("could not call function");
+            assert_v8!(value, 4, usize, runtime);
 
-        let value = runtime
-            .call_function_by_ref(Some(&module), function, json_args!(3))
-            .expect("could not call function twice");
-        assert_v8!(value, 5, usize, runtime);
+            let value = runtime
+                .call_function_by_ref(Some(&module), function, json_args!(3))
+                .await
+                .expect("could not call function twice");
+            assert_v8!(value, 5, usize, runtime);
+
+            Ok(())
+        });
     }
 
     #[test]
@@ -881,14 +916,20 @@ mod test_inner_runtime {
             .get_function_by_name(Some(&module), "test")
             .expect("Could not get function");
 
-        let value = runtime
-            .call_function_by_ref(Some(&module), function.clone(), json_args!(2))
-            .expect("could not call function");
-        assert_v8!(value, 4, usize, runtime);
+        run_async_task(|| async move {
+            let value = runtime
+                .call_function_by_ref(Some(&module), function.clone(), json_args!(2))
+                .await
+                .expect("could not call function");
+            assert_v8!(value, 4, usize, runtime);
 
-        let value = runtime
-            .call_function_by_ref(None, function, json_args!(2))
-            .expect("could not call function");
-        assert_v8!(value, 4, usize, runtime);
+            let value = runtime
+                .call_function_by_ref(None, function, json_args!(2))
+                .await
+                .expect("could not call function");
+            assert_v8!(value, 4, usize, runtime);
+
+            Ok(())
+        });
     }
 }

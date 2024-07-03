@@ -117,11 +117,57 @@ runtime.register_function("foo", |args| {
 runtime.load_module(&module)?;
 ```
 
-See [Runtime::register_async_function] for registering and calling async rust from JS
+----
 
-For better performance calling rust code, consider using an extension instead - see the `runtime_extensions` example for details
+Asynchronous JS can be called in 2 ways; 
 
-The 'state' parameter can be used to persist data - please see the `call_rust_from_js` example for details
+The first is to use the `async` keyword in JS, and then call the function using [Runtime::call_function_async]
+```rust
+use rustyscript::{ Runtime, Module };
+
+let module = Module::new("test.js", "export async function foo() { return 5; }");
+let mut runtime = Runtime::new(Default::default())?;
+
+// The runtime has its own tokio runtime; you can get a handle to it with `tokio_runtime`
+// You can also build the runtime with your own tokio runtime, see [Runtime::with_tokio_runtime]
+let tokio_runtime = runtime.tokio_runtime();
+
+let result: i32 = tokio_runtime.block_on(async {
+    // Top-level await is supported - we can load modules asynchronously
+    runtime.load_module_async(&module)?;
+
+    // Call the function asynchronously
+    runtime.call_function_async(None, "foo", vec![]).await
+})?;
+
+assert_eq!(result, 5);
+```
+
+The second is to use [js_value::Promise]
+```rust
+use rustyscript::{ Runtime, Module, js_value::Promise };
+
+let module = Module::new("test.js", "export async function foo() { return 5; }");
+
+let mut runtime = Runtime::new(Default::default())?;
+let handle = runtime.load_module(&module)?;
+
+// We call the function without waiting for the event loop to run, or for the promise to resolve
+// This way we can store it and wait for it later, without blocking the event loop or borrowing the runtime
+let result: Promise<i32> = runtime.call_function_immediate(None, "foo", vec![])?;
+
+// We can then wait for the promise to resolve
+// We can do so asynchronously, using [js_value::Promise::into_future]
+// But we can also block the current thread:
+let result = result.into_value(&mut runtime)?;
+assert_eq!(result, 5);
+
+- See [Runtime::register_async_function] for registering and calling async rust from JS
+- See `examples/async_javascript.rs` for a more detailed example of using async JS
+
+----
+
+For better performance calling rust code, consider using an extension instead of a module - see the `runtime_extensions` example for details
 
 ----
 
@@ -187,7 +233,5 @@ used to create snapshots of the runtime for faster startup times. See [SnapshotB
 ----
 
 Please also check out [@Bromeon/js_sandbox](https://github.com/Bromeon/js-sandbox), another great crate in this niche
-
-For an example of this crate in use, please check out [lavendeux-parser](https://github.com/rscarson/lavendeux-parser)
 
 <!-- cargo-rdme end -->

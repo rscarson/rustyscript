@@ -94,6 +94,9 @@ jobs:
     - name: async_javascript
       run: cargo run --example async_javascript
 
+    - name: async_eval
+      run: cargo run --example async_eval
+
     - name: Check if the README is up to date.
       run: |
         cargo install cargo-rdme

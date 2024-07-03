@@ -13,15 +13,23 @@ trait V8TypeChecker {
     }
 
     /// Checks if a `v8::Value` is of a certain type
-    fn is_valid(value: v8::Global<v8::Value>) -> bool;
+    fn validate(value: v8::Global<v8::Value>) -> Result<(), crate::Error>;
 }
 
 /// Implementations of `V8TypeChecker` for functions
 #[derive(Eq, Hash, PartialEq, Debug, Clone, Deserialize)]
 struct FunctionTypeChecker;
 impl V8TypeChecker for FunctionTypeChecker {
-    fn is_valid(value: v8::Global<v8::Value>) -> bool {
-        Self::into_raw(&value).is_function()
+    fn validate(value: v8::Global<v8::Value>) -> Result<(), crate::Error> {
+        let raw = Self::into_raw(&value);
+        if raw.is_function() {
+            Ok(())
+        } else {
+            Err(crate::Error::ValueNotCallable(format!(
+                "{}",
+                raw.type_repr()
+            )))
+        }
     }
 }
 
@@ -29,8 +37,16 @@ impl V8TypeChecker for FunctionTypeChecker {
 #[derive(Eq, Hash, PartialEq, Debug, Clone, Deserialize)]
 struct PromiseTypeChecker;
 impl V8TypeChecker for PromiseTypeChecker {
-    fn is_valid(value: v8::Global<v8::Value>) -> bool {
-        Self::into_raw(&value).is_promise()
+    fn validate(value: v8::Global<v8::Value>) -> Result<(), crate::Error> {
+        let raw = Self::into_raw(&value);
+        if raw.is_promise() {
+            Ok(())
+        } else {
+            Err(crate::Error::JsonDecode(format!(
+                "Expected a promise, found `{}`",
+                raw.type_repr()
+            )))
+        }
     }
 }
 
@@ -38,8 +54,8 @@ impl V8TypeChecker for PromiseTypeChecker {
 #[derive(Eq, Hash, PartialEq, Debug, Clone, Deserialize)]
 struct DefaultTypeChecker;
 impl V8TypeChecker for DefaultTypeChecker {
-    fn is_valid(_: v8::Global<v8::Value>) -> bool {
-        true
+    fn validate(_value: v8::Global<v8::Value>) -> Result<(), crate::Error> {
+        Ok(())
     }
 }
 
@@ -75,11 +91,8 @@ impl<'de, T: V8TypeChecker> serde::Deserialize<'de> for V8Value<T> {
         D: serde::Deserializer<'de>,
     {
         let value = crate::v8_serializer::GlobalValue::deserialize(deserializer)?;
-        if T::is_valid(value.v8_value.clone()) {
-            Ok(Self(value.v8_value, std::marker::PhantomData))
-        } else {
-            Err(serde::de::Error::custom("Invalid V8 value"))
-        }
+        T::validate(value.v8_value.clone()).map_err(serde::de::Error::custom)?;
+        Ok(Self(value.v8_value, std::marker::PhantomData))
     }
 }
 
@@ -95,6 +108,13 @@ impl Function {
         self.0
             .into_global(scope)
             .ok_or_else(|| crate::Error::ValueNotCallable("function".to_string()))
+    }
+
+    /// Returns true if the function is async
+    pub fn is_async(&self) -> bool {
+        // Safe because we aren't applying this to an isolate
+        let unsafe_f = unsafe { v8::Handle::get_unchecked(&self.0 .0) };
+        unsafe_f.is_async_function()
     }
 
     /// Calls this function. See [Runtime::call_stored_function]
@@ -270,7 +290,9 @@ mod test {
         assert_eq!(value, 42);
 
         let f2: Function = runtime.get_value(Some(&handle), "f2").unwrap();
-        let value: Promise<usize> = f2.call(&mut runtime, Some(&handle), &json_args!()).unwrap();
+        let value: Promise<usize> = f2
+            .call_immediate(&mut runtime, Some(&handle), &json_args!())
+            .unwrap();
         let value = value.into_value(&mut runtime).unwrap();
         assert_eq!(value, 42);
     }
@@ -288,7 +310,9 @@ mod test {
         let handle = runtime.load_module(&module).unwrap();
 
         let f: Function = runtime.get_value(Some(&handle), "f").unwrap();
-        let value: Promise<usize> = f.call(&mut runtime, Some(&handle), &json_args!()).unwrap();
+        let value: Promise<usize> = f
+            .call_immediate(&mut runtime, Some(&handle), &json_args!())
+            .unwrap();
         let value = value.into_value(&mut runtime).unwrap();
         assert_eq!(value, 42);
     }

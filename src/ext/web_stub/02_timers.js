@@ -12,7 +12,7 @@ const {
   ReflectApply,
 } = primordials;
 
-import * as webidl from "ext:deno_webidl/00_webidl.js";
+import * as webidl from "ext:deno_web/00_webidl.js";
 
 const hrU8 = new Uint8Array(8);
 const hr = new Uint32Array(TypedArrayPrototypeGetBuffer(hrU8));

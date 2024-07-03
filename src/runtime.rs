@@ -12,7 +12,16 @@ pub type RuntimeOptions = InnerRuntimeOptions;
 /// For functions returning nothing
 pub type Undefined = serde_json::Value;
 
-/// Represents a configured runtime ready to run modules
+/// A runtime instance that can be used to execute JavaScript code and interact with it
+/// Most runtime functions have 3 variants - blocking, async, and immediate
+/// For example:
+/// - `call_function` will block until the function is resolved and the event loop is empty
+/// - `call_function_async` will return a future that resolves when the function is resolved and the event loop is empty
+/// - `call_function_immediate` will return the result immediately, without resolving promises or running the event loop
+///   (See [js_value::Promise])
+/// 
+/// Note: For multithreaded applications, you may need to call `init_platform` before creating a `Runtime`
+/// (See [utilities::init_platform])
 pub struct Runtime {
     inner: InnerRuntime,
     tokio: Rc<tokio::runtime::Runtime>,
@@ -302,6 +311,8 @@ impl Runtime {
     /// - The event loop is resolved, and
     /// - If the value is a promise, the promise is resolved
     ///
+    /// Note that synchronous functions are run synchronously. Returned promises will be run asynchronously, however.
+    ///
     /// # Arguments
     /// * `module_context` - Optional handle to a module providing global context for the function
     /// * `function` - A The function object
@@ -323,7 +334,8 @@ impl Runtime {
         let function = function.into_global(&mut self.deno_runtime().handle_scope())?;
         let result = self
             .inner
-            .call_function_by_ref(module_context, function, args)?;
+            .call_function_by_ref(module_context, function, args)
+            .await?;
         let result = self.inner.resolve_with_event_loop(result).await?;
         self.inner.from_v8(result)
     }
@@ -382,9 +394,12 @@ impl Runtime {
         T: deno_core::serde::de::DeserializeOwned,
     {
         let function = function.into_global(&mut self.deno_runtime().handle_scope())?;
-        let result = self
-            .inner
-            .call_function_by_ref(module_context, function, args)?;
+        let result = self.run_async_task(|runtime| async move {
+            runtime
+                .inner
+                .call_function_by_ref(module_context, function, args)
+                .await
+        })?;
         self.inner.from_v8(result)
     }
 
@@ -392,6 +407,8 @@ impl Runtime {
     /// Returns a future that resolves when:
     /// - The event loop is resolved, and
     /// - If the value is a promise, the promise is resolved
+    ///
+    /// Note that synchronous functions are run synchronously. Returned promises will be run asynchronously, however.
     ///
     /// # Arguments
     /// * `module_context` - Optional handle to a module to search - if None, or if the search fails, the global context is used
@@ -428,7 +445,8 @@ impl Runtime {
         let function = self.inner.get_function_by_name(module_context, name)?;
         let result = self
             .inner
-            .call_function_by_ref(module_context, function, args)?;
+            .call_function_by_ref(module_context, function, args)
+            .await?;
         let result = self.inner.resolve_with_event_loop(result).await?;
         self.inner.from_v8(result)
     }
@@ -515,9 +533,12 @@ impl Runtime {
         T: deno_core::serde::de::DeserializeOwned,
     {
         let function = self.inner.get_function_by_name(module_context, name)?;
-        let result = self
-            .inner
-            .call_function_by_ref(module_context, function, args)?;
+        let result = self.run_async_task(|runtime| async move {
+            runtime
+                .inner
+                .call_function_by_ref(module_context, function, args)
+                .await
+        })?;
         self.inner.from_v8(result)
     }
 
@@ -822,6 +843,8 @@ impl Runtime {
     /// - The event loop is resolved, and
     /// - If the value is a promise, the promise is resolved
     ///
+    /// Note that synchronous functions are run synchronously. Returned promises will be run asynchronously, however.
+    ///
     /// # Arguments
     /// * `module_context` - A handle returned by loading a module into the runtime
     ///
@@ -854,9 +877,10 @@ impl Runtime {
         T: deno_core::serde::de::DeserializeOwned,
     {
         if let Some(entrypoint) = module_context.entrypoint() {
-            let result =
-                self.inner
-                    .call_function_by_ref(Some(module_context), entrypoint.clone(), args)?;
+            let result = self
+                .inner
+                .call_function_by_ref(Some(module_context), entrypoint.clone(), args)
+                .await?;
             let result = self.inner.resolve_with_event_loop(result).await?;
             self.inner.from_v8(result)
         } else {
@@ -901,9 +925,12 @@ impl Runtime {
         T: deno_core::serde::de::DeserializeOwned,
     {
         if let Some(entrypoint) = module_context.entrypoint() {
-            let result =
-                self.inner
-                    .call_function_by_ref(Some(module_context), entrypoint.clone(), args)?;
+            let result = self.run_async_task(|runtime| async move {
+                runtime
+                    .inner
+                    .call_function_by_ref(Some(module_context), entrypoint.clone(), args)
+                    .await
+            })?;
             self.inner.from_v8(result)
         } else {
             Err(Error::MissingEntrypoint(module_context.module().clone()))
