@@ -119,7 +119,7 @@ runtime.load_module(&module)?;
 
 ----
 
-Asynchronous JS can be called in 2 ways; 
+Asynchronous JS can be called in 2 ways;
 
 The first is to use the `async` keyword in JS, and then call the function using [Runtime::call_function_async]
 ```rust
@@ -201,6 +201,7 @@ These functions provide simple one-liner access to common features of this crate
 - import; Get a handle to a JS module from which you can get exported values and functions
 - resolve_path; Resolve a relative path to the current working dir
 - validate; Validate the syntax of a JS expression
+- init_platform; Initialize the V8 platform for multi-threaded applications
 
 #### Crate features
 The table below lists the available features for this crate. Features marked at `Preserves Sandbox: NO` break isolation between loaded JS modules and the host system.
