@@ -282,7 +282,7 @@ impl InnerRuntime {
         Ok(result)
     }
 
-    pub fn from_v8<T>(&mut self, value: v8::Global<v8::Value>) -> Result<T, Error>
+    pub fn decode_value<T>(&mut self, value: v8::Global<v8::Value>) -> Result<T, Error>
     where
         T: DeserializeOwned,
     {
@@ -298,8 +298,7 @@ impl InnerRuntime {
     ) -> Result<v8::Global<v8::Value>, Error> {
         // Try to get the value from the module context first
         let result = module_context
-            .map(|module_context| self.get_module_export_value(module_context, name).ok())
-            .flatten();
+            .and_then(|module_context| self.get_module_export_value(module_context, name).ok());
 
         // If it's not found, try the global context
         match result {
@@ -533,7 +532,7 @@ mod test_inner_runtime {
 
     macro_rules! assert_v8 {
         ($l:expr, $r:expr, $t:ty, $rt:expr) => {
-            assert_eq!($rt.from_v8::<$t>($l).expect("Wrong type"), $r,)
+            assert_eq!($rt.decode_value::<$t>($l).expect("Wrong type"), $r,)
         };
     }
 
@@ -840,7 +839,7 @@ mod test_inner_runtime {
             let result = rt
                 .call_function_by_ref(Some(&module), f, json_args!())
                 .await?;
-            let result: Promise<usize> = rt.from_v8(result).expect("Could not deserialize");
+            let result: Promise<usize> = rt.decode_value(result).expect("Could not deserialize");
             let result: usize = result.resolve(&mut rt.deno_runtime()).await?;
             assert_eq!(2, result);
 
@@ -874,11 +873,13 @@ mod test_inner_runtime {
         }
 
         let structure = runtime.get_value_ref(Some(&module), "test").unwrap();
-        let structure: TestStruct = runtime.from_v8(structure).expect("Could not deserialize");
+        let structure: TestStruct = runtime
+            .decode_value(structure)
+            .expect("Could not deserialize");
 
         let function = structure
             .func
-            .into_global(&mut runtime.deno_runtime().handle_scope())
+            .as_global(&mut runtime.deno_runtime().handle_scope())
             .unwrap();
 
         run_async_task(|| async move {

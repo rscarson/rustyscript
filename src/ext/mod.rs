@@ -1,4 +1,5 @@
 #![allow(unused_variables)]
+#![allow(clippy::derivable_impls)]
 use deno_core::Extension;
 
 pub mod rustyscript;

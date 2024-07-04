@@ -19,6 +19,93 @@ use crate::Error;
 use std::sync::mpsc::{channel, Receiver, Sender};
 use std::thread::{spawn, JoinHandle};
 
+/// A pool of worker threads that can be used to run javascript code in parallel
+/// Uses a round-robin strategy to distribute work between workers
+/// Each worker is an independent runtime instance
+pub struct WorkerPool<W>
+where
+    W: InnerWorker,
+{
+    workers: Vec<Worker<W>>,
+    next_worker: usize,
+}
+
+impl<W> WorkerPool<W>
+where
+    W: InnerWorker,
+{
+    /// Create a new worker pool with the specified number of workers
+    pub fn new(options: W::RuntimeOptions, n_workers: u32) -> Result<Self, Error> {
+        crate::init_platform(n_workers, true);
+        let mut workers = Vec::with_capacity(n_workers as usize + 1);
+        for _ in 0..n_workers {
+            workers.push(Worker::new(options.clone())?);
+        }
+
+        Ok(Self {
+            workers,
+            next_worker: 0,
+        })
+    }
+
+    /// Stop all workers in the pool and wait for them to finish
+    pub fn shutdown(self) {
+        for worker in self.workers {
+            worker.shutdown();
+        }
+    }
+
+    /// Get the number of workers in the pool
+    pub fn len(&self) -> usize {
+        self.workers.len()
+    }
+
+    /// Get a worker by its index in the pool
+    pub fn worker_by_id(&self, id: usize) -> Option<&Worker<W>> {
+        self.workers.get(id)
+    }
+
+    /// Get a mutable worker by its index in the pool
+    pub fn worker_by_id_mut(&mut self, id: usize) -> Option<&mut Worker<W>> {
+        self.workers.get_mut(id)
+    }
+
+    /// Get the next worker in the pool
+    pub fn next_worker(&mut self) -> &Worker<W> {
+        let worker = &self.workers[self.next_worker];
+        self.next_worker = (self.next_worker + 1) % self.workers.len();
+        worker
+    }
+
+    /// Get the next worker in the pool as a mutable reference
+    pub fn next_worker_mut(&mut self) -> &mut Worker<W> {
+        let len = self.workers.len();
+        let worker = &mut self.workers[self.next_worker];
+        self.next_worker = (self.next_worker + 1) % len;
+        worker
+    }
+
+    /// Send a request to the next worker in the pool
+    /// This will block the current thread until the response is received
+    pub fn send_and_await(&mut self, query: W::Query) -> Result<W::Response, Error> {
+        self.next_worker_mut().send_and_await(query)
+    }
+
+    /// Evaluate a string of non-ecma javascript code in a separate thread
+    /// The code is evaluated in a new runtime instance, which is then destroyed
+    /// Returns a handle to the thread that is running the code
+    pub fn eval_in_thread<T>(code: String) -> std::thread::JoinHandle<Result<T, Error>>
+    where
+        T: serde::DeserializeOwned,
+    {
+        deno_core::JsRuntime::init_platform(None);
+        std::thread::spawn(|| {
+            let mut runtime = crate::Runtime::new(Default::default())?;
+            runtime.eval(&code)
+        })
+    }
+}
+
 /// A worker thread that can be used to run javascript code in a separate thread
 /// Contains a channel pair for communication, and a single runtime instance
 ///
@@ -101,6 +188,17 @@ where
         }
     }
 
+    /// Stop the worker and wait for it to finish
+    /// Consumes the worker
+    /// Stops by destroying the sender, which will cause the thread to exit the loop and finish
+    /// If implementing a custom `thread` function, make sure to handle rx failures gracefully
+    pub fn shutdown(self) {
+        // We can stop the thread by destroying the sender
+        // This will cause the thread to exit the loop and finish
+        drop(self.tx);
+        self.handle.join().ok();
+    }
+
     /// Send a request to the worker
     /// This will not block the current thread
     /// Will return an error if the worker has stopped or panicked
@@ -144,7 +242,7 @@ where
 pub trait InnerWorker
 where
     Self: Send,
-    <Self as InnerWorker>::RuntimeOptions: std::marker::Send + 'static,
+    <Self as InnerWorker>::RuntimeOptions: std::marker::Send + 'static + Clone,
     <Self as InnerWorker>::Query: std::marker::Send + 'static,
     <Self as InnerWorker>::Response: std::marker::Send + 'static,
 {
@@ -216,8 +314,6 @@ impl InnerWorker for DefaultWorker {
     fn handle_query(runtime: &mut Self::Runtime, query: Self::Query) -> Self::Response {
         let (runtime, modules) = runtime;
         match query {
-            DefaultWorkerQuery::Stop => Self::Response::Ok(()),
-
             DefaultWorkerQuery::Eval(code) => match runtime.eval(&code) {
                 Ok(v) => Self::Response::Value(v),
                 Err(e) => Self::Response::Error(e),
@@ -290,39 +386,11 @@ impl InnerWorker for DefaultWorker {
             }
         }
     }
-
-    // Custom thread impl to handle stop
-    fn thread(mut runtime: Self::Runtime, rx: Receiver<Self::Query>, tx: Sender<Self::Response>) {
-        loop {
-            let msg = match rx.recv() {
-                Ok(msg) => msg,
-                Err(_) => break,
-            };
-
-            match &msg {
-                DefaultWorkerQuery::Stop => {
-                    tx.send(Self::Response::Ok(())).unwrap();
-                    break;
-                }
-                _ => {
-                    let response = Self::handle_query(&mut runtime, msg);
-                    tx.send(response).unwrap();
-                }
-            }
-        }
-    }
 }
 impl DefaultWorker {
     /// Create a new worker instance
     pub fn new(options: DefaultWorkerOptions) -> Result<Self, Error> {
         Worker::new(options).map(Self)
-    }
-
-    /// Stop the worker and wait for it to finish
-    /// Consumes the worker and returns an error if the worker panicked
-    pub fn stop(self) -> Result<(), Error> {
-        self.0.send(DefaultWorkerQuery::Stop)?;
-        self.0.join()
     }
 
     /// Evaluate a string of javascript code
@@ -458,9 +526,6 @@ pub struct DefaultWorkerOptions {
 
 /// Query types for the default worker
 pub enum DefaultWorkerQuery {
-    /// Stops the worker
-    Stop,
-
     /// Evaluates a string of javascript code
     Eval(String),
 

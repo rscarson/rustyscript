@@ -1,7 +1,7 @@
 //! This crate is meant to provide a quick and simple way to integrate a runtime javacript or typescript component from within rust.
 //!
 //! - **By default, the code being run is entirely sandboxed from the host, having no filesystem or network access.**
-//!     - It can be extended to include those capabilities and more if desired - please see the 'web' feature, and the `runtime_extensions` example
+//!     - It can be extended to include those capabilities and more if desired - please see the 'web' feature, and the 'runtime_extensions' example
 //! - Asynchronous JS code is supported (I suggest using the timeout option when creating your runtime)
 //! - Loaded JS modules can import other modules
 //! - Typescript is supported by default, and will be transpiled into JS for execution
@@ -40,7 +40,7 @@
 //! # }
 //! ```
 //!
-//! Modules can also be loaded from the filesystem with `Module::load` or `Module::load_dir` if you want to collect all modules in a given directory.
+//! Modules can also be loaded from the filesystem with [Module::load] or [Module::load_dir] if you want to collect all modules in a given directory.
 //!
 //! ----
 //!
@@ -56,11 +56,11 @@
 //! let value: String = module.call("exported_function_name", json_args!()).expect("Could not get a value!");
 //! ```
 //!
-//! There are a few other utilities included, such as `rustyscript::validate` and `rustyscript::resolve_path`
+//! There are a few other utilities included, such as [validate] and [resolve_path]
 //!
 //! ----
 //!
-//! A more detailed version of the crate's usage can be seen below, which breaks down the steps instead of using the one-liner `Runtime::execute_module`:
+//! A more detailed version of the crate's usage can be seen below, which breaks down the steps instead of using the one-liner [Runtime::execute_module]:
 //! ```rust
 //! use rustyscript::{json_args, Runtime, RuntimeOptions, Module, Error, Undefined};
 //! use std::time::Duration;
@@ -95,9 +95,9 @@
 //! # }
 //! ```
 //!
-//! There are also `_async` and `immediate` versions of most runtime functions;
-//! `_async` functions return a future that resolves to the result of the operation, while
-//! `immediate` functions will make no attempt to wait for the event loop, making them suitable
+//! There are also '_async' and 'immediate' versions of most runtime functions;
+//! '_async' functions return a future that resolves to the result of the operation, while
+//! '_immediate' functions will make no attempt to wait for the event loop, making them suitable
 //! for using [js_value::Promise]
 //!
 //! Rust functions can also be registered to be called from javascript:
@@ -122,24 +122,24 @@
 //!
 //! Asynchronous JS can be called in 2 ways;
 //!
-//! The first is to use the `async` keyword in JS, and then call the function using [Runtime::call_function_async]
+//! The first is to use the 'async' keyword in JS, and then call the function using [Runtime::call_function_async]
 //! ```rust
-//! use rustyscript::{ Runtime, Module };
+//! use rustyscript::{ Runtime, Module, json_args };
 //!
 //! # fn main() -> Result<(), rustyscript::Error> {
 //! let module = Module::new("test.js", "export async function foo() { return 5; }");
 //! let mut runtime = Runtime::new(Default::default())?;
 //!
-//! // The runtime has its own tokio runtime; you can get a handle to it with `tokio_runtime`
+//! // The runtime has its own tokio runtime; you can get a handle to it with [Runtime::tokio_runtime]
 //! // You can also build the runtime with your own tokio runtime, see [Runtime::with_tokio_runtime]
 //! let tokio_runtime = runtime.tokio_runtime();
 //!
 //! let result: i32 = tokio_runtime.block_on(async {
 //!     // Top-level await is supported - we can load modules asynchronously
-//!     runtime.load_module_async(&module)?;
+//!     let handle = runtime.load_module_async(&module).await?;
 //!
 //!     // Call the function asynchronously
-//!     runtime.call_function_async(None, "foo", vec![]).await
+//!     runtime.call_function_async(Some(&handle), "foo", json_args!()).await
 //! })?;
 //!
 //! assert_eq!(result, 5);
@@ -149,7 +149,7 @@
 //!
 //! The second is to use [js_value::Promise]
 //! ```rust
-//! use rustyscript::{ Runtime, Module, js_value::Promise };
+//! use rustyscript::{ Runtime, Module, js_value::Promise, json_args };
 //!
 //! # fn main() -> Result<(), rustyscript::Error> {
 //! let module = Module::new("test.js", "export async function foo() { return 5; }");
@@ -159,7 +159,7 @@
 //!
 //! // We call the function without waiting for the event loop to run, or for the promise to resolve
 //! // This way we can store it and wait for it later, without blocking the event loop or borrowing the runtime
-//! let result: Promise<i32> = runtime.call_function_immediate(None, "foo", vec![])?;
+//! let result: Promise<i32> = runtime.call_function_immediate(Some(&handle), "foo", json_args!())?;
 //!
 //! // We can then wait for the promise to resolve
 //! // We can do so asynchronously, using [js_value::Promise::into_future]
@@ -168,23 +168,24 @@
 //! assert_eq!(result, 5);
 //! # Ok(())
 //! # }
+//! ```
 //!
 //! - See [Runtime::register_async_function] for registering and calling async rust from JS
-//! - See `examples/async_javascript.rs` for a more detailed example of using async JS
+//! - See 'examples/async_javascript.rs' for a more detailed example of using async JS
 //!
 //! ----
 //!
-//! For better performance calling rust code, consider using an extension instead of a module - see the `runtime_extensions` example for details
+//! For better performance calling rust code, consider using an extension instead of a module - see the 'runtime_extensions' example for details
 //!
 //! ----
 //!
 //! A threaded worker can be used to run code in a separate thread, or to allow multiple concurrent runtimes.
 //!
-//! the `worker` module provides a simple interface to create and interact with workers.
-//! The `InnerWorker` trait can be implemented to provide custom worker behavior.
+//! the [worker] module provides a simple interface to create and interact with workers.
+//! The [worker::InnerWorker] trait can be implemented to provide custom worker behavior.
 //!
 //! It also provides a default worker implementation that can be used without any additional setup:
-//! ```rust
+//! ```ignore
 //! use rustyscript::{Error, worker::{Worker, DefaultWorker, DefaultWorkerOptions}};
 //! use std::time::Duration;
 //!
@@ -214,7 +215,7 @@
 //! The table below lists the available features for this crate. Features marked at `Preserves Sandbox: NO` break isolation between loaded JS modules and the host system.
 //! Use with caution.
 //!
-//! Please note that the `web` feature will also enable fs_import and url_import, allowing arbitrary filesystem and network access for import statements
+//! Please note that the 'web' feature will also enable fs_import and url_import, allowing arbitrary filesystem and network access for import statements
 //!
 //! | Feature        | Description                                                                                       | Preserves Sandbox | Dependencies                                                                   |  
 //! |----------------|---------------------------------------------------------------------------------------------------|------------------|---------------------------------------------------------------------------------|
@@ -235,7 +236,7 @@
 //! |worker          | Enables access to the threaded worker API [rustyscript::worker]                                   |yes               |None                                                                             |
 //! |snapshot_builder| Enables access to [rustyscript::SnapshotBuilder]                                                  |yes               |None                                                                             |
 //!
-//! There is also a `snapshot_builder` feature enables access to an alternative runtime
+//! There is also a 'snapshot_builder' feature which enables access to an alternative runtime
 //! used to create snapshots of the runtime for faster startup times. See [SnapshotBuilder] for more information
 //!
 //! ----

@@ -25,10 +25,7 @@ impl V8TypeChecker for FunctionTypeChecker {
         if raw.is_function() {
             Ok(())
         } else {
-            Err(crate::Error::ValueNotCallable(format!(
-                "{}",
-                raw.type_repr()
-            )))
+            Err(crate::Error::ValueNotCallable(raw.type_repr().to_string()))
         }
     }
 }
@@ -68,7 +65,7 @@ struct V8Value<V8TypeChecker>(
 );
 
 impl<T> V8Value<T> {
-    pub(crate) fn into_local<'a, V>(&self, scope: &mut HandleScope<'a>) -> Option<v8::Local<'a, V>>
+    pub(crate) fn as_local<'a, V>(&self, scope: &mut HandleScope<'a>) -> Option<v8::Local<'a, V>>
     where
         v8::Local<'a, V>: TryFrom<v8::Local<'a, v8::Value>>,
     {
@@ -76,11 +73,11 @@ impl<T> V8Value<T> {
         v8::Local::<'a, V>::try_from(local).ok()
     }
 
-    pub(crate) fn into_global<'a, V>(&self, scope: &mut HandleScope<'a>) -> Option<v8::Global<V>>
+    pub(crate) fn as_global<'a, V>(&self, scope: &mut HandleScope<'a>) -> Option<v8::Global<V>>
     where
         v8::Local<'a, V>: TryFrom<v8::Local<'a, v8::Value>>,
     {
-        let local = self.into_local(scope)?;
+        let local = self.as_local(scope)?;
         Some(v8::Global::new(scope, local))
     }
 }
@@ -101,12 +98,12 @@ impl<'de, T: V8TypeChecker> serde::Deserialize<'de> for V8Value<T> {
 #[derive(Eq, Hash, PartialEq, Debug, Clone)]
 pub struct Function(V8Value<FunctionTypeChecker>);
 impl Function {
-    pub(crate) fn into_global<'a>(
+    pub(crate) fn as_global(
         &self,
-        scope: &mut HandleScope<'a>,
+        scope: &mut HandleScope<'_>,
     ) -> Result<v8::Global<v8::Function>, crate::Error> {
         self.0
-            .into_global(scope)
+            .as_global(scope)
             .ok_or_else(|| crate::Error::ValueNotCallable("function".to_string()))
     }
 
@@ -257,7 +254,7 @@ impl Value {
         T: serde::de::DeserializeOwned,
     {
         let mut scope = runtime.deno_runtime().handle_scope();
-        let local = self.0.into_local(&mut scope).unwrap();
+        let local = self.0.as_local(&mut scope).unwrap();
         Ok(deno_core::serde_v8::from_v8(&mut scope, local)?)
     }
 
