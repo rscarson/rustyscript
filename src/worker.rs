@@ -94,12 +94,12 @@ where
     /// Evaluate a string of non-ecma javascript code in a separate thread
     /// The code is evaluated in a new runtime instance, which is then destroyed
     /// Returns a handle to the thread that is running the code
-    pub fn eval_in_thread<T>(code: String) -> std::thread::JoinHandle<Result<T, Error>>
+    pub fn eval_in_thread<T: 'static>(code: String) -> std::thread::JoinHandle<Result<T, Error>>
     where
-        T: serde::DeserializeOwned,
+        T: serde::de::DeserializeOwned + Send,
     {
         deno_core::JsRuntime::init_platform(None);
-        std::thread::spawn(|| {
+        std::thread::spawn(move || {
             let mut runtime = crate::Runtime::new(Default::default())?;
             runtime.eval(&code)
         })
