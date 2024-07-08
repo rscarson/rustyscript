@@ -15,19 +15,44 @@ default = ["worker", "console", "url", "crypto"]
 no_extensions = []
 all = ["web", "io", "webstorage", "cache"]
 
-cache = ["deno_cache", "web"]
-console = ["deno_console"]
-crypto = ["deno_crypto"]
-io = ["deno_io", "web", "rustyline", "winapi", "nix", "libc", "once_cell"]
-url = ["deno_url"]
-web = ["deno_web", "deno_tls", "deno_fetch", "deno_net", "console", "url", "crypto", "url_import", "fs_import"]
-webstorage = ["deno_webstorage"]
+#
+# Each feature in this section corresponds to a different deno extension
+# I have annotated each with the section of the w3c spec that it implements
+#
+
+    # [https://w3c.github.io/ServiceWorker/#cache-interface]
+    cache = ["deno_cache", "web"]
+
+    # [https://console.spec.whatwg.org/]
+    console = ["deno_console"]
+
+    # [https://www.w3.org/TR/WebCryptoAPI/]
+    crypto = ["deno_crypto"]
+
+    # Provides IO primitives for other Deno extensions (stdio streams, etc)
+    io = ["deno_io", "web", "rustyline", "winapi", "nix", "libc", "once_cell"]
+
+    # [https://url.spec.whatwg.org/]
+    # [https://wicg.github.io/urlpattern/]
+    url = ["deno_url"]
+
+    # Timers, events, text encoder/decoder, 
+    # [https://w3c.github.io/FileAPI]
+    # [https://fetch.spec.whatwg.org/]
+    web = ["deno_web", "deno_tls", "deno_fetch", "deno_net", "console", "url", "crypto", "url_import", "fs_import"]
+
+    # [https://html.spec.whatwg.org/multipage/webstorage.html]
+    webstorage = ["deno_webstorage"]
 
 # Features for the module loader
+# Both will break sandboxing
+# - fs_import allows arbitrary file imports
+# - url_import allows importing from the web
 fs_import = []
 url_import = ["reqwest"]
 
-# Enables the use of the SnapshotBuilder
+# Enables the use of the SnapshotBuilder runtime
+# It is used to create a snapshot of a runtime for faster startup times
 snapshot_builder = []
 
 # Enables the threaded worker API
@@ -39,7 +64,7 @@ criterion = "0.5.1"
 
 [dependencies]
 thiserror = "1.0.61"
-serde = "1.0.203"
+serde = "1.0.204"
 
 # The deno runtime itself, and the webidl extension for the web APIs
 deno_core = "0.292.0"
