@@ -11,17 +11,17 @@ categories = ["web-programming", "network-programming", "api-bindings", "compile
 readme = "readme.md"
 
 [features]
-default = []
+default = ["worker", "console", "url", "crypto"]
 no_extensions = []
-all = ["web", "io"]
+all = ["web", "io", "webstorage", "cache"]
 
-webidl = ["deno_webidl"]
-webstorage = ["webidl", "deno_webstorage"]
-io = ["deno_web", "deno_io", "rustyline", "winapi", "nix", "libc", "once_cell"]
-url = ["deno_url", "webidl"]
+cache = ["deno_cache", "web"]
 console = ["deno_console"]
-crypto = ["deno_crypto", "webidl"]
-web = ["console", "url", "crypto", "deno_web", "deno_tls", "deno_fetch", "url_import", "fs_import", "deno_net"]
+crypto = ["deno_crypto"]
+io = ["deno_io", "web", "rustyline", "winapi", "nix", "libc", "once_cell"]
+url = ["deno_url"]
+web = ["deno_web", "deno_tls", "deno_fetch", "deno_net", "console", "url", "crypto", "url_import", "fs_import"]
+webstorage = ["deno_webstorage"]
 
 # Features for the module loader
 fs_import = []
@@ -38,28 +38,35 @@ version-sync = "0.9.5"
 criterion = "0.5.1"
 
 [dependencies]
-deno_core = "0.292.0"
-deno_ast = { version = "0.39.2", features = ["transpiling"]}
 thiserror = "1.0.61"
 serde = "1.0.203"
+
+# The deno runtime itself, and the webidl extension for the web APIs
+deno_core = "0.292.0"
+deno_webidl = "0.158.0"
+
+# For transpiling typescript
+deno_ast = { version = "0.39.2", features = ["transpiling"]}
+
+# Runtime for async tasks
 tokio = "1.38.0"
 
 # For URL imports
 # Pinned for now due to upstream issues
 reqwest = { version = "=0.12.4", optional = true, default-features = false, features = ["blocking", "rustls-tls"] }
 
-# Extension features
-deno_url = {version = "0.158.0", optional = true}
-deno_webidl = {version = "0.158.0", optional = true}
+# Dependencies for the various extension features
+deno_cache = {version = "0.90.0", optional = true}
 deno_console = {version = "0.158.0", optional = true}
 deno_crypto = {version = "0.172.0", optional = true}
 deno_fetch = {version = "0.182.0", optional = true}
-deno_web = {version = "0.189.0", optional = true}
-deno_tls = {version = "0.145.0", optional = true}
 deno_net = {version = "0.150.0", optional = true}
+deno_tls = {version = "0.145.0", optional = true} # Options for the web feature
+deno_url = {version = "0.158.0", optional = true}
+deno_web = {version = "0.189.0", optional = true}
 deno_webstorage = {version = "0.153.0", optional = true}
 
-# io feature deps
+# Dependencies for the IO feature
 deno_io = {version = "0.68.0", optional = true}
 rustyline = {version = "=14.0.0", optional = true}
 winapi = {version = "=0.3.9", optional = true, features = ["commapi", "knownfolders", "mswsock", "objbase", "psapi", "shlobj", "tlhelp32", "winbase", "winerror", "winuser", "winsock2", "processenv", "wincon", "wincontypes", "consoleapi"]}

@@ -154,3 +154,38 @@ map_error!(tokio::task::JoinError, |e| {
 map_error!(deno_core::futures::channel::oneshot::Canceled, |e| {
     Error::Timeout(e.to_string())
 });
+
+#[cfg(test)]
+mod test {
+    use crate::{Module, Runtime};
+
+    #[test]
+    #[rustfmt::skip]
+    fn test_highlights() {
+        let mut runtime = Runtime::new(Default::default()).unwrap();
+
+        let mut module = Module::new("", "1 + x");
+        let e = runtime
+            .load_module(&mut module)
+            .unwrap_err()
+            .as_highlighted();
+        assert_eq!(e, concat!(
+            "Line 1:1\n",
+            "| 1 + x\n",
+            "|     ^\n",
+            "= Unexpected token '+'"
+        ));
+
+        let mut module = Module::new("test.js", "1 + x\n");
+        let e = runtime
+            .load_module(&mut module)
+            .unwrap_err()
+            .as_highlighted();
+        assert_eq!(e, concat!(
+            "test.js:1\n",
+            "| 1 + x\n",
+            "|     ^\n",
+            "= Unexpected token '+'"
+        ));
+    }
+}

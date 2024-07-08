@@ -16,88 +16,34 @@ jobs:
 
     steps:
     - uses: actions/checkout@v3
-    
-    - name: Build
-      run: cargo build --verbose
 
-    - name: Run tests
-      run: cargo test --verbose --lib
-
-    - name: Run clippy
-      run: cargo clippy --all-features
-
-    - name: Run fmt
-      run: cargo fmt --check
-
-    - name: Run barebones tests
-      run: cargo test --no-default-features --lib
-
-    - name: Run complete tests
-      run: cargo test --all-features --lib
-
-    - name: Run web tests
-      run: cargo test --features "web" --lib
-
-  # Now we run the examples
-
-    - name: web_features
-      run: cargo run --example web_features --features "web"
-
-    - name: url_imports
-      run: cargo run --example url_import `--features="fs_import url_import"
-
-    - name: typescript_modules
-      run: cargo run --example typescript_modules
-
-    - name: thread_safety
-      run: cargo run --example thread_safety
-
-    - name: serialized_types
-      run: cargo run --example serialized_types
-
-    - name: runtime_extensions
-      run: cargo run --example runtime_extensions
-
-    - name: multiple_modules
-      run: cargo run --example multiple_modules
-
-    - name: module_import
-      run: cargo run --example module_import
-
-    - name: interactive_prompt
-      run: cargo run --example interactive_prompt -- 5+5
-
-    - name: hello_world
-      run: cargo run --example hello_world
-
-    - name: functions_and_values
-      run: cargo run --example functions_and_values
-
-    - name: extending_runtime
-      run: cargo run --example extending_runtime
-
-    - name: entrypoint_functions
-      run: cargo run --example entrypoint_functions
-
-    - name: default_threaded_worker
-      run: cargo run --example default_threaded_worker --features "worker"
-
-    - name: custom_threaded_worker
-      run: cargo run --example custom_threaded_worker --features "worker"
-
-    - name: create_snapshot
-      run: cargo run --example create_snapshot --features "snapshot_builder"
-
-    - name: call_rust_from_js
-      run: cargo run --example call_rust_from_js
-
-    - name: async_javascript
-      run: cargo run --example async_javascript
-
-    - name: async_eval
-      run: cargo run --example async_eval
-
+    # Check if the README is up to date
+    # We will do this before all the time-consuming tests
     - name: Check if the README is up to date.
       run: |
         cargo install cargo-rdme
         cargo rdme --check
+
+    # Check formatting
+    - name: Run fmt
+      run: cargo fmt --check
+
+    # Run default feature tests
+    - name: Run tests
+      run: cargo test --verbose --lib
+    
+    # Lint all the things
+    - name: Run clippy
+      run: cargo clippy --all-features
+
+    # Run tests with no features
+    - name: Run barebones tests
+      run: cargo test --no-default-features --lib
+
+    # Run tests with just web feature
+    - name: Run web tests
+      run: cargo test --features "web" --lib
+
+    # Run tests with all features
+    - name: Run complete tests
+      run: cargo test --all-features --lib

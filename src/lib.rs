@@ -245,11 +245,6 @@
 //!
 #![warn(missing_docs)]
 
-#[macro_use]
-mod transl8;
-
-mod v8_serializer;
-
 #[cfg(feature = "snapshot_builder")]
 mod snapshot_builder;
 #[cfg(feature = "snapshot_builder")]

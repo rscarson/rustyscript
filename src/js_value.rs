@@ -1,4 +1,5 @@
 //! This module a
+use deno_core::serde_v8::GlobalValue;
 use deno_core::v8::{self, HandleScope};
 use serde::Deserialize;
 
@@ -87,7 +88,7 @@ impl<'de, T: V8TypeChecker> serde::Deserialize<'de> for V8Value<T> {
     where
         D: serde::Deserializer<'de>,
     {
-        let value = crate::v8_serializer::GlobalValue::deserialize(deserializer)?;
+        let value = GlobalValue::deserialize(deserializer)?;
         T::validate(value.v8_value.clone()).map_err(serde::de::Error::custom)?;
         Ok(Self(value.v8_value, std::marker::PhantomData))
     }
@@ -232,9 +233,46 @@ where
 }
 
 /// A Deserializable javascript value, that can be stored and used later
-/// Must live as long as the runtime it was birthed from
+/// Can only be used on the same runtime it was created on
+///
+/// This mimics the auto-decoding that happens when providing a type parameter to Runtime functions
 #[derive(Eq, Hash, PartialEq, Debug, Clone)]
 pub struct Value(V8Value<DefaultTypeChecker>);
+impl Value {
+    /// Returns the underlying [deno_core::v8::Global]
+    /// This is useful if you want to pass the value to a [deno_core::JsRuntime] function directly
+    pub fn into_v8(self) -> v8::Global<v8::Value> {
+        self.0 .0
+    }
+
+    /// Converts the value to a [deno_core::v8::Local]
+    /// This is useful if you want to pass the value to a [deno_core::JsRuntime] function directly
+    /// [js_value::Value::into_v8] may be more useful in most cases
+    pub fn into_v8_local<'a>(
+        self,
+        scope: &mut HandleScope<'a>,
+    ) -> Result<v8::Local<'a, v8::Value>, crate::Error> {
+        Ok(self.0.as_local(scope).unwrap())
+    }
+
+    /// Converts the value to an arbitrary rust type
+    /// Mimics the auto-decoding using from_v8 that normally happens
+    /// Note: This will not await the event loop, or resolve promises
+    /// Use [js_value::Promise] as the generic T for that
+    pub fn try_into<T>(self, runtime: &mut crate::Runtime) -> Result<T, crate::Error>
+    where
+        T: serde::de::DeserializeOwned,
+    {
+        let mut scope = runtime.deno_runtime().handle_scope();
+        let local = self.0.as_local(&mut scope).unwrap();
+        Ok(deno_core::serde_v8::from_v8(&mut scope, local)?)
+    }
+}
+impl Into<v8::Global<v8::Value>> for Value {
+    fn into(self) -> v8::Global<v8::Value> {
+        self.0 .0
+    }
+}
 impl<'de> serde::Deserialize<'de> for Value {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
@@ -244,30 +282,28 @@ impl<'de> serde::Deserialize<'de> for Value {
         Ok(Self(inner))
     }
 }
-impl Value {
-    /// Converts the value to a rust type
-    /// Mimics the auto-decoding using from_v8 that normally happens
-    /// Note: This will not await the event loop, or resolve promises
-    /// Use [js_value::Promise] for that
-    pub fn into_type<T>(self, runtime: &mut crate::Runtime) -> Result<T, crate::Error>
-    where
-        T: serde::de::DeserializeOwned,
-    {
-        let mut scope = runtime.deno_runtime().handle_scope();
-        let local = self.0.as_local(&mut scope).unwrap();
-        Ok(deno_core::serde_v8::from_v8(&mut scope, local)?)
-    }
-
-    /// Returns the underlying v8 value
-    pub fn into_v8(self) -> v8::Global<v8::Value> {
-        self.0 .0
-    }
-}
 
 #[cfg(test)]
 mod test {
     use super::*;
     use crate::{json_args, Module, Runtime};
+
+    #[test]
+    fn test_value() {
+        let module = Module::new(
+            "test.js",
+            "
+            export const f = 42;
+        ",
+        );
+
+        let mut runtime = Runtime::new(Default::default()).unwrap();
+        let handle = runtime.load_module(&module).unwrap();
+
+        let f: Value = runtime.get_value(Some(&handle), "f").unwrap();
+        let value: usize = f.try_into(&mut runtime).unwrap();
+        assert_eq!(value, 42);
+    }
 
     #[test]
     fn test_function() {

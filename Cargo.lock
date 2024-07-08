@@ -754,6 +754,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "deno_cache"
+version = "0.90.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8ae49a85c175daae4835d7596024366edd58a03d686f5ed5936e74420c08c3c2"
+dependencies = [
+ "async-trait",
+ "deno_core 0.290.0",
+ "rusqlite",
+ "serde",
+ "sha2",
+ "tokio",
+]
+
+[[package]]
 name = "deno_console"
 version = "0.158.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2978,6 +2992,7 @@ version = "0.5.0"
 dependencies = [
  "criterion",
  "deno_ast",
+ "deno_cache",
  "deno_console",
  "deno_core 0.292.0",
  "deno_crypto",

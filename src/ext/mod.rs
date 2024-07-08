@@ -3,6 +3,10 @@
 use deno_core::Extension;
 
 pub mod rustyscript;
+pub mod webidl;
+
+#[cfg(feature = "cache")]
+pub mod cache;
 
 #[cfg(feature = "console")]
 pub mod console;
@@ -19,11 +23,11 @@ pub mod web;
 #[cfg(not(feature = "web"))]
 pub mod web_stub;
 
-#[cfg(feature = "webidl")]
-pub mod webidl;
-
 #[cfg(feature = "io")]
 pub mod io;
+
+#[cfg(feature = "webstorage")]
+pub mod webstorage;
 
 /// Options for configuring extensions
 pub struct ExtensionOptions {
@@ -42,6 +46,10 @@ pub struct ExtensionOptions {
     /// Optional path to the directory where the webstorage extension will store its data
     #[cfg(feature = "webstorage")]
     pub webstorage_origin_storage_dir: Option<std::path::PathBuf>,
+
+    /// Optional cache configuration for the deno_cache extension
+    #[cfg(feature = "cache")]
+    pub cache: Option<deno_cache::CreateCache<deno_cache::SqliteBackedCache>>,
 }
 
 impl Default for ExtensionOptions {
@@ -58,6 +66,9 @@ impl Default for ExtensionOptions {
 
             #[cfg(feature = "webstorage")]
             webstorage_origin_storage_dir: None,
+
+            #[cfg(feature = "cache")]
+            cache: None,
         }
     }
 }
@@ -70,11 +81,14 @@ pub fn all_extensions(
 ) -> Vec<Extension> {
     let mut extensions = rustyscript::extensions();
 
+    // We always add this one - used for too many things
+    extensions.extend(webidl::extensions());
+
+    #[cfg(feature = "cache")]
+    extensions.extend(cache::extensions(options.cache));
+
     #[cfg(feature = "console")]
     extensions.extend(console::extensions());
-
-    #[cfg(feature = "webidl")]
-    extensions.extend(webidl::extensions());
 
     #[cfg(feature = "url")]
     extensions.extend(url::extensions());
@@ -91,6 +105,11 @@ pub fn all_extensions(
     #[cfg(feature = "io")]
     extensions.extend(io::extensions(options.io_pipes));
 
+    #[cfg(feature = "webstorage")]
+    extensions.extend(webstorage::extensions(
+        options.webstorage_origin_storage_dir,
+    ));
+
     extensions.extend(user_extensions);
     extensions
 }
@@ -103,11 +122,14 @@ pub fn all_snapshot_extensions(
 ) -> Vec<Extension> {
     let mut extensions = rustyscript::snapshot_extensions();
 
+    // We always add this one - used for too many things
+    extensions.extend(webidl::snapshot_extensions());
+
+    #[cfg(feature = "cache")]
+    extensions.extend(cache::snapshot_extensions(options.cache));
+
     #[cfg(feature = "console")]
     extensions.extend(console::snapshot_extensions());
-
-    #[cfg(feature = "webidl")]
-    extensions.extend(webidl::snapshot_extensions());
 
     #[cfg(feature = "url")]
     extensions.extend(url::snapshot_extensions());
@@ -123,6 +145,11 @@ pub fn all_snapshot_extensions(
 
     #[cfg(feature = "io")]
     extensions.extend(io::snapshot_extensions(options.io_pipes));
+
+    #[cfg(feature = "webstorage")]
+    extensions.extend(webstorage::snapshot_extensions(
+        options.webstorage_origin_storage_dir,
+    ));
 
     extensions.extend(user_extensions);
     extensions
