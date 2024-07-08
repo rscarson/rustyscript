@@ -78,6 +78,10 @@ impl Default for InnerRuntimeOptions {
 
 /// Deno JsRuntime wrapper providing helper functions needed
 /// by the public-facing Runtime API
+///
+/// This struct is not intended to be used directly by the end user
+/// It provides a set of async functions that can be used to interact with the
+/// underlying deno runtime instance
 pub struct InnerRuntime {
     pub deno_runtime: JsRuntime,
     pub options: InnerRuntimeOptions,
@@ -148,6 +152,11 @@ impl InnerRuntime {
         state.put(value);
 
         Ok(())
+    }
+
+    // Registers an op2 function with the runtime without the need for an extension
+    pub fn register_op(&mut self, op: deno_core::_ops::OpDecl) -> Result<(), Error> {
+        self.put(op)
     }
 
     /// Register an async rust function

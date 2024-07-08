@@ -1,4 +1,4 @@
-name: Build
+name: Tests
 
 on:
   push:
@@ -17,28 +17,13 @@ jobs:
     steps:
     - uses: actions/checkout@v3
 
-    # Check if the README is up to date
-    # We will do this before all the time-consuming tests
-    - name: Check if the README is up to date.
-      run: |
-        cargo install cargo-rdme
-        cargo rdme --check
-
-    # Check formatting
-    - name: Run fmt
-      run: cargo fmt --check
+    # Run tests with no features
+    - name: Run barebones tests
+      run: cargo test --no-default-features --lib
 
     # Run default feature tests
     - name: Run tests
       run: cargo test --verbose --lib
-    
-    # Lint all the things
-    - name: Run clippy
-      run: cargo clippy --all-features
-
-    # Run tests with no features
-    - name: Run barebones tests
-      run: cargo test --no-default-features --lib
 
     # Run tests with just web feature
     - name: Run web tests

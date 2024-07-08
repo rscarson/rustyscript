@@ -98,7 +98,7 @@
 //! There are also '_async' and 'immediate' versions of most runtime functions;
 //! '_async' functions return a future that resolves to the result of the operation, while
 //! '_immediate' functions will make no attempt to wait for the event loop, making them suitable
-//! for using [js_value::Promise]
+//! for using [crate::js_value::Promise]
 //!
 //! Rust functions can also be registered to be called from javascript:
 //! ```rust
@@ -147,7 +147,7 @@
 //! # }
 //! ```
 //!
-//! The second is to use [js_value::Promise]
+//! The second is to use [crate::js_value::Promise]
 //! ```rust
 //! use rustyscript::{ Runtime, Module, js_value::Promise, json_args };
 //!
@@ -162,7 +162,7 @@
 //! let result: Promise<i32> = runtime.call_function_immediate(Some(&handle), "foo", json_args!())?;
 //!
 //! // We can then wait for the promise to resolve
-//! // We can do so asynchronously, using [js_value::Promise::into_future]
+//! // We can do so asynchronously, using [crate::js_value::Promise::into_future]
 //! // But we can also block the current thread:
 //! let result = result.into_value(&mut runtime)?;
 //! assert_eq!(result, 5);
@@ -219,12 +219,13 @@
 //!
 //! | Feature        | Description                                                                                       | Preserves Sandbox | Dependencies                                                                   |  
 //! |----------------|---------------------------------------------------------------------------------------------------|------------------|---------------------------------------------------------------------------------|
+//! |cache           |Implements the Cache API for Deno                                                                  |**NO**            |deno_cache, deno_webidl, deno_web, deno_crypto, deno_fetch, deno_url, deno_net   |
 //! |console         |Provides `console.*` functionality from JS                                                         |yes               |deno_console                                                                     |
 //! |crypto          |Provides `crypto.*` functionality from JS                                                          |yes               |deno_crypto, deno_webidl                                                         |
 //! |url             |Provides the URL, and URLPattern APIs from within JS                                               |yes               |deno_webidl, deno_url                                                            |
 //! |io              |Provides IO primitives such as stdio streams and abstraction over File System files.               |**NO**            |deno_io, rustyline, winapi, nix, libc, once_cell                                 |
 //! |web             |Provides the Event, TextEncoder, TextDecoder, File, Web Cryptography, and fetch APIs from within JS|**NO**            |deno_webidl, deno_web, deno_crypto, deno_fetch, deno_url, deno_net               |
-//! |webstorage      |Provides the WebStorage API                                                                        |**NO**            |deno_webidl, deno_webstorage                                                        |
+//! |webstorage      |Provides the WebStorage API                                                                        |**NO**            |deno_webidl, deno_webstorage                                                     |
 //! |                |                                                                                                   |                  |                                                                                 |
 //! |default         |Provides only those extensions that preserve sandboxing                                            |yes               |deno_console, deno_crypto, deno_webidl, deno_url                                 |
 //! |no_extensions   |Disables all extensions to the JS runtime - you can still add your own extensions in this mode     |yes               |None                                                                             |
@@ -233,8 +234,8 @@
 //! |fs_import       | Enables importing arbitrary code from the filesystem through JS                                   |**NO**            |None                                                                             |
 //! |url_import      | Enables importing arbitrary code from network locations through JS                                |**NO**            |reqwest                                                                          |
 //! |                |                                                                                                   |                  |                                                                                 |
-//! |worker          | Enables access to the threaded worker API [rustyscript::worker]                                   |yes               |None                                                                             |
-//! |snapshot_builder| Enables access to [rustyscript::SnapshotBuilder]                                                  |yes               |None                                                                             |
+//! |worker          | Enables access to the threaded worker API [worker]                                                |yes               |None                                                                             |
+//! |snapshot_builder| Enables access to [SnapshotBuilder]                                                               |yes               |None                                                                             |
 //!
 //! There is also a 'snapshot_builder' feature which enables access to an alternative runtime
 //! used to create snapshots of the runtime for faster startup times. See [SnapshotBuilder] for more information

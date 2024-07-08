@@ -115,7 +115,7 @@ impl Function {
         unsafe_f.is_async_function()
     }
 
-    /// Calls this function. See [Runtime::call_stored_function]
+    /// Calls this function. See [crate::Runtime::call_stored_function]
     /// Blocks until:
     /// - The event loop is resolved, and
     /// - If the value is a promise, the promise is resolved
@@ -131,7 +131,7 @@ impl Function {
         runtime.call_stored_function(module_context, self, args)
     }
 
-    /// Calls this function. See [Runtime::call_stored_function_async]
+    /// Calls this function. See [crate::Runtime::call_stored_function_async]
     /// Returns a future that resolves when:
     /// - The event loop is resolved, and
     /// - If the value is a promise, the promise is resolved
@@ -149,7 +149,7 @@ impl Function {
             .await
     }
 
-    /// Calls this function. See [Runtime::call_stored_function_immediate]
+    /// Calls this function. See [crate::Runtime::call_stored_function_immediate]
     /// Does not wait for the event loop to resolve, or attempt to resolve promises
     pub fn call_immediate<T>(
         &self,
@@ -247,7 +247,7 @@ impl Value {
 
     /// Converts the value to a [deno_core::v8::Local]
     /// This is useful if you want to pass the value to a [deno_core::JsRuntime] function directly
-    /// [js_value::Value::into_v8] may be more useful in most cases
+    /// [crate::js_value::Value::into_v8] may be more useful in most cases
     pub fn into_v8_local<'a>(
         self,
         scope: &mut HandleScope<'a>,
@@ -258,7 +258,7 @@ impl Value {
     /// Converts the value to an arbitrary rust type
     /// Mimics the auto-decoding using from_v8 that normally happens
     /// Note: This will not await the event loop, or resolve promises
-    /// Use [js_value::Promise] as the generic T for that
+    /// Use [crate::js_value::Promise] as the generic T for that
     pub fn try_into<T>(self, runtime: &mut crate::Runtime) -> Result<T, crate::Error>
     where
         T: serde::de::DeserializeOwned,

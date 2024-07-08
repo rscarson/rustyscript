@@ -109,10 +109,10 @@ where
 /// A worker thread that can be used to run javascript code in a separate thread
 /// Contains a channel pair for communication, and a single runtime instance
 ///
-/// This worker is generic over an implementation of the [worker::InnerWorker] trait
+/// This worker is generic over an implementation of the [InnerWorker] trait
 /// This allows flexibility in the runtime used by the worker, as well as the types of queries and responses that can be used
 ///
-/// For a simple worker that uses the default runtime, see [worker::DefaultWorker]
+/// For a simple worker that uses the default runtime, see [DefaultWorker]
 pub struct Worker<W>
 where
     W: InnerWorker,
@@ -238,7 +238,7 @@ where
 /// As well as the types of queries and responses that can be used
 ///
 /// Implement this trait for a specific runtime to use it with the worker
-/// For an example implementation, see [worker::DefaultWorker]
+/// For an example implementation, see [DefaultWorker]
 pub trait InnerWorker
 where
     Self: Send,

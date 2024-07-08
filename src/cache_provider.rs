@@ -4,7 +4,11 @@ use deno_core::{
 };
 use std::{cell::RefCell, collections::HashMap};
 
-/// Applies clone to ModuleSource
+/// A helper trait to clone a ModuleSource
+/// deno_core::ModuleSource does not implement Clone, so we need to implement it ourselves
+/// for our cache providers to work
+///
+/// Todo: This is a temporary solution, we should submit a PR to deno_core to implement Clone for ModuleSource
 pub trait ClonableSource {
     /// Create a new copy of a ModuleSource
     fn clone(&self, specifier: &ModuleSpecifier) -> ModuleSource;

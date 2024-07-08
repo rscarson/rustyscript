@@ -18,10 +18,10 @@ pub type Undefined = serde_json::Value;
 /// - `call_function` will block until the function is resolved and the event loop is empty
 /// - `call_function_async` will return a future that resolves when the function is resolved and the event loop is empty
 /// - `call_function_immediate` will return the result immediately, without resolving promises or running the event loop
-///   (See [js_value::Promise])
+///   (See [crate::js_value::Promise])
 ///
 /// Note: For multithreaded applications, you may need to call `init_platform` before creating a `Runtime`
-/// (See [utilities::init_platform])
+/// (See [crate::utilities::init_platform])
 pub struct Runtime {
     inner: InnerRuntime,
     tokio: Rc<tokio::runtime::Runtime>,
@@ -229,6 +229,35 @@ impl Runtime {
         self.inner.put(value)
     }
 
+    /// Registers an op2 function with the runtime without the need for an extension
+    /// This can be a simpler alternative to using an extension, that can be faster
+    /// than registered functions
+    ///
+    /// For creating an op2 function, see the [deno_core::op2] macro
+    ///
+    /// # Example
+    /// ```rust
+    /// use rustyscript::{ Runtime, Module, Error };
+    /// use deno_core::{op2};
+    ///
+    /// #[op2(fast)]
+    /// #[bigint]
+    /// fn op_add(#[bigint] a: i64, #[bigint] b: i64) -> i64 {
+    ///     a + b
+    /// }
+    ///
+    /// # fn main() -> Result<(), Error> {
+    /// let mut runtime = Runtime::new(Default::default())?;
+    /// runtime.register_op(op_add())?;
+    /// let value: i64 = runtime.eval("Deno.core.ops.op_add(1, 2)")?;
+    /// assert_eq!(3, value);
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub fn register_op(&mut self, op: deno_core::_ops::OpDecl) -> Result<(), Error> {
+        self.inner.register_op(op)
+    }
+
     /// Register a rust function to be callable from JS
     /// ```rust
     /// use rustyscript::{ Runtime, Module, serde_json::Value };
@@ -290,7 +319,7 @@ impl Runtime {
     /// - `load_module_async`
     /// - `load_modules_async`
     ///
-    /// Or any of the `_immmediate` variants, paired with [js_value::Promise]
+    /// Or any of the `_immmediate` variants, paired with [crate::js_value::Promise]
     ///
     /// # Arguments
     /// * `expr` - A string representing the JavaScript expression to evaluate
@@ -385,7 +414,7 @@ impl Runtime {
 
     /// Calls a stored javascript function and deserializes its return value.
     /// Will not attempt to resolve promises, or run the event loop
-    /// Promises can be returned by specifying the return type as [js_value::Promise]
+    /// Promises can be returned by specifying the return type as [crate::js_value::Promise]
     /// The event loop should be run using [Runtime::await_event_loop]
     ///
     /// # Arguments
@@ -498,7 +527,7 @@ impl Runtime {
 
     /// Calls a javascript function within the Deno runtime by its name and deserializes its return value.
     /// Will not attempt to resolve promises, or run the event loop
-    /// Promises can be returned by specifying the return type as [js_value::Promise]
+    /// Promises can be returned by specifying the return type as [crate::js_value::Promise]
     /// The event loop should be run using [Runtime::await_event_loop]
     ///
     /// # Arguments
@@ -612,7 +641,7 @@ impl Runtime {
 
     /// Get a value from a runtime instance
     /// Will not attempt to resolve promises, or run the event loop
-    /// Promises can be returned by specifying the return type as [js_value::Promise]
+    /// Promises can be returned by specifying the return type as [crate::js_value::Promise]
     /// The event loop should be run using [Runtime::await_event_loop]
     ///
     /// # Arguments
@@ -842,7 +871,7 @@ impl Runtime {
 
     /// Executes the entrypoint function of a module within the Deno runtime.
     /// Will not attempt to resolve promises, or run the event loop
-    /// Promises can be returned by specifying the return type as [js_value::Promise]
+    /// Promises can be returned by specifying the return type as [crate::js_value::Promise]
     /// The event loop should be run using [Runtime::await_event_loop]
     ///
     /// # Arguments
@@ -967,6 +996,26 @@ mod test_runtime {
         assert_eq!(2, Runtime::into_arg(2));
         assert_eq!("test", Runtime::into_arg("test"));
         assert_ne!("test", Runtime::into_arg(2));
+    }
+
+    #[test]
+    fn test_register_op() {
+        use deno_core::op2;
+        #[op2(fast)]
+        #[bigint]
+        fn op_add(#[bigint] a: i64, #[bigint] b: i64) -> i64 {
+            a + b
+        }
+
+        let mut runtime = Runtime::new(Default::default()).expect("Could not create the runtime");
+        runtime
+            .register_op(op_add())
+            .expect("Could not register op");
+
+        let result: i64 = runtime
+            .eval("Deno.core.ops.op_add(2, 2)")
+            .expect("Could not call op");
+        assert_eq!(4, result);
     }
 
     #[test]

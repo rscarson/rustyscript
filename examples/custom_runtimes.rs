@@ -16,10 +16,10 @@ use rustyscript::{
 };
 use std::time::Duration;
 
-// See ext/example_extension for a demonstration
+// See example_extension for a demonstration
 // of creating a deno_core extension for the runtime
-mod ext;
-use ext::example_extension;
+mod example_extension;
+use example_extension::example_extension;
 
 // A module that will always be loaded into the custom runtime
 const MY_MODULE: StaticModule = module!(
