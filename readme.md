@@ -7,6 +7,9 @@
 <!-- cargo-rdme start -->
 
 This crate is meant to provide a quick and simple way to integrate a runtime javacript or typescript component from within rust.
+It uses the v8 engine through the deno_core crate, and is meant to be as simple as possible to use without sacrificing flexibility or performance.
+
+I also have attempted to abstract away the v8 engine details so you can for the most part operate directly on rust types.
 
 - **By default, the code being run is entirely sandboxed from the host, having no filesystem or network access.**
     - It can be extended to include those capabilities and more if desired - please see the 'web' feature, and the 'runtime_extensions' example
