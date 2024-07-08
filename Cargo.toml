@@ -39,7 +39,7 @@ criterion = "0.5.1"
 
 [dependencies]
 thiserror = "1.0.61"
-serde = "1.0.203"
+serde = "1.0.204"
 
 # The deno runtime itself, and the webidl extension for the web APIs
 deno_core = "0.292.0"
