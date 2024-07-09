@@ -38,6 +38,8 @@ macro_rules! impl_v8 {
 }
 
 /// A trait that is used to check if a `v8::Value` is of a certain type
+/// Will cause a panic if validate is insufficient to verify that the
+/// given value is of type `T::Output`
 trait V8TypeChecker {
     type Output;
 
@@ -98,7 +100,7 @@ impl V8TypeChecker for DefaultTypeChecker {
 
 /// The core struct behind the [Function], [Promise], and [Value] types
 /// Should probably not be user-facing
-/// TODO: Better API for this so we can make it public eventually
+/// TODO: Safer API for this so we can make it public eventually
 ///
 /// A Deserializable javascript object, that can be stored and used later
 /// Must live as long as the runtime it was birthed from
@@ -109,6 +111,7 @@ struct V8Value<V8TypeChecker>(
 );
 
 impl<T: V8TypeChecker> V8Value<T> {
+    /// Returns the underlying global as a local in the type configured by the type checker
     pub(crate) fn as_local<'a>(&self, scope: &mut HandleScope<'a>) -> v8::Local<'a, T::Output>
     where
         v8::Local<'a, T::Output>: TryFrom<v8::Local<'a, v8::Value>>,
@@ -119,6 +122,7 @@ impl<T: V8TypeChecker> V8Value<T> {
             .expect("Failed to convert V8Value: Invalid V8TypeChecker!")
     }
 
+    /// Returns the underlying global in the type configured by the type checker
     pub(crate) fn as_global<'a>(&self, scope: &mut HandleScope<'a>) -> v8::Global<T::Output>
     where
         v8::Local<'a, T::Output>: TryFrom<v8::Local<'a, v8::Value>>,
