@@ -890,8 +890,7 @@ mod test_inner_runtime {
 
         let function = structure
             .func
-            .as_global(&mut runtime.deno_runtime().handle_scope())
-            .unwrap();
+            .as_global(&mut runtime.deno_runtime().handle_scope());
 
         run_async_task(|| async move {
             let value = runtime

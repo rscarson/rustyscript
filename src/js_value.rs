@@ -1,10 +1,46 @@
-//! This module a
+//! This module provides a way to store and use javascript values, functions, and promises
+//! The are a deserialized version of the v8::Value
+//!
+//! [Function] and [Promise] are both specializations of [Value] providing deserialize-time type checking
+//! and additional utility functions for interacting with the runtime
 use deno_core::serde_v8::GlobalValue;
 use deno_core::v8::{self, HandleScope};
 use serde::Deserialize;
 
+/// A macro to implement the common functions for [Function], [Promise], and [Value]
+macro_rules! impl_v8 {
+    ($name:ident$(<$generic:ident>)?, $checker:ident $(,)?) => {
+        impl $(<$generic>)? $name $(<$generic>)? where
+        $( $generic: serde::de::DeserializeOwned, )? {
+            /// Returns the underlying [deno_core::v8::Global]
+            /// This is useful if you want to pass the value to a [deno_core::JsRuntime] function directly
+            pub fn into_v8(self) -> v8::Global<v8::Value> {
+                self.0 .0
+            }
+        }
+        impl<'de$(, $generic)?> serde::Deserialize<'de> for $name $(<$generic>)?
+        $(where $generic: serde::de::DeserializeOwned,)?
+        {
+            fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+            where
+                D: serde::Deserializer<'de>,
+            {
+                let inner = V8Value::<$checker>::deserialize(deserializer)?;
+                Ok(Self(inner $(, std::marker::PhantomData::<$generic>)?))
+            }
+        }
+        impl $(<$generic>)? Into<v8::Global<v8::Value>> for $name $(<$generic>)? $(where $generic: serde::de::DeserializeOwned)? {
+            fn into(self) -> v8::Global<v8::Value> {
+                self.0 .0
+            }
+        }
+    };
+}
+
 /// A trait that is used to check if a `v8::Value` is of a certain type
 trait V8TypeChecker {
+    type Output;
+
     /// Converts a `v8::Global<v8::Value>` to a `&v8::Value`
     ///
     /// # Safety
@@ -21,6 +57,7 @@ trait V8TypeChecker {
 #[derive(Eq, Hash, PartialEq, Debug, Clone, Deserialize)]
 struct FunctionTypeChecker;
 impl V8TypeChecker for FunctionTypeChecker {
+    type Output = v8::Function;
     fn validate(value: v8::Global<v8::Value>) -> Result<(), crate::Error> {
         let raw = Self::into_raw(&value);
         if raw.is_function() {
@@ -35,6 +72,7 @@ impl V8TypeChecker for FunctionTypeChecker {
 #[derive(Eq, Hash, PartialEq, Debug, Clone, Deserialize)]
 struct PromiseTypeChecker;
 impl V8TypeChecker for PromiseTypeChecker {
+    type Output = v8::Promise;
     fn validate(value: v8::Global<v8::Value>) -> Result<(), crate::Error> {
         let raw = Self::into_raw(&value);
         if raw.is_promise() {
@@ -52,11 +90,16 @@ impl V8TypeChecker for PromiseTypeChecker {
 #[derive(Eq, Hash, PartialEq, Debug, Clone, Deserialize)]
 struct DefaultTypeChecker;
 impl V8TypeChecker for DefaultTypeChecker {
+    type Output = v8::Value;
     fn validate(_value: v8::Global<v8::Value>) -> Result<(), crate::Error> {
         Ok(())
     }
 }
 
+/// The core struct behind the [Function], [Promise], and [Value] types
+/// Should probably not be user-facing
+/// TODO: Better API for this so we can make it public eventually
+///
 /// A Deserializable javascript object, that can be stored and used later
 /// Must live as long as the runtime it was birthed from
 #[derive(Eq, Hash, PartialEq, Debug, Clone)]
@@ -65,21 +108,23 @@ struct V8Value<V8TypeChecker>(
     std::marker::PhantomData<V8TypeChecker>,
 );
 
-impl<T> V8Value<T> {
-    pub(crate) fn as_local<'a, V>(&self, scope: &mut HandleScope<'a>) -> Option<v8::Local<'a, V>>
+impl<T: V8TypeChecker> V8Value<T> {
+    pub(crate) fn as_local<'a>(&self, scope: &mut HandleScope<'a>) -> v8::Local<'a, T::Output>
     where
-        v8::Local<'a, V>: TryFrom<v8::Local<'a, v8::Value>>,
+        v8::Local<'a, T::Output>: TryFrom<v8::Local<'a, v8::Value>>,
     {
         let local = v8::Local::new(scope, &self.0);
-        v8::Local::<'a, V>::try_from(local).ok()
+        v8::Local::<'a, T::Output>::try_from(local)
+            .ok()
+            .expect("Failed to convert V8Value: Invalid V8TypeChecker!")
     }
 
-    pub(crate) fn as_global<'a, V>(&self, scope: &mut HandleScope<'a>) -> Option<v8::Global<V>>
+    pub(crate) fn as_global<'a>(&self, scope: &mut HandleScope<'a>) -> v8::Global<T::Output>
     where
-        v8::Local<'a, V>: TryFrom<v8::Local<'a, v8::Value>>,
+        v8::Local<'a, T::Output>: TryFrom<v8::Local<'a, v8::Value>>,
     {
-        let local = self.as_local(scope)?;
-        Some(v8::Global::new(scope, local))
+        let local = self.as_local(scope);
+        v8::Global::new(scope, local)
     }
 }
 
@@ -98,14 +143,10 @@ impl<'de, T: V8TypeChecker> serde::Deserialize<'de> for V8Value<T> {
 /// Must live as long as the runtime it was birthed from
 #[derive(Eq, Hash, PartialEq, Debug, Clone)]
 pub struct Function(V8Value<FunctionTypeChecker>);
+impl_v8!(Function, FunctionTypeChecker);
 impl Function {
-    pub(crate) fn as_global(
-        &self,
-        scope: &mut HandleScope<'_>,
-    ) -> Result<v8::Global<v8::Function>, crate::Error> {
-        self.0
-            .as_global(scope)
-            .ok_or_else(|| crate::Error::ValueNotCallable("function".to_string()))
+    pub(crate) fn as_global(&self, scope: &mut HandleScope<'_>) -> v8::Global<v8::Function> {
+        self.0.as_global(scope)
     }
 
     /// Returns true if the function is async
@@ -162,20 +203,6 @@ impl Function {
     {
         runtime.call_stored_function_immediate(module_context, self, args)
     }
-
-    /// Returns the underlying v8 value
-    pub fn into_v8(self) -> v8::Global<v8::Value> {
-        self.0 .0
-    }
-}
-impl<'de> serde::Deserialize<'de> for Function {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
-        let inner = V8Value::<FunctionTypeChecker>::deserialize(deserializer)?;
-        Ok(Self(inner))
-    }
 }
 
 /// A Deserializable javascript promise, that can be stored and used later
@@ -187,6 +214,7 @@ impl<'de> serde::Deserialize<'de> for Function {
 pub struct Promise<T>(V8Value<PromiseTypeChecker>, std::marker::PhantomData<T>)
 where
     T: serde::de::DeserializeOwned;
+impl_v8!(Promise<T>, PromiseTypeChecker);
 impl<T> Promise<T>
 where
     T: serde::de::DeserializeOwned,
@@ -213,23 +241,6 @@ where
     pub fn into_value(self, runtime: &mut crate::Runtime) -> Result<T, crate::Error> {
         runtime.run_async_task(move |runtime| async move { self.into_future(runtime).await })
     }
-
-    /// Returns the underlying v8 value
-    pub fn into_v8(self) -> v8::Global<v8::Value> {
-        self.0 .0
-    }
-}
-impl<'de, T> serde::Deserialize<'de> for Promise<T>
-where
-    T: serde::de::DeserializeOwned,
-{
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
-        let inner = V8Value::<PromiseTypeChecker>::deserialize(deserializer)?;
-        Ok(Self(inner, std::marker::PhantomData))
-    }
 }
 
 /// A Deserializable javascript value, that can be stored and used later
@@ -238,23 +249,8 @@ where
 /// This mimics the auto-decoding that happens when providing a type parameter to Runtime functions
 #[derive(Eq, Hash, PartialEq, Debug, Clone)]
 pub struct Value(V8Value<DefaultTypeChecker>);
+impl_v8!(Value, DefaultTypeChecker);
 impl Value {
-    /// Returns the underlying [deno_core::v8::Global]
-    /// This is useful if you want to pass the value to a [deno_core::JsRuntime] function directly
-    pub fn into_v8(self) -> v8::Global<v8::Value> {
-        self.0 .0
-    }
-
-    /// Converts the value to a [deno_core::v8::Local]
-    /// This is useful if you want to pass the value to a [deno_core::JsRuntime] function directly
-    /// [crate::js_value::Value::into_v8] may be more useful in most cases
-    pub fn into_v8_local<'a>(
-        self,
-        scope: &mut HandleScope<'a>,
-    ) -> Result<v8::Local<'a, v8::Value>, crate::Error> {
-        Ok(self.0.as_local(scope).unwrap())
-    }
-
     /// Converts the value to an arbitrary rust type
     /// Mimics the auto-decoding using from_v8 that normally happens
     /// Note: This will not await the event loop, or resolve promises
@@ -264,22 +260,8 @@ impl Value {
         T: serde::de::DeserializeOwned,
     {
         let mut scope = runtime.deno_runtime().handle_scope();
-        let local = self.0.as_local(&mut scope).unwrap();
+        let local = self.0.as_local(&mut scope);
         Ok(deno_core::serde_v8::from_v8(&mut scope, local)?)
-    }
-}
-impl Into<v8::Global<v8::Value>> for Value {
-    fn into(self) -> v8::Global<v8::Value> {
-        self.0 .0
-    }
-}
-impl<'de> serde::Deserialize<'de> for Value {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
-        let inner = V8Value::<DefaultTypeChecker>::deserialize(deserializer)?;
-        Ok(Self(inner))
     }
 }
 
