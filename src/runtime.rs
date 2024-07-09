@@ -21,7 +21,7 @@ pub type Undefined = serde_json::Value;
 ///   (See [crate::js_value::Promise])
 ///
 /// Note: For multithreaded applications, you may need to call `init_platform` before creating a `Runtime`
-/// (See [crate::utilities::init_platform])
+/// (See [[crate::init_platform])
 pub struct Runtime {
     inner: InnerRuntime,
     tokio: Rc<tokio::runtime::Runtime>,
@@ -255,10 +255,13 @@ impl Runtime {
     /// # }
     /// ```
     pub fn register_op(&mut self, op: deno_core::_ops::OpDecl) -> Result<(), Error> {
-        self.inner.register_op(op)
+        self.inner.put(op)
     }
 
     /// Register a rust function to be callable from JS
+    /// - The [[crate::sync_callback] macro can be used to simplify this process
+    /// - For better performance, consider using [Runtime::register_op] or an extension instead
+    ///
     /// ```rust
     /// use rustyscript::{ Runtime, Module, serde_json::Value };
     ///
@@ -283,6 +286,9 @@ impl Runtime {
     }
 
     /// Register a non-blocking rust function to be callable from JS
+    /// - The [[crate::async_callback] macro can be used to simplify this process
+    /// - For better performance, consider using [Runtime::register_op] or an extension instead
+    ///
     /// ```rust
     /// use rustyscript::{ Runtime, Module, serde_json::Value, async_callback, Error };
     ///
@@ -1001,21 +1007,36 @@ mod test_runtime {
     #[test]
     fn test_register_op() {
         use deno_core::op2;
+
         #[op2(fast)]
         #[bigint]
         fn op_add(#[bigint] a: i64, #[bigint] b: i64) -> i64 {
             a + b
         }
 
+        #[op2(fast)]
+        #[bigint]
+        fn op_sub(#[bigint] a: i64, #[bigint] b: i64) -> i64 {
+            a - b
+        }
+
         let mut runtime = Runtime::new(Default::default()).expect("Could not create the runtime");
         runtime
             .register_op(op_add())
+            .expect("Could not register op");
+        runtime
+            .register_op(op_sub())
             .expect("Could not register op");
 
         let result: i64 = runtime
             .eval("Deno.core.ops.op_add(2, 2)")
             .expect("Could not call op");
         assert_eq!(4, result);
+
+        let result: i64 = runtime
+            .eval("Deno.core.ops.op_sub(2, 2)")
+            .expect("Could not call op");
+        assert_eq!(0, result);
     }
 
     #[test]

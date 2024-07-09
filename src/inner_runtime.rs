@@ -60,6 +60,11 @@ pub struct InnerRuntimeOptions {
     /// as when the snapshot was created
     /// If provided, user-supplied extensions must be instantiated with `init_ops` instead of `init_ops_and_esm`
     pub startup_snapshot: Option<&'static [u8]>,
+
+    /// Optional configuration parameters for building the underlying v8 isolate
+    /// This can be used to alter the behavior of the runtime.
+    /// See the rusty_v8 documentation for more information
+    pub isolate_params: Option<v8::CreateParams>,
 }
 
 impl Default for InnerRuntimeOptions {
@@ -70,6 +75,7 @@ impl Default for InnerRuntimeOptions {
             timeout: Duration::MAX,
             module_cache: None,
             startup_snapshot: None,
+            isolate_params: None,
 
             extension_options: Default::default(),
         }
@@ -106,6 +112,7 @@ impl InnerRuntime {
                 })),
 
                 source_map_getter: Some(loader),
+                create_params: options.isolate_params,
 
                 startup_snapshot: options.startup_snapshot,
                 extensions,
@@ -152,11 +159,6 @@ impl InnerRuntime {
         state.put(value);
 
         Ok(())
-    }
-
-    // Registers an op2 function with the runtime without the need for an extension
-    pub fn register_op(&mut self, op: deno_core::_ops::OpDecl) -> Result<(), Error> {
-        self.put(op)
     }
 
     /// Register an async rust function

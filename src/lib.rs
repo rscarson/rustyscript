@@ -220,6 +220,7 @@
 //! Use with caution.
 //!
 //! Please note that the 'web' feature will also enable fs_import and url_import, allowing arbitrary filesystem and network access for import statements
+//! - This is because the deno_web crate allows both fetch and FS reads already
 //!
 //! | Feature        | Description                                                                                       | Preserves Sandbox | Dependencies                                                                   |  
 //! |----------------|---------------------------------------------------------------------------------------------------|------------------|---------------------------------------------------------------------------------|
