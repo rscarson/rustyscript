@@ -137,8 +137,8 @@ impl SnapshotBuilder {
         let deno_runtime = &mut self.deno_runtime;
         let tokio_runtime = self.tokio_runtime.clone();
 
-        InnerRuntime::run_async_task(
-            async move {
+        tokio_runtime.block_on(async move {
+            tokio::time::timeout(timeout, || async move {
                 let module_specifier = module.filename().to_module_specifier()?;
                 let (code, _) = transpiler::transpile(&module_specifier, module.contents())?;
                 let code = deno_core::FastString::from(code);
@@ -152,9 +152,8 @@ impl SnapshotBuilder {
                     .await?;
                 result.await?;
                 Ok::<ModuleId, Error>(modid)
-            },
-            timeout,
-            tokio_runtime,
-        )
+            })
+            .await
+        })?
     }
 }
