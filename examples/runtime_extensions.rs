@@ -10,7 +10,6 @@
 use rustyscript::{Error, Module, Runtime, RuntimeOptions};
 
 mod example_extension;
-use example_extension::example_extension;
 
 fn main() -> Result<(), Error> {
     let module = Module::new("test.js", " export const result = example_ext.add(5, 5); ");

@@ -16,6 +16,5 @@ fn main() -> Result<(), Error> {
         json_args!(1, 2).to_vec(),
     )?;
     assert_eq!(result, 3);
-
-    worker.stop()
+    Ok(())
 }

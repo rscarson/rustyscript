@@ -62,7 +62,7 @@ fn main() -> Result<(), Error> {
     match runtime.load_module(&module) {
         Ok(_) => (),
         Err(e) => {
-            eprintln!("{}", e.as_highlighted());
+            eprintln!("{}", e.as_highlighted(Default::default()));
         }
     }
 

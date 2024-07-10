@@ -55,6 +55,7 @@ pub enum MyWorkerMessage {
 }
 
 /// The runtime options for our worker
+#[derive(Clone)]
 pub struct MyWorkerOptions {
     pub timeout: std::time::Duration,
 }
