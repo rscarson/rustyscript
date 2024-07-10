@@ -9,8 +9,12 @@ use std::rc::Rc;
 /// Represents the set of options accepted by the runtime constructor
 pub type RuntimeOptions = InnerRuntimeOptions;
 
-/// For functions returning nothing
-pub type Undefined = serde_json::Value;
+/// For functions returning nothing. Acts as a placeholder for the return type
+/// Should accept any type of value from javascript
+///
+/// It is in fact an alias for [crate::js_value::Value]
+/// Note: This used to be an alias for `serde_json::Value`, but was changed for performance reasons
+pub type Undefined = crate::js_value::Value;
 
 /// A runtime instance that can be used to execute JavaScript code and interact with it
 /// Most runtime functions have 3 variants - blocking, async, and immediate
@@ -227,35 +231,6 @@ impl Runtime {
         T: 'static,
     {
         self.inner.put(value)
-    }
-
-    /// Registers an op2 function with the runtime without the need for an extension
-    /// This can be a simpler alternative to using an extension, that can be faster
-    /// than registered functions
-    ///
-    /// For creating an op2 function, see the [deno_core::op2] macro
-    ///
-    /// # Example
-    /// ```rust
-    /// use rustyscript::{ Runtime, Module, Error };
-    /// use deno_core::{op2};
-    ///
-    /// #[op2(fast)]
-    /// #[bigint]
-    /// fn op_add(#[bigint] a: i64, #[bigint] b: i64) -> i64 {
-    ///     a + b
-    /// }
-    ///
-    /// # fn main() -> Result<(), Error> {
-    /// let mut runtime = Runtime::new(Default::default())?;
-    /// runtime.register_op(op_add())?;
-    /// let value: i64 = runtime.eval("Deno.core.ops.op_add(1, 2)")?;
-    /// assert_eq!(3, value);
-    /// # Ok(())
-    /// # }
-    /// ```
-    pub fn register_op(&mut self, op: deno_core::_ops::OpDecl) -> Result<(), Error> {
-        self.inner.put(op)
     }
 
     /// Register a rust function to be callable from JS
@@ -1002,41 +977,6 @@ mod test_runtime {
         assert_eq!(2, Runtime::into_arg(2));
         assert_eq!("test", Runtime::into_arg("test"));
         assert_ne!("test", Runtime::into_arg(2));
-    }
-
-    #[test]
-    fn test_register_op() {
-        use deno_core::op2;
-
-        #[op2(fast)]
-        #[bigint]
-        fn op_add(#[bigint] a: i64, #[bigint] b: i64) -> i64 {
-            a + b
-        }
-
-        #[op2(fast)]
-        #[bigint]
-        fn op_sub(#[bigint] a: i64, #[bigint] b: i64) -> i64 {
-            a - b
-        }
-
-        let mut runtime = Runtime::new(Default::default()).expect("Could not create the runtime");
-        runtime
-            .register_op(op_add())
-            .expect("Could not register op");
-        runtime
-            .register_op(op_sub())
-            .expect("Could not register op");
-
-        let result: i64 = runtime
-            .eval("Deno.core.ops.op_add(2, 2)")
-            .expect("Could not call op");
-        assert_eq!(4, result);
-
-        let result: i64 = runtime
-            .eval("Deno.core.ops.op_sub(2, 2)")
-            .expect("Could not call op");
-        assert_eq!(0, result);
     }
 
     #[test]

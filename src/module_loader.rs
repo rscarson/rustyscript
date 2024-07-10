@@ -14,7 +14,7 @@ use std::{
     rc::Rc,
 };
 
-type SourceMapCache = HashMap<String, (String, Vec<u8>)>;
+type SourceMapCache = HashMap<String, (String, Option<Vec<u8>>)>;
 
 #[derive(Clone)]
 struct InnerRustyLoader {
@@ -70,11 +70,10 @@ impl InnerRustyLoader {
                     None,
                 );
 
-                if let Some(source_map) = source_map {
-                    self.source_map_cache
-                        .borrow_mut()
-                        .insert(module_specifier.to_string(), (code, source_map.to_vec()));
-                }
+                self.source_map_cache.borrow_mut().insert(
+                    module_specifier.to_string(),
+                    (code, source_map.map(|s| s.to_vec())),
+                );
 
                 if let Some(p) = cache_provider {
                     p.set(&module_specifier, source.clone(&module_specifier));
@@ -199,15 +198,21 @@ impl RustyLoader {
     pub fn whitelist_has(&self, specifier: &str) -> bool {
         self.inner.whitelist_has(specifier)
     }
+
+    pub fn insert_source_map(&self, file_name: &str, code: String, source_map: Option<Vec<u8>>) {
+        self.inner
+            .source_map_cache
+            .borrow_mut()
+            .insert(file_name.to_string(), (code, source_map));
+    }
 }
 
 impl SourceMapGetter for RustyLoader {
     fn get_source_map(&self, file_name: &str) -> Option<Vec<u8>> {
-        self.inner
-            .source_map_cache()
-            .borrow()
-            .get(file_name)
-            .map(|(_, map)| map.to_vec())
+        let sref = self.inner.source_map_cache();
+        let sref = sref.borrow();
+        let sref = sref.get(file_name)?;
+        sref.1.as_ref().map(|s| s.to_vec())
     }
 
     fn get_source_line(&self, file_name: &str, line_number: usize) -> Option<String> {
@@ -218,7 +223,6 @@ impl SourceMapGetter for RustyLoader {
         if line_number >= lines.len() {
             return None;
         }
-
         Some(lines[line_number].to_string())
     }
 }

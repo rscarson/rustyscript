@@ -3,6 +3,8 @@
 use deno_core::Extension;
 
 pub mod rustyscript;
+
+#[cfg(feature = "webidl")]
 pub mod webidl;
 
 #[cfg(feature = "cache")]
@@ -20,7 +22,7 @@ pub mod url;
 #[cfg(feature = "web")]
 pub mod web;
 
-#[cfg(not(feature = "web"))]
+#[cfg(all(not(feature = "web"), feature = "web_stub"))]
 pub mod web_stub;
 
 #[cfg(feature = "io")]
@@ -81,7 +83,7 @@ pub fn all_extensions(
 ) -> Vec<Extension> {
     let mut extensions = rustyscript::extensions();
 
-    // We always add this one - used for too many things
+    #[cfg(feature = "webidl")]
     extensions.extend(webidl::extensions());
 
     #[cfg(feature = "cache")]
@@ -96,7 +98,7 @@ pub fn all_extensions(
     #[cfg(feature = "web")]
     extensions.extend(web::extensions(options.web));
 
-    #[cfg(not(feature = "web"))]
+    #[cfg(all(not(feature = "web"), feature = "web_stub"))]
     extensions.extend(web_stub::extensions());
 
     #[cfg(feature = "crypto")]
@@ -122,7 +124,7 @@ pub fn all_snapshot_extensions(
 ) -> Vec<Extension> {
     let mut extensions = rustyscript::snapshot_extensions();
 
-    // We always add this one - used for too many things
+    #[cfg(feature = "webidl")]
     extensions.extend(webidl::snapshot_extensions());
 
     #[cfg(feature = "cache")]
@@ -137,7 +139,7 @@ pub fn all_snapshot_extensions(
     #[cfg(feature = "web")]
     extensions.extend(web::snapshot_extensions(options.web));
 
-    #[cfg(not(feature = "web"))]
+    #[cfg(all(not(feature = "web"), feature = "web_stub"))]
     extensions.extend(web_stub::snapshot_extensions());
 
     #[cfg(feature = "crypto")]

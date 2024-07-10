@@ -1,6 +1,23 @@
 use crate::Module;
 use thiserror::Error;
 
+/// Options for [Error::as_highlighted]
+#[derive(Debug, Clone)]
+pub struct ErrorFormattingOptions {
+    pub include_filename: bool,
+    pub include_line_number: bool,
+    pub include_column_number: bool,
+}
+impl Default for ErrorFormattingOptions {
+    fn default() -> Self {
+        Self {
+            include_filename: true,
+            include_line_number: true,
+            include_column_number: true,
+        }
+    }
+}
+
 /// Represents the errors that can occur during execution of a module
 #[derive(Error, Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub enum Error {
@@ -52,9 +69,10 @@ impl Error {
     /// ```
     ///
     /// Otherwise, it will just display the error message normally
-    pub fn as_highlighted(&self) -> String {
+    pub fn as_highlighted(&self, options: ErrorFormattingOptions) -> String {
         match self {
-            Error::JsError(e) if e.source_line.is_some() => {
+            Error::JsError(e) => {
+                // Extract basic information about position
                 let (filename, row, col) = match e.frames.first() {
                     Some(f) => (
                         match &f.file_name {
@@ -68,38 +86,67 @@ impl Error {
                     None => (None, 1, 1),
                 };
 
-                let line = e.source_line.as_ref().unwrap();
-                let line = line.trim_end();
+                let mut line = e.source_line.as_ref().map(|s| s.trim_end());
                 let col = col - 1;
 
                 // Get at most 50 characters, centered on column_number
-                let (start, end) = if line.len() < 50 {
-                    (0, line.len())
-                } else if col < 25 {
-                    (0, 50)
-                } else if col > line.len() - 25 {
-                    (line.len() - 50, line.len())
-                } else {
-                    (col - 25, col + 25)
+                let mut padding = String::new();
+                match line {
+                    None => {}
+                    Some(s) => {
+                        let (start, end) = if s.len() < 50 {
+                            (0, s.len())
+                        } else if col < 25 {
+                            (0, 50)
+                        } else if col > s.len() - 25 {
+                            (s.len() - 50, s.len())
+                        } else {
+                            (col - 25, col + 25)
+                        };
+
+                        line = Some(s.get(start..end).unwrap_or(s));
+                        padding = " ".repeat(col - start - 1);
+                    }
+                }
+
+                let msg_lines = e.exception_message.split('\n').collect::<Vec<_>>();
+
+                //
+                // Format all the parts using the options
+                //
+
+                let line_number_part = match options.include_line_number {
+                    true => format!("{}:", row),
+                    false => String::new(),
                 };
 
-                let line = line.get(start..end).unwrap_or(line);
-                let fpos = if let Some(filename) = filename {
-                    format!("{}:{}\n", filename, row)
-                } else if row > 1 {
-                    format!("Line {}\n", row)
-                } else {
-                    "".to_string()
+                let col_number_part = match options.include_column_number {
+                    true => format!("{}:", col),
+                    false => String::new(),
                 };
 
-                let msg = e
-                    .exception_message
-                    .split('\n')
-                    .map(|l| format!("= {}", l))
+                let source_line_part = match line {
+                    Some(s) => format!("| {s}\n| {padding}^\n"),
+                    None => String::new(),
+                };
+
+                let msg_part = msg_lines
+                    .into_iter()
+                    .map(|l| format!("= {l}"))
                     .collect::<Vec<_>>()
                     .join("\n");
-                format!("{fpos}| {line}\n| {}^\n{msg}", " ".repeat(col - start))
+
+                let position_part = format!("{line_number_part}{col_number_part}");
+                let position_part = match filename {
+                    None if position_part.is_empty() => String::new(),
+                    Some(f) if options.include_filename => format!("{f}:{position_part}\n"),
+                    _ => format!("At {position_part}\n"),
+                };
+
+                // Combine all the parts
+                format!("{position_part}{source_line_part}{msg_part}",)
             }
+
             _ => format!("{}", self),
         }
     }
@@ -157,35 +204,31 @@ map_error!(deno_core::futures::channel::oneshot::Canceled, |e| {
 
 #[cfg(test)]
 mod test {
-    use crate::{Module, Runtime};
+    use crate::{error::ErrorFormattingOptions, Module, Runtime, Undefined};
 
     #[test]
     #[rustfmt::skip]
     fn test_highlights() {
         let mut runtime = Runtime::new(Default::default()).unwrap();
 
-        let mut module = Module::new("", "1 + x");
-        let e = runtime
-            .load_module(&mut module)
-            .unwrap_err()
-            .as_highlighted();
+        let e = runtime.eval::<Undefined>("1+1;\n1 + x").unwrap_err().as_highlighted(Default::default());
         assert_eq!(e, concat!(
-            "Line 1:1\n",
+            "At 2:1:\n",
             "| 1 + x\n",
-            "|     ^\n",
-            "= Unexpected token '+'"
+            "| ^\n",
+            "= Uncaught ReferenceError: x is not defined"
         ));
 
-        let mut module = Module::new("test.js", "1 + x\n");
-        let e = runtime
-            .load_module(&mut module)
-            .unwrap_err()
-            .as_highlighted();
+        let module = Module::new("test.js", "1+1;\n1 + x");
+        let e = runtime.load_module(&module).unwrap_err().as_highlighted(ErrorFormattingOptions {
+            include_filename: false,
+            ..Default::default()
+        });
         assert_eq!(e, concat!(
-            "test.js:1\n",
+            "At 2:1:\n",
             "| 1 + x\n",
-            "|     ^\n",
-            "= Unexpected token '+'"
+            "| ^\n",
+            "= Uncaught (in promise) ReferenceError: x is not defined"
         ));
     }
 }

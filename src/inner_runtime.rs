@@ -89,6 +89,7 @@ impl Default for InnerRuntimeOptions {
 /// It provides a set of async functions that can be used to interact with the
 /// underlying deno runtime instance
 pub struct InnerRuntime {
+    pub module_loader: Rc<RustyLoader>,
     pub deno_runtime: JsRuntime,
     pub options: InnerRuntimeOptions,
 }
@@ -111,7 +112,7 @@ impl InnerRuntime {
                     transpile_extension(specifier, code)
                 })),
 
-                source_map_getter: Some(loader),
+                source_map_getter: Some(loader.clone()),
                 create_params: options.isolate_params,
 
                 startup_snapshot: options.startup_snapshot,
@@ -119,6 +120,8 @@ impl InnerRuntime {
 
                 ..Default::default()
             })?,
+
+            module_loader: loader,
 
             options: InnerRuntimeOptions {
                 timeout: options.timeout,
@@ -224,6 +227,10 @@ impl InnerRuntime {
     where
         T: DeserializeOwned,
     {
+        // Update source map cache
+        self.module_loader
+            .insert_source_map("", expr.to_string(), None);
+
         let result = self.deno_runtime().execute_script("", expr.to_string())?;
 
         let mut scope = self.deno_runtime.handle_scope();
@@ -449,13 +456,22 @@ impl InnerRuntime {
         // Get additional modules first
         for side_module in side_modules {
             let module_specifier = side_module.filename().to_module_specifier()?;
-            let (code, _) = transpiler::transpile(&module_specifier, side_module.contents())?;
-            let code = deno_core::FastString::from(code);
+            let (code, sourcemap) =
+                transpiler::transpile(&module_specifier, side_module.contents())?;
+            let fast_code = deno_core::FastString::from(code.clone());
 
             let s_modid = self
                 .deno_runtime
-                .load_side_es_module_from_code(&module_specifier, code)
+                .load_side_es_module_from_code(&module_specifier, fast_code)
                 .await?;
+
+            // Update source map cache
+            self.module_loader.insert_source_map(
+                module_specifier.as_str(),
+                code,
+                sourcemap.map(|s| s.to_vec()),
+            );
+
             let result = self.deno_runtime.mod_evaluate(s_modid);
             self.deno_runtime
                 .run_event_loop(PollEventLoopOptions::default())
@@ -467,13 +483,20 @@ impl InnerRuntime {
         // Load main module
         if let Some(module) = main_module {
             let module_specifier = module.filename().to_module_specifier()?;
-            let (code, _) = transpiler::transpile(&module_specifier, module.contents())?;
-            let code = deno_core::FastString::from(code);
+            let (code, sourcemap) = transpiler::transpile(&module_specifier, module.contents())?;
+            let fast_code = deno_core::FastString::from(code.clone());
 
             let module_id = self
                 .deno_runtime
-                .load_main_es_module_from_code(&module_specifier, code)
+                .load_main_es_module_from_code(&module_specifier, fast_code)
                 .await?;
+
+            // Update source map cache
+            self.module_loader.insert_source_map(
+                module_specifier.as_str(),
+                code,
+                sourcemap.map(|s| s.to_vec()),
+            );
 
             // Finish execution
             let result = self.deno_runtime.mod_evaluate(module_id);
@@ -512,11 +535,10 @@ impl InnerRuntime {
 mod test_inner_runtime {
     use serde::Deserialize;
 
-    use crate::{
-        async_callback,
-        js_value::{Function, Promise},
-        json_args, sync_callback,
-    };
+    use crate::{async_callback, js_value::Function, json_args, sync_callback};
+
+    #[cfg(any(feature = "web", feature = "web_stub"))]
+    use crate::js_value::Promise;
 
     use super::*;
 
@@ -598,6 +620,7 @@ mod test_inner_runtime {
         assert_eq!(result, 5);
     }
 
+    #[cfg(any(feature = "web", feature = "web_stub"))]
     #[test]
     fn test_eval() {
         let mut runtime = InnerRuntime::new(Default::default()).expect("Could not load runtime");
@@ -767,6 +790,7 @@ mod test_inner_runtime {
         assert_v8!(result, 5, usize, runtime);
     }
 
+    #[cfg(any(feature = "web", feature = "web_stub"))]
     #[test]
     fn test_toplevel_await() {
         let module = Module::new(
@@ -794,6 +818,7 @@ mod test_inner_runtime {
         assert_v8!(result, 2, usize, runtime);
     }
 
+    #[cfg(any(feature = "web", feature = "web_stub"))]
     #[test]
     fn test_promise() {
         let module = Module::new(
@@ -827,6 +852,7 @@ mod test_inner_runtime {
         });
     }
 
+    #[cfg(any(feature = "web", feature = "web_stub"))]
     #[test]
     fn test_async_fn() {
         let module = Module::new(
