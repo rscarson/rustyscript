@@ -863,8 +863,8 @@ dependencies = [
  "bytes",
  "data-url",
  "deno_core",
- "deno_permissions",
- "deno_tls",
+ "deno_permissions 0.19.0",
+ "deno_tls 0.146.0",
  "dyn-clone",
  "http",
  "reqwest",
@@ -919,13 +919,13 @@ dependencies = [
 
 [[package]]
 name = "deno_net"
-version = "0.151.0"
+version = "0.152.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8b98cca523af9a207d57aa363d967119b4a0f6c51f550f7dc728fbe617b92e76"
+checksum = "b2e34927c48e788d20a2419173a19b6ef127e6119d221d62ad7a14c305a74c40"
 dependencies = [
  "deno_core",
- "deno_permissions",
- "deno_tls",
+ "deno_permissions 0.20.0",
+ "deno_tls 0.147.0",
  "pin-project",
  "rustls-tokio-stream",
  "serde",
@@ -968,6 +968,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "deno_permissions"
+version = "0.20.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8aa186755e5876312f5a09b0f510fe0f764be948e574e64b089337298355aa3d"
+dependencies = [
+ "deno_core",
+ "deno_terminal",
+ "fqdn",
+ "libc",
+ "log",
+ "once_cell",
+ "serde",
+ "which 4.4.2",
+ "winapi",
+]
+
+[[package]]
 name = "deno_terminal"
 version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -982,6 +999,23 @@ name = "deno_tls"
 version = "0.146.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2b6b7fdc9fecc88e80a283e7ab2f1b085e1a24693824bf2469063b20cbbaadeb"
+dependencies = [
+ "deno_core",
+ "deno_native_certs",
+ "rustls",
+ "rustls-pemfile",
+ "rustls-tokio-stream",
+ "rustls-webpki",
+ "serde",
+ "tokio",
+ "webpki-roots",
+]
+
+[[package]]
+name = "deno_tls"
+version = "0.147.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b4d822c164302f83a42f7e357f34f2de2f3554a8f2876ee6eee71f3eb5a0a23f"
 dependencies = [
  "deno_core",
  "deno_native_certs",
@@ -1023,7 +1057,7 @@ dependencies = [
  "base64-simd 0.8.0",
  "bytes",
  "deno_core",
- "deno_permissions",
+ "deno_permissions 0.19.0",
  "encoding_rs",
  "flate2",
  "futures",
@@ -2826,7 +2860,7 @@ dependencies = [
  "deno_fetch",
  "deno_io",
  "deno_net",
- "deno_tls",
+ "deno_tls 0.146.0",
  "deno_url",
  "deno_web",
  "deno_webidl",
