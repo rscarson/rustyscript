@@ -42,8 +42,7 @@ impl String {
     pub(crate) fn to_utf16_buffer(&self, scope: &mut HandleScope<'_>) -> Vec<u16> {
         let local = self.0.as_local(scope);
         let u16_len = local.length();
-        let mut buffer = Vec::with_capacity(u16_len);
-        buffer.resize(u16_len, 0);
+        let mut buffer = vec![0; u16_len];
 
         local.write(scope, &mut buffer, 0, WriteOptions::NO_NULL_TERMINATION);
         buffer
@@ -52,8 +51,7 @@ impl String {
     pub(crate) fn to_utf8_buffer(&self, scope: &mut HandleScope<'_>) -> Vec<u8> {
         let local = self.0.as_local(scope);
         let u8_len = local.utf8_length(scope);
-        let mut buffer = Vec::with_capacity(u8_len);
-        buffer.resize(u8_len, 0);
+        let mut buffer = vec![0; u8_len];
 
         local.write_utf8(scope, &mut buffer, None, WriteOptions::NO_NULL_TERMINATION);
         buffer

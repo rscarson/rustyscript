@@ -75,7 +75,7 @@ impl Map {
         let value = local.get(scope, key.into())?;
 
         let value = v8::Global::new(scope, value);
-        Some(crate::js_value::Value::from_v8(value).ok()?)
+        crate::js_value::Value::from_v8(value).ok()
     }
 
     pub(crate) fn get_string_keys(&self, scope: &mut HandleScope) -> Vec<String> {

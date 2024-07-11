@@ -62,6 +62,14 @@ where
         self.workers.len()
     }
 
+    /// Check if the pool is empty
+    /// This will be true if the pool has no workers
+    /// This can happen if the pool was created with 0 workers
+    /// Which is not particularly useful, but is allowed
+    pub fn is_empty(&self) -> bool {
+        self.workers.is_empty()
+    }
+
     /// Get a worker by its index in the pool
     pub fn worker_by_id(&self, id: usize) -> Option<Rc<RefCell<Worker<W>>>> {
         Some(Rc::clone(self.workers.get(id)?))
