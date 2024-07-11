@@ -834,7 +834,7 @@ dependencies = [
  "ctr",
  "curve25519-dalek",
  "deno_core",
- "deno_web",
+ "deno_web 0.190.0",
  "elliptic-curve",
  "num-traits",
  "once_cell",
@@ -863,7 +863,7 @@ dependencies = [
  "bytes",
  "data-url",
  "deno_core",
- "deno_permissions",
+ "deno_permissions 0.19.0",
  "deno_tls",
  "dyn-clone",
  "http",
@@ -924,7 +924,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8b98cca523af9a207d57aa363d967119b4a0f6c51f550f7dc728fbe617b92e76"
 dependencies = [
  "deno_core",
- "deno_permissions",
+ "deno_permissions 0.19.0",
  "deno_tls",
  "pin-project",
  "rustls-tokio-stream",
@@ -955,6 +955,23 @@ name = "deno_permissions"
 version = "0.19.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fcf036d579c7f7d6d7858677a62218a65dcf1359ef94ebfe47f77e27680a2592"
+dependencies = [
+ "deno_core",
+ "deno_terminal",
+ "fqdn",
+ "libc",
+ "log",
+ "once_cell",
+ "serde",
+ "which 4.4.2",
+ "winapi",
+]
+
+[[package]]
+name = "deno_permissions"
+version = "0.20.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8aa186755e5876312f5a09b0f510fe0f764be948e574e64b089337298355aa3d"
 dependencies = [
  "deno_core",
  "deno_terminal",
@@ -1023,7 +1040,26 @@ dependencies = [
  "base64-simd 0.8.0",
  "bytes",
  "deno_core",
- "deno_permissions",
+ "deno_permissions 0.19.0",
+ "encoding_rs",
+ "flate2",
+ "futures",
+ "serde",
+ "tokio",
+ "uuid",
+]
+
+[[package]]
+name = "deno_web"
+version = "0.191.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0a3f71cc755cf2f4cf814ce6d28c1762568e8b7e0589153c8630246ad94aa504"
+dependencies = [
+ "async-trait",
+ "base64-simd 0.8.0",
+ "bytes",
+ "deno_core",
+ "deno_permissions 0.20.0",
  "encoding_rs",
  "flate2",
  "futures",
@@ -1048,7 +1084,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4f3004c915932a304f0a1fe4d6758763dfa8a61f55f405ca6aaaa4896a9ff187"
 dependencies = [
  "deno_core",
- "deno_web",
+ "deno_web 0.190.0",
  "rusqlite",
 ]
 
@@ -2828,7 +2864,7 @@ dependencies = [
  "deno_net",
  "deno_tls",
  "deno_url",
- "deno_web",
+ "deno_web 0.191.0",
  "deno_webidl",
  "deno_webstorage",
  "libc",
