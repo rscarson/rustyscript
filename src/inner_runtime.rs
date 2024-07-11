@@ -65,6 +65,10 @@ pub struct InnerRuntimeOptions {
     /// This can be used to alter the behavior of the runtime.
     /// See the rusty_v8 documentation for more information
     pub isolate_params: Option<v8::CreateParams>,
+
+    /// Optional shared array buffer store to use for the runtime
+    /// Allows data-sharing between runtimes across threads
+    pub shared_array_buffer_store: Option<deno_core::SharedArrayBufferStore>,
 }
 
 impl Default for InnerRuntimeOptions {
@@ -76,6 +80,7 @@ impl Default for InnerRuntimeOptions {
             module_cache: None,
             startup_snapshot: None,
             isolate_params: None,
+            shared_array_buffer_store: None,
 
             extension_options: Default::default(),
         }
@@ -114,6 +119,7 @@ impl InnerRuntime {
 
                 source_map_getter: Some(loader.clone()),
                 create_params: options.isolate_params,
+                shared_array_buffer_store: options.shared_array_buffer_store,
 
                 startup_snapshot: options.startup_snapshot,
                 extensions,
@@ -660,6 +666,11 @@ mod test_inner_runtime {
 
         let rt = &mut runtime;
         let module = run_async_task(|| async move { rt.load_modules(Some(&module), vec![]).await });
+
+        let v = runtime
+            .get_value_ref(None, "a")
+            .expect("Could not find global");
+        assert_v8!(v, 2, usize, runtime);
 
         let v = runtime
             .get_value_ref(Some(&module), "a")

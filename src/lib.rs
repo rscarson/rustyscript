@@ -258,9 +258,9 @@ mod snapshot_builder;
 pub use snapshot_builder::SnapshotBuilder;
 
 pub mod cache_provider;
+pub mod error;
 pub mod js_value;
 
-mod error;
 mod ext;
 mod inner_runtime;
 mod module;

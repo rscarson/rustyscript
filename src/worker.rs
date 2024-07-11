@@ -16,6 +16,8 @@
 //! }
 
 use crate::Error;
+use std::cell::RefCell;
+use std::rc::Rc;
 use std::sync::mpsc::{channel, Receiver, Sender};
 use std::thread::{spawn, JoinHandle};
 
@@ -26,7 +28,7 @@ pub struct WorkerPool<W>
 where
     W: InnerWorker,
 {
-    workers: Vec<Worker<W>>,
+    workers: Vec<Rc<RefCell<Worker<W>>>>,
     next_worker: usize,
 }
 
@@ -39,7 +41,7 @@ where
         crate::init_platform(n_workers, true);
         let mut workers = Vec::with_capacity(n_workers as usize + 1);
         for _ in 0..n_workers {
-            workers.push(Worker::new(options.clone())?);
+            workers.push(Rc::new(RefCell::new(Worker::new(options.clone())?)));
         }
 
         Ok(Self {
@@ -51,7 +53,7 @@ where
     /// Stop all workers in the pool and wait for them to finish
     pub fn shutdown(self) {
         for worker in self.workers {
-            worker.shutdown();
+            worker.borrow_mut().shutdown();
         }
     }
 
@@ -61,34 +63,21 @@ where
     }
 
     /// Get a worker by its index in the pool
-    pub fn worker_by_id(&self, id: usize) -> Option<&Worker<W>> {
-        self.workers.get(id)
-    }
-
-    /// Get a mutable worker by its index in the pool
-    pub fn worker_by_id_mut(&mut self, id: usize) -> Option<&mut Worker<W>> {
-        self.workers.get_mut(id)
+    pub fn worker_by_id(&self, id: usize) -> Option<Rc<RefCell<Worker<W>>>> {
+        Some(Rc::clone(self.workers.get(id)?))
     }
 
     /// Get the next worker in the pool
-    pub fn next_worker(&mut self) -> &Worker<W> {
+    pub fn next_worker(&mut self) -> Rc<RefCell<Worker<W>>> {
         let worker = &self.workers[self.next_worker];
         self.next_worker = (self.next_worker + 1) % self.workers.len();
-        worker
-    }
-
-    /// Get the next worker in the pool as a mutable reference
-    pub fn next_worker_mut(&mut self) -> &mut Worker<W> {
-        let len = self.workers.len();
-        let worker = &mut self.workers[self.next_worker];
-        self.next_worker = (self.next_worker + 1) % len;
-        worker
+        Rc::clone(worker)
     }
 
     /// Send a request to the next worker in the pool
     /// This will block the current thread until the response is received
     pub fn send_and_await(&mut self, query: W::Query) -> Result<W::Response, Error> {
-        self.next_worker_mut().send_and_await(query)
+        self.next_worker().borrow().send_and_await(query)
     }
 
     /// Evaluate a string of non-ecma javascript code in a separate thread
@@ -117,8 +106,8 @@ pub struct Worker<W>
 where
     W: InnerWorker,
 {
-    handle: JoinHandle<()>,
-    tx: Sender<W::Query>,
+    handle: Option<JoinHandle<()>>,
+    tx: Option<Sender<W::Query>>,
     rx: Receiver<W::Response>,
 }
 
@@ -150,8 +139,8 @@ where
         });
 
         let worker = Self {
-            handle,
-            tx: qtx,
+            handle: Some(handle),
+            tx: Some(qtx),
             rx: rrx,
         };
 
@@ -167,6 +156,7 @@ where
                 // This can be replaced with `?` by calling `try_new` on the deno_core::Runtime once that change makes it into a release
                 let e = worker
                     .handle
+                    .expect("Thread handle missing")
                     .join()
                     .err()
                     .and_then(|e| {
@@ -189,23 +179,28 @@ where
     }
 
     /// Stop the worker and wait for it to finish
-    /// Consumes the worker
     /// Stops by destroying the sender, which will cause the thread to exit the loop and finish
     /// If implementing a custom `thread` function, make sure to handle rx failures gracefully
-    pub fn shutdown(self) {
-        // We can stop the thread by destroying the sender
-        // This will cause the thread to exit the loop and finish
-        drop(self.tx);
-        self.handle.join().ok();
+    /// Otherwise this will block indefinitely
+    pub fn shutdown(&mut self) {
+        if let (Some(tx), Some(hnd)) = (self.tx.take(), self.handle.take()) {
+            // We can stop the thread by destroying the sender
+            // This will cause the thread to exit the loop and finish
+            drop(tx);
+            hnd.join().ok();
+        }
     }
 
     /// Send a request to the worker
     /// This will not block the current thread
     /// Will return an error if the worker has stopped or panicked
     pub fn send(&self, query: W::Query) -> Result<(), Error> {
-        self.tx
-            .send(query)
-            .map_err(|e| Error::Runtime(e.to_string()))
+        match &self.tx {
+            None => return Err(Error::WorkerHasStopped),
+            Some(tx) => tx,
+        }
+        .send(query)
+        .map_err(|e| Error::Runtime(e.to_string()))
     }
 
     /// Receive a response from the worker
@@ -227,9 +222,12 @@ where
     /// WARNING: This will block the current thread until the worker has finished
     ///          Make sure to send a stop message to the worker before calling this!
     pub fn join(self) -> Result<(), Error> {
-        self.handle
-            .join()
-            .map_err(|_| Error::Runtime("Worker thread panicked".to_string()))
+        match self.handle {
+            Some(hnd) => hnd
+                .join()
+                .map_err(|_| Error::Runtime("Worker thread panicked".to_string())),
+            None => Ok(()),
+        }
     }
 }
 
@@ -305,6 +303,8 @@ impl InnerWorker for DefaultWorker {
         let runtime = crate::Runtime::new(crate::RuntimeOptions {
             default_entrypoint: options.default_entrypoint,
             timeout: options.timeout,
+            shared_array_buffer_store: options.shared_array_buffer_store,
+            startup_snapshot: options.startup_snapshot,
             ..Default::default()
         })?;
         let modules = std::collections::HashMap::new();
@@ -522,6 +522,16 @@ pub struct DefaultWorkerOptions {
 
     /// The timeout to use for the runtime
     pub timeout: std::time::Duration,
+
+    /// Optional snapshot to load into the runtime
+    /// This will reduce load times, but requires the same extensions to be loaded
+    /// as when the snapshot was created
+    /// If provided, user-supplied extensions must be instantiated with `init_ops` instead of `init_ops_and_esm`
+    pub startup_snapshot: Option<&'static [u8]>,
+
+    /// Optional shared array buffer store to use for the runtime
+    /// Allows data-sharing between runtimes across threads
+    pub shared_array_buffer_store: Option<deno_core::SharedArrayBufferStore>,
 }
 
 /// Query types for the default worker

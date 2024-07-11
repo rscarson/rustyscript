@@ -127,6 +127,10 @@ name = "default_threaded_worker"
 required-features = ["worker"]
 
 [[example]]
+name = "worker_pool"
+required-features = ["worker"]
+
+[[example]]
 name = "create_snapshot"
 required-features = ["snapshot_builder"]
 

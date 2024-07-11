@@ -1,11 +1,21 @@
+//! Contains the error type for the runtime
+//! And some associated utilities
 use crate::Module;
 use thiserror::Error;
 
 /// Options for [Error::as_highlighted]
 #[derive(Debug, Clone)]
 pub struct ErrorFormattingOptions {
+    /// Include the filename in the output
+    /// Appears on the first line
     pub include_filename: bool,
+
+    /// Include the line number in the output
+    /// Appears on the first line
     pub include_line_number: bool,
+
+    /// Include the column number in the output
+    /// Appears on the first line
     pub include_column_number: bool,
 }
 impl Default for ErrorFormattingOptions {
@@ -44,6 +54,10 @@ pub enum Error {
     /// Triggers when a module could not be loaded from the filesystem
     #[error("{0}")]
     ModuleNotFound(String),
+
+    /// Triggers when attempting to use a worker that has already been shutdown
+    #[error("This worker has been destroyed")]
+    WorkerHasStopped,
 
     /// Triggers on runtime issues during execution of a module
     #[error("{0}")]
