@@ -25,7 +25,7 @@ jobs:
       run: cargo run --example web_features --features "web"
 
     - name: url_imports
-      run: cargo run --example url_import `--features="fs_import url_import"
+      run: cargo run --example url_import --features="fs_import url_import"
 
     - name: typescript_modules
       run: cargo run --example typescript_modules

@@ -12,7 +12,7 @@ const {
   Symbol,
 } = primordials;
 
-import * as webidl from "ext:deno_web/00_webidl.js";
+import * as webidl from "ext:deno_webidl/00_webidl.js";
 
 const _name = Symbol("name");
 const _message = Symbol("message");
