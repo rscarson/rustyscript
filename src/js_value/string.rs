@@ -20,14 +20,14 @@ impl String {
         self.to_rust_string_lossy(&mut scope)
     }
 
-    /// Converts the string to a UTF-8 character buffer in the form of a Vec<u8>
+    /// Converts the string to a UTF-8 character buffer in the form of a `Vec<u8>`
     /// Excludes the null terminator
     pub fn to_utf8_bytes(&self, runtime: &mut crate::Runtime) -> Vec<u8> {
         let mut scope = runtime.deno_runtime().handle_scope();
         self.to_utf8_buffer(&mut scope)
     }
 
-    /// Converts the string to a UTF-16 character buffer in the form of a Vec<u16>
+    /// Converts the string to a UTF-16 character buffer in the form of a `Vec<u16>`
     /// Excludes the null terminator
     pub fn to_utf16_bytes(&self, runtime: &mut crate::Runtime) -> Vec<u16> {
         let mut scope = runtime.deno_runtime().handle_scope();

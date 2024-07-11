@@ -63,8 +63,8 @@ jobs:
     - name: custom_threaded_worker
       run: cargo run --example custom_threaded_worker --features "worker"
 
-    - name: custom_runtime
-      run: cargo run --example custom_runtime
+    - name: custom_runtimes
+      run: cargo run --example custom_runtimes
 
     - name: create_snapshot
       run: cargo run --example create_snapshot --features "snapshot_builder"

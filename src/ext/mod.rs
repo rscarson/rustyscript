@@ -86,9 +86,6 @@ pub fn all_extensions(
     #[cfg(feature = "webidl")]
     extensions.extend(webidl::extensions());
 
-    #[cfg(feature = "cache")]
-    extensions.extend(cache::extensions(options.cache));
-
     #[cfg(feature = "console")]
     extensions.extend(console::extensions());
 
@@ -97,6 +94,9 @@ pub fn all_extensions(
 
     #[cfg(feature = "web")]
     extensions.extend(web::extensions(options.web));
+
+    #[cfg(feature = "cache")]
+    extensions.extend(cache::extensions(options.cache));
 
     #[cfg(all(not(feature = "web"), feature = "web_stub"))]
     extensions.extend(web_stub::extensions());
@@ -127,9 +127,6 @@ pub fn all_snapshot_extensions(
     #[cfg(feature = "webidl")]
     extensions.extend(webidl::snapshot_extensions());
 
-    #[cfg(feature = "cache")]
-    extensions.extend(cache::snapshot_extensions(options.cache));
-
     #[cfg(feature = "console")]
     extensions.extend(console::snapshot_extensions());
 
@@ -138,6 +135,9 @@ pub fn all_snapshot_extensions(
 
     #[cfg(feature = "web")]
     extensions.extend(web::snapshot_extensions(options.web));
+
+    #[cfg(feature = "cache")]
+    extensions.extend(cache::snapshot_extensions(options.cache));
 
     #[cfg(all(not(feature = "web"), feature = "web_stub"))]
     extensions.extend(web_stub::snapshot_extensions());

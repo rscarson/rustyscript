@@ -235,7 +235,6 @@ impl Runtime {
 
     /// Register a rust function to be callable from JS
     /// - The [[crate::sync_callback] macro can be used to simplify this process
-    /// - For better performance, consider using [Runtime::register_op] or an extension instead
     ///
     /// ```rust
     /// use rustyscript::{ Runtime, Module, serde_json::Value };
@@ -262,7 +261,6 @@ impl Runtime {
 
     /// Register a non-blocking rust function to be callable from JS
     /// - The [[crate::async_callback] macro can be used to simplify this process
-    /// - For better performance, consider using [Runtime::register_op] or an extension instead
     ///
     /// ```rust
     /// use rustyscript::{ Runtime, Module, serde_json::Value, async_callback, Error };

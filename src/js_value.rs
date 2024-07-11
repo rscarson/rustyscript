@@ -29,6 +29,8 @@ macro_rules! impl_v8 {
                 Ok(Self(inner $(, std::marker::PhantomData::<$generic>)?))
             }
         }
+
+        #[allow(clippy::from_over_into)]
         impl $(<$generic>)? Into<v8::Global<v8::Value>> for $name $(<$generic>)? $(where $generic: serde::de::DeserializeOwned)? {
             fn into(self) -> v8::Global<v8::Value> {
                 self.0 .0
