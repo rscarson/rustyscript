@@ -24,12 +24,10 @@
 //! let module = Module::new(
 //!     "test.js",
 //!     "
-//!     rustyscript.register_entrypoint(
-//!         (string, integer) => {
-//!             console.log(`Hello world: string=${string}, integer=${integer}`);
-//!             return 2;
-//!         }
-//!     )
+//!     export default (string, integer) => {
+//!         console.log(`Hello world: string=${string}, integer=${integer}`);
+//!         return 2;
+//!     }
 //!     "
 //! );
 //!

@@ -138,7 +138,7 @@ impl Runtime {
     ///     function load(obj) {
     ///         console.log(`Hello world: a=${obj.a}, b=${obj.b}`);
     ///     }
-    ///     rustyscript.register_entrypoint(load);
+    ///     export default load;
     /// ");
     ///
     /// #[derive(Serialize)]
@@ -678,7 +678,7 @@ impl Runtime {
     ///
     /// # fn main() -> Result<(), Error> {
     /// let mut runtime = Runtime::new(Default::default())?;
-    /// let module = Module::new("test.js", "rustyscript.register_entrypoint(() => 'test')");
+    /// let module = Module::new("test.js", "export default () => 'test'");
     /// runtime.load_module(&module);
     /// # Ok(())
     /// # }
@@ -730,7 +730,7 @@ impl Runtime {
     ///
     /// # fn main() -> Result<(), Error> {
     /// let mut runtime = Runtime::new(Default::default())?;
-    /// let module = Module::new("test.js", "rustyscript.register_entrypoint(() => 'test')");
+    /// let module = Module::new("test.js", "export default () => 'test'");
     /// runtime.load_modules(&module, vec![]);
     /// # Ok(())
     /// # }
@@ -791,7 +791,7 @@ impl Runtime {
     ///
     /// # fn main() -> Result<(), Error> {
     /// let mut runtime = Runtime::new(Default::default())?;
-    /// let module = Module::new("test.js", "rustyscript.register_entrypoint(() => 'test')");
+    /// let module = Module::new("test.js", "export default () => 'test'");
     /// let module = runtime.load_module(&module)?;
     ///
     /// // Run the entrypoint and handle the result
@@ -868,7 +868,7 @@ impl Runtime {
     ///
     /// # fn main() -> Result<(), Error> {
     /// let mut runtime = Runtime::new(Default::default())?;
-    /// let module = Module::new("test.js", "rustyscript.register_entrypoint(() => 'test')");
+    /// let module = Module::new("test.js", "export default () => 'test'");
     /// let module = runtime.load_module(&module)?;
     ///
     /// // Run the entrypoint and handle the result
@@ -918,7 +918,7 @@ impl Runtime {
     /// use rustyscript::{json_args, Runtime, Module, Error};
     ///
     /// # fn main() -> Result<(), Error> {
-    /// let module = Module::new("test.js", "rustyscript.register_entrypoint(() => 2)");
+    /// let module = Module::new("test.js", "export default () => 2");
     /// let value: usize = Runtime::execute_module(&module, vec![], Default::default(), json_args!())?;
     /// # Ok(())
     /// # }
@@ -1019,7 +1019,7 @@ mod test_runtime {
         let module = Module::new(
             "test.js",
             "
-            rustyscript.register_entrypoint(() => 2);
+            export default () => 2;
         ",
         );
         let module = runtime

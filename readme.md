@@ -1,7 +1,7 @@
 ## Effortless JS Integration for Rust
 
 [![Crates.io](https://img.shields.io/crates/v/rustyscript.svg)](https://crates.io/crates/rustyscript)
-[![Build Status](https://github.com/rscarson/rustyscript/workflows/Rust/badge.svg)](https://github.com/rscarson/rustyscript/actions?query=branch%3Amaster)
+[![Build Status](https://github.com/rscarson/rustyscript/workflows/Tests/badge.svg)](https://github.com/rscarson/rustyscript/actions?query=branch%3Amaster)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](https://raw.githubusercontent.com/rscarson/rustyscript/master/LICENSE)
 
 <!-- cargo-rdme start -->
@@ -31,12 +31,10 @@ use rustyscript::{json_args, Runtime, Module, Error};
 let module = Module::new(
     "test.js",
     "
-    rustyscript.register_entrypoint(
-        (string, integer) => {
-            console.log(`Hello world: string=${string}, integer=${integer}`);
-            return 2;
-        }
-    )
+    export default (string, integer) => {
+        console.log(`Hello world: string=${string}, integer=${integer}`);
+        return 2;
+    }
     "
 );
 

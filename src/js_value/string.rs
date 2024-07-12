@@ -13,11 +13,18 @@ impl_checker!(StringTypeChecker, String, is_string, |e| {
 
 impl String {
     /// Converts the string to a rust string
-    /// Potentially lossy, due to encoding differences
-    /// between JS (UTF-16) and Rust (UTF-8)
-    pub fn to_string(&self, runtime: &mut crate::Runtime) -> std::string::String {
+    /// Potentially lossy, if the string contains orphan UTF-16 surrogates
+    pub fn to_string_lossy(&self, runtime: &mut crate::Runtime) -> std::string::String {
         let mut scope = runtime.deno_runtime().handle_scope();
         self.to_rust_string_lossy(&mut scope)
+    }
+
+    /// Converts the string to a rust string
+    /// If the string contains orphan UTF-16 surrogates, it may return None
+    /// In that case, you can use `to_string_lossy` to get a lossy conversion
+    pub fn to_string(&self, runtime: &mut crate::Runtime) -> Option<std::string::String> {
+        let bytes = self.to_utf8_bytes(runtime);
+        std::string::String::from_utf8(bytes).ok()
     }
 
     /// Converts the string to a UTF-8 character buffer in the form of a `Vec<u8>`
@@ -80,7 +87,11 @@ mod test {
         let handle = runtime.load_module(&module).unwrap();
 
         let f: String = runtime.get_value(Some(&handle), "good").unwrap();
-        let value = f.to_string(&mut runtime);
+        let value = f.to_string_lossy(&mut runtime);
+        assert_eq!(value, "Hello, World!");
+
+        let f: String = runtime.get_value(Some(&handle), "good").unwrap();
+        let value = f.to_string(&mut runtime).unwrap();
         assert_eq!(value, "Hello, World!");
 
         let f: String = runtime.get_value(Some(&handle), "bad").unwrap();
