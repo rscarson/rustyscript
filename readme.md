@@ -23,7 +23,7 @@ I also have attempted to abstract away the v8 engine details so you can for the 
 Here is a very basic use of this crate to execute a JS module. It will:
 - Create a basic runtime
 - Load a javascript module,
-- Call the default function (you can use `export default`, or call `rustyscript.register_entrypoint(f)` from javascript)
+- Call a function registered as the entrypoint
 - Return the resulting value
 ```rust
 use rustyscript::{json_args, Runtime, Module, Error};
