@@ -78,7 +78,7 @@ worker = []
 #
 
 [dependencies]
-thiserror = "1.0.61"
+thiserror = "1.0.62"
 serde = "1.0.204"
 
 # The deno runtime itself, and the webidl extension for the web APIs
