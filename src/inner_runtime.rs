@@ -438,6 +438,41 @@ impl InnerRuntime {
         }
     }
 
+    /// Get the entrypoint function for a module
+    pub fn get_module_entrypoint(
+        &mut self,
+        module_context: &mut ModuleHandle,
+        default: Option<&str>,
+    ) -> Result<Option<v8::Global<v8::Function>>, Error> {
+        // Try to get an entrypoint from a call to `rustyscript.register_entrypoint` first
+        let state = self.deno_runtime.op_state();
+        let mut deep_state = state.try_borrow_mut()?;
+        let entrypoint = deep_state.try_take::<v8::Global<v8::Function>>();
+        if let Some(entrypoint) = entrypoint {
+            return Ok(Some(entrypoint));
+        }
+
+        // Try to get an entrypoint from the default export next
+        if let Ok(default_export) = self.get_module_export_value(module_context, "default") {
+            let mut scope = self.deno_runtime.handle_scope();
+            let default_export = v8::Local::new(&mut scope, default_export);
+            if default_export.is_function() {
+                if let Ok(f) = v8::Local::<v8::Function>::try_from(default_export) {
+                    return Ok(Some(v8::Global::new(&mut scope, f)));
+                }
+            }
+        }
+
+        // Try to get an entrypoint from the default entrypoint
+        if let Some(default) = default {
+            if let Ok(f) = self.get_function_by_name(Some(module_context), default) {
+                return Ok(Some(f));
+            }
+        }
+
+        Ok(None)
+    }
+
     /// Load one or more modules
     /// Returns a future that resolves to a handle to the main module, or the last
     /// side-module
@@ -516,23 +551,14 @@ impl InnerRuntime {
             module_handle_stub = ModuleHandle::new(module, module_id, None);
         }
 
-        // Try to get an entrypoint
-        let state = self.deno_runtime().op_state();
-        let mut deep_state = state.try_borrow_mut()?;
-        let f_entrypoint = match deep_state.try_take::<v8::Global<v8::Function>>() {
-            Some(entrypoint) => Some(entrypoint),
-            None => match default_entrypoint {
-                None => None,
-                Some(entrypoint) => self
-                    .get_function_by_name(Some(&module_handle_stub), &entrypoint)
-                    .ok(),
-            },
-        };
+        // Try to get the default entrypoint
+        let entrypoint =
+            self.get_module_entrypoint(&mut module_handle_stub, default_entrypoint.as_deref())?;
 
         Ok(ModuleHandle::new(
             module_handle_stub.module(),
             module_handle_stub.id(),
-            f_entrypoint,
+            entrypoint,
         ))
     }
 }
