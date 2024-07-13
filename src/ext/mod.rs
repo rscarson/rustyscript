@@ -165,6 +165,11 @@ pub fn all_snapshot_extensions(
         options.webstorage_origin_storage_dir,
     ));
 
+    #[cfg(feature = "websocket")]
+    extensions.extend(websocket::snapshot_extensions(
+        options.websocket,
+    ));
+
     extensions.extend(user_extensions);
     extensions
 }
