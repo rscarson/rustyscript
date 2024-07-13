@@ -1,11 +1,11 @@
-use std::sync::Arc;
-use deno_core::{extension, Extension};
-use deno_core::error::AnyError;
-use deno_core::url::Url;
-use deno_tls::RootCertStoreProvider;
-use deno_websocket::WebSocketPermissions;
 use crate::ext::web::Permissions;
 use crate::WebOptions;
+use deno_core::error::AnyError;
+use deno_core::url::Url;
+use deno_core::{extension, Extension};
+use deno_tls::RootCertStoreProvider;
+use deno_websocket::WebSocketPermissions;
+use std::sync::Arc;
 
 extension!(
     init_websocket,
@@ -41,7 +41,7 @@ pub fn extensions(options: WebSocketOptions) -> Vec<Extension> {
         deno_websocket::deno_websocket::init_ops_and_esm::<Permissions>(
             options.user_agent,
             options.root_cert_store_provider,
-            options.unsafely_ignore_certificate_errors
+            options.unsafely_ignore_certificate_errors,
         ),
         init_websocket::init_ops_and_esm(),
     ]
@@ -52,7 +52,7 @@ pub fn snapshot_extensions(options: WebSocketOptions) -> Vec<Extension> {
         deno_websocket::deno_websocket::init_ops::<Permissions>(
             options.user_agent,
             options.root_cert_store_provider,
-            options.unsafely_ignore_certificate_errors
+            options.unsafely_ignore_certificate_errors,
         ),
         init_websocket::init_ops(),
     ]

@@ -1,7 +1,7 @@
 ///
 /// This example demonstrates how to use websockets.
 ///
-use rustyscript::{Error, json_args, Module, Runtime, RuntimeOptions, Undefined};
+use rustyscript::{json_args, Error, Module, Runtime, RuntimeOptions, Undefined};
 
 fn main() -> Result<(), Error> {
     let module = Module::new(
