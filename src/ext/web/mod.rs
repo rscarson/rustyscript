@@ -78,6 +78,7 @@ extension!(
 );
 
 /// Options for configuring the web related extensions
+#[derive(Clone)]
 pub struct WebOptions {
     /// Base URL for some deno_web OPs
     pub base_url: Option<ModuleSpecifier>,

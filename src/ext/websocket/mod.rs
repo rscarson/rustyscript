@@ -5,6 +5,7 @@ use deno_core::url::Url;
 use deno_tls::RootCertStoreProvider;
 use deno_websocket::WebSocketPermissions;
 use crate::ext::web::Permissions;
+use crate::WebOptions;
 
 extension!(
     init_websocket,
@@ -19,12 +20,12 @@ pub struct WebSocketOptions {
     pub unsafely_ignore_certificate_errors: Option<Vec<String>>,
 }
 
-impl Default for WebSocketOptions {
-    fn default() -> Self {
+impl From<WebOptions> for WebSocketOptions {
+    fn from(options: WebOptions) -> Self {
         Self {
-            user_agent: "".to_string(),
-            root_cert_store_provider: None,
-            unsafely_ignore_certificate_errors: None,
+            user_agent: options.user_agent,
+            root_cert_store_provider: options.root_cert_store_provider,
+            unsafely_ignore_certificate_errors: options.unsafely_ignore_certificate_errors,
         }
     }
 }

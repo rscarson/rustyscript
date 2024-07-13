@@ -79,7 +79,7 @@ impl Default for ExtensionOptions {
             cache: None,
 
             #[cfg(feature = "websocket")]
-            websocket: websocket::WebSocketOptions::default()
+            websocket: websocket::WebSocketOptions::from(web::WebOptions::default())
         }
     }
 }
@@ -102,7 +102,7 @@ pub fn all_extensions(
     extensions.extend(url::extensions());
 
     #[cfg(feature = "web")]
-    extensions.extend(web::extensions(options.web));
+    extensions.extend(web::extensions(options.web.clone()));
 
     #[cfg(feature = "cache")]
     extensions.extend(cache::extensions(options.cache));
@@ -122,7 +122,7 @@ pub fn all_extensions(
     ));
 
     #[cfg(feature = "websocket")]
-    extensions.extend(websocket::extensions(options.websocket));
+    extensions.extend(websocket::extensions(websocket::WebSocketOptions::from(options.web)));
 
     extensions.extend(user_extensions);
     extensions
@@ -146,7 +146,7 @@ pub fn all_snapshot_extensions(
     extensions.extend(url::snapshot_extensions());
 
     #[cfg(feature = "web")]
-    extensions.extend(web::snapshot_extensions(options.web));
+    extensions.extend(web::snapshot_extensions(options.web.clone()));
 
     #[cfg(feature = "cache")]
     extensions.extend(cache::snapshot_extensions(options.cache));
@@ -166,9 +166,7 @@ pub fn all_snapshot_extensions(
     ));
 
     #[cfg(feature = "websocket")]
-    extensions.extend(websocket::snapshot_extensions(
-        options.websocket,
-    ));
+    extensions.extend(websocket::snapshot_extensions(websocket::WebSocketOptions::from(options.web)));
 
     extensions.extend(user_extensions);
     extensions
