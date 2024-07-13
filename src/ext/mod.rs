@@ -116,9 +116,7 @@ pub fn all_extensions(
     ));
 
     #[cfg(feature = "websocket")]
-    extensions.extend(websocket::extensions(websocket::WebSocketOptions::from(
-        options.web.clone(),
-    )));
+    extensions.extend(websocket::extensions(options.web.clone()));
 
     extensions.extend(user_extensions);
     extensions
@@ -162,9 +160,7 @@ pub fn all_snapshot_extensions(
     ));
 
     #[cfg(feature = "websocket")]
-    extensions.extend(websocket::snapshot_extensions(
-        websocket::WebSocketOptions::from(options.web.clone()),
-    ));
+    extensions.extend(websocket::snapshot_extensions(options.web.clone()));
 
     extensions.extend(user_extensions);
     extensions
