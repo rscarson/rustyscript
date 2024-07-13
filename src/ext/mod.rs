@@ -57,7 +57,7 @@ pub struct ExtensionOptions {
     pub cache: Option<deno_cache::CreateCache<deno_cache::SqliteBackedCache>>,
 
     #[cfg(feature = "websocket")]
-    pub websocket_user_agent: String,
+    pub websocket: websocket::WebSocketOptions,
 }
 
 impl Default for ExtensionOptions {
@@ -79,7 +79,7 @@ impl Default for ExtensionOptions {
             cache: None,
 
             #[cfg(feature = "websocket")]
-            websocket_user_agent: String::from("Deno"),
+            websocket: websocket::WebSocketOptions::default()
         }
     }
 }
@@ -122,7 +122,7 @@ pub fn all_extensions(
     ));
 
     #[cfg(feature = "websocket")]
-    extensions.extend(websocket::extensions(options.websocket_user_agent));
+    extensions.extend(websocket::extensions(options.websocket));
 
     extensions.extend(user_extensions);
     extensions
