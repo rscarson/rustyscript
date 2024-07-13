@@ -12,19 +12,20 @@ fn main() -> Result<(), Error> {
                 const ws = new WebSocket(url);
 
                 ws.addEventListener('open', () => {
-                    console.log(ws.readyState);
+                    console.log('WebSocket connection opened');
+                    console.log(`Sending message 'ping'`);
                     ws.send('ping');
                 });
 
                 ws.addEventListener('message', (event) => {
-                    console.log(event.data);
+                    console.log(`Received '${event.data}'`);
                     ws.close();
                 });
 
                 ws.addEventListener('close', (event) => {
                     if (event.wasClean) {
-                        console.log(`Connection closed, code=${event.code} reason=${event.reason}`);
-                        resolve(`Connection closed, code=${event.code} reason=${event.reason}`);
+                        console.log(`Connection closed, code=${event.code} reason='${event.reason}'`);
+                        resolve();
                     } else {
                         console.log('Connection died');
                         reject(new Error('Connection died'));
