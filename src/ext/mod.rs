@@ -31,6 +31,9 @@ pub mod io;
 #[cfg(feature = "webstorage")]
 pub mod webstorage;
 
+#[cfg(feature = "websocket")]
+pub mod websocket;
+
 /// Options for configuring extensions
 pub struct ExtensionOptions {
     /// Options specific to the deno_web, deno_fetch and deno_net extensions
@@ -52,6 +55,9 @@ pub struct ExtensionOptions {
     /// Optional cache configuration for the deno_cache extension
     #[cfg(feature = "cache")]
     pub cache: Option<deno_cache::CreateCache<deno_cache::SqliteBackedCache>>,
+
+    #[cfg(feature = "websocket")]
+    pub websocket_user_agent: String,
 }
 
 impl Default for ExtensionOptions {
@@ -71,6 +77,9 @@ impl Default for ExtensionOptions {
 
             #[cfg(feature = "cache")]
             cache: None,
+
+            #[cfg(feature = "websocket")]
+            websocket_user_agent: String::from("Deno"),
         }
     }
 }
@@ -111,6 +120,9 @@ pub fn all_extensions(
     extensions.extend(webstorage::extensions(
         options.webstorage_origin_storage_dir,
     ));
+
+    #[cfg(feature = "websocket")]
+    extensions.extend(websocket::extensions(options.websocket_user_agent));
 
     extensions.extend(user_extensions);
     extensions
