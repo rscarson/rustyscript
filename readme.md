@@ -215,28 +215,28 @@ More details on the features can be found in `Cargo.toml`
 Please note that the 'web' feature will also enable fs_import and url_import, allowing arbitrary filesystem and network access for import statements
 - This is because the deno_web crate allows both fetch and FS reads already
 
-| Feature          | Description                                                                                         | Preserves Sandbox| Dependencies                                                                     |  
-|------------------|-----------------------------------------------------------------------------------------------------|------------------|----------------------------------------------------------------------------------|
-| cache            | Implements the Cache API for Deno                                                                   |**NO**            | deno_cache, deno_webidl, deno_web, deno_crypto, deno_fetch, deno_url, deno_net   |
-| console          | Provides `console.*` functionality from JS                                                          |yes               | deno_console                                                                     |
-| crypto           | Provides `crypto.*` functionality from JS                                                           |yes               | deno_crypto, deno_webidl                                                         |
-| url              | Provides the URL, and URLPattern APIs from within JS                                                |yes               | deno_webidl, deno_url                                                            |
-| io               | Provides IO primitives such as stdio streams and abstraction over File System files.                |**NO**            | deno_io, rustyline, winapi, nix, libc, once_cell                                 |
-| web              | Provides the Event, TextEncoder, TextDecoder, File, Web Cryptography, and fetch APIs from within JS |**NO**            | deno_webidl, deno_web, deno_crypto, deno_fetch, deno_url, deno_net               |
-| webstorage       | Provides the WebStorage API                                                                         |**NO**            | deno_webidl, deno_webstorage                                                     |
-| websocket        | Provides the WebSocket API                                                                          |**NO**            | deno_web, deno_websocket                                                         |
-| webidl           | Provides the webidl API                                                                             |yes               | deno_webidl                                                                      |
-|                  |                                                                                                     |                  |                                                                                  |
-| default          | Provides only those extensions that preserve sandboxing                                             |yes               | deno_console, deno_crypto, deno_webidl, deno_url                                 |
-| no_extensions    | Disables all extensions to the JS runtime - you can still add your own extensions in this mode      |yes               | None                                                                             |
-| all              | Provides all available functionality                                                                |**NO**            | deno_console, deno_webidl, deno_web, deno_net, deno_crypto, deno_fetch, deno_url |
-|                  |                                                                                                     |                  |                                                                                  |
-| fs_import        | Enables importing arbitrary code from the filesystem through JS                                     |**NO**            | None                                                                             |
-| url_import       | Enables importing arbitrary code from network locations through JS                                  |**NO**            | reqwest                                                                          |
-|                  |                                                                                                     |                  |                                                                                  |
-| worker           | Enables access to the threaded worker API [worker]                                                  |yes               | None                                                                             |
-| snapshot_builder | Enables access to [SnapshotBuilder], a runtime for creating snapshots that can improve start-times  |yes               | None                                                                             |
-| web_stub         | Enables a subset of `web` features that do not break sandboxing                                     |yes               | deno_webidl                                                                      |
+| Feature        | Description                                                                                       | Preserves Sandbox| Dependencies                                                                    |  
+|----------------|---------------------------------------------------------------------------------------------------|------------------|---------------------------------------------------------------------------------|
+|cache           |Implements the Cache API for Deno                                                                  |**NO**            |deno_cache, deno_webidl, deno_web, deno_crypto, deno_fetch, deno_url, deno_net   |
+|console         |Provides `console.*` functionality from JS                                                         |yes               |deno_console                                                                     |
+|crypto          |Provides `crypto.*` functionality from JS                                                          |yes               |deno_crypto, deno_webidl                                                         |
+|url             |Provides the URL, and URLPattern APIs from within JS                                               |yes               |deno_webidl, deno_url                                                            |
+|io              |Provides IO primitives such as stdio streams and abstraction over File System files.               |**NO**            |deno_io, rustyline, winapi, nix, libc, once_cell                                 |
+|web             |Provides the Event, TextEncoder, TextDecoder, File, Web Cryptography, and fetch APIs from within JS|**NO**            |deno_webidl, deno_web, deno_crypto, deno_fetch, deno_url, deno_net               |
+|webstorage      |Provides the WebStorage API                                                                        |**NO**            |deno_webidl, deno_webstorage                                                     |
+|websocket       |Provides the WebSocket API                                                                         |**NO**            |deno_web, deno_websocket                                                         |
+|webidl          |Provides the webidl API                                                                            |yes               |deno_webidl                                                                      |
+|                |                                                                                                   |                  |                                                                                 |
+|default         |Provides only those extensions that preserve sandboxing                                            |yes               |deno_console, deno_crypto, deno_webidl, deno_url                                 |
+|no_extensions   |Disables all extensions to the JS runtime - you can still add your own extensions in this mode     |yes               |None                                                                             |
+|all             |Provides all available functionality                                                               |**NO**            |deno_console, deno_webidl, deno_web, deno_net, deno_crypto, deno_fetch, deno_url |
+|                |                                                                                                   |                  |                                                                                 |
+|fs_import       |Enables importing arbitrary code from the filesystem through JS                                    |**NO**            |None                                                                             |
+|url_import      |Enables importing arbitrary code from network locations through JS                                 |**NO**            |reqwest                                                                          |
+|                |                                                                                                   |                  |                                                                                 |
+|worker          |Enables access to the threaded worker API [worker]                                                 |yes               |None                                                                             |
+|snapshot_builder|Enables access to [SnapshotBuilder], a runtime for creating snapshots that can improve start-times |yes               |None                                                                             |
+|web_stub        |Enables a subset of `web` features that do not break sandboxing                                    |yes               |deno_webidl                                                                      |
 
 ----
 
