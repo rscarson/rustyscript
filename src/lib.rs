@@ -286,9 +286,6 @@ pub use deno_tls;
 pub use ext::web::WebOptions;
 pub use ext::ExtensionOptions;
 
-#[cfg(feature = "websocket")]
-pub use ext::websocket::WebSocketOptions;
-
 // Expose some important stuff from us
 pub use error::Error;
 pub use inner_runtime::{FunctionArguments, RsAsyncFunction, RsFunction};

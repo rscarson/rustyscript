@@ -55,9 +55,6 @@ pub struct ExtensionOptions {
     /// Optional cache configuration for the deno_cache extension
     #[cfg(feature = "cache")]
     pub cache: Option<deno_cache::CreateCache<deno_cache::SqliteBackedCache>>,
-
-    #[cfg(feature = "websocket")]
-    pub websocket: websocket::WebSocketOptions,
 }
 
 impl Default for ExtensionOptions {
@@ -77,9 +74,6 @@ impl Default for ExtensionOptions {
 
             #[cfg(feature = "cache")]
             cache: None,
-
-            #[cfg(feature = "websocket")]
-            websocket: websocket::WebSocketOptions::from(web::WebOptions::default())
         }
     }
 }
@@ -122,7 +116,7 @@ pub fn all_extensions(
     ));
 
     #[cfg(feature = "websocket")]
-    extensions.extend(websocket::extensions(websocket::WebSocketOptions::from(options.web)));
+    extensions.extend(websocket::extensions(websocket::WebSocketOptions::from(options.web.clone())));
 
     extensions.extend(user_extensions);
     extensions
@@ -166,7 +160,7 @@ pub fn all_snapshot_extensions(
     ));
 
     #[cfg(feature = "websocket")]
-    extensions.extend(websocket::snapshot_extensions(websocket::WebSocketOptions::from(options.web)));
+    extensions.extend(websocket::extensions(websocket::WebSocketOptions::from(options.web.clone())));
 
     extensions.extend(user_extensions);
     extensions
