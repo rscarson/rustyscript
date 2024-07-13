@@ -5,4 +5,5 @@ import { applyToGlobal, nonEnumerable } from 'ext:rustyscript/rustyscript.js';
 
 applyToGlobal({
     WebSocket: nonEnumerable(websocket.WebSocket),
+    WebSocketStream: nonEnumerable(websocketStream.WebSocketStream)
 });
