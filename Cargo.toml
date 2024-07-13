@@ -60,7 +60,7 @@ web_stub = ["webidl"]
     webstorage = ["deno_webstorage", "webidl"]
 
     # [https://websockets.spec.whatwg.org/]
-    websocket = ["deno_websocket", "deno_web"]
+    websocket = ["deno_websocket", "web"]
 
 # Features for the module loader
 # Both will break sandboxing
