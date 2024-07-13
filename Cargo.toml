@@ -59,6 +59,7 @@ web_stub = ["webidl"]
     # [https://html.spec.whatwg.org/multipage/webstorage.html]
     webstorage = ["deno_webstorage", "webidl"]
 
+    # [https://websockets.spec.whatwg.org/]
     websocket = ["deno_websocket", "deno_web"]
 
 # Features for the module loader
