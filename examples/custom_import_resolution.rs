@@ -25,6 +25,7 @@ impl ImportProvider for MyImportProvider {
             // Or fall back to the default resolve behavior
             None
         }
+        // You can also return Some(Error) here if you wish to disallow a particular resolution
     }
 }
 fn main() {
