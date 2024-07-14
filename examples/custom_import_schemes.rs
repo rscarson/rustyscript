@@ -13,15 +13,17 @@ impl MyImportProvider {
 }
 impl ImportProvider for MyImportProvider {
     fn resolve(
-            &mut self,
-            specifier: &ModuleSpecifier,
-            _referrer: &str,
-            _kind: deno_core::ResolutionKind,
-        ) -> Option<Result<ModuleSpecifier, deno_core::anyhow::Error>> {
-        // Provide a resolution only if our custom URL scheme is used
+        &mut self,
+        specifier: &ModuleSpecifier,
+        _referrer: &str,
+        _kind: deno_core::ResolutionKind,
+    ) -> Option<Result<ModuleSpecifier, deno_core::anyhow::Error>> {
         if specifier.scheme() == "examplescheme" {
+            // Return Some(Ok) without modifying the returned specifier in order to allow this kind of import
             Some(Ok(specifier.clone()))
         } else {
+            // Return None in order to allow rustyscript to decide the specifier's validity
+            // If you wish to disallow a particular resolution, Some(Error) can be returned instead
             None
         }
     }
@@ -32,10 +34,14 @@ impl ImportProvider for MyImportProvider {
         _is_dyn_import: bool,
         _requested_module_type: deno_core::RequestedModuleType,
     ) -> Option<Result<String, deno_core::anyhow::Error>> {
-        // Load module from example_code for this one scheme, but otherwise return None
+        // If the url_import or fs_import features are enabled, this method is only called if
+        // rustyscript doesn't have a built-in importer that matches the specifier.
         if specifier.scheme() == "examplescheme" {
+            // Return a string containing the desired module code
             Some(Ok(self.example_code.clone()))
         } else {
+            // When None is returned from this method, rustyscript will not allow the import, even
+            // if the resolution was valid.
             None
         }
     }
