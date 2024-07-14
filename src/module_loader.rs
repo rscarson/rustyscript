@@ -33,7 +33,7 @@ pub trait ImportProvider {
         referrer: &Option<ModuleSpecifier>,
         is_dyn_import: bool,
         requested_module_type: deno_core::RequestedModuleType,
-    ) -> Option< Result<String, anyhow::Error> > {
+    ) -> Option<Result<String, anyhow::Error>> {
         None
     }
 }
@@ -354,9 +354,11 @@ mod test {
             _ => panic!("Unexpected response"),
         }
     }
-    
+
     #[cfg(feature = "import_provider")]
-    struct TestImportProvider { i: usize }
+    struct TestImportProvider {
+        i: usize,
+    }
     #[cfg(feature = "import_provider")]
     impl TestImportProvider {
         fn new() -> Self {
@@ -374,8 +376,10 @@ mod test {
             match specifier.scheme() {
                 "test" => {
                     self.i += 1;
-                    Some(Ok(ModuleSpecifier::parse(&format!("test://{}", self.i)).unwrap()))
-                },
+                    Some(Ok(
+                        ModuleSpecifier::parse(&format!("test://{}", self.i)).unwrap()
+                    ))
+                }
                 _ => None,
             }
         }
@@ -394,7 +398,7 @@ mod test {
             }
         }
     }
-    
+
     #[tokio::test]
     #[cfg(feature = "import_provider")]
     async fn test_import_provider() {
@@ -405,7 +409,9 @@ mod test {
             "console.log('Scissors')".to_string(),
         ];
         for i in 0..3 {
-            let specifier = loader.resolve("test://anything", "", ResolutionKind::Import).unwrap();
+            let specifier = loader
+                .resolve("test://anything", "", ResolutionKind::Import)
+                .unwrap();
             let response = loader.load(
                 &specifier,
                 None,
@@ -426,5 +432,4 @@ mod test {
             }
         }
     }
-
 }
