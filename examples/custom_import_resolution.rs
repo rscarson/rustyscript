@@ -30,7 +30,9 @@ impl ImportProvider for MyImportProvider {
 }
 fn main() {
     let options = rustyscript::RuntimeOptions {
-        import_provider: Some(Box::new(MyImportProvider::new("https://deno.land/std@0.224.0/assert/mod.ts"))),
+        import_provider: Some(Box::new(MyImportProvider::new(
+            "https://deno.land/std@0.224.0/assert/mod.ts",
+        ))),
         ..Default::default()
     };
     let mut runtime = Runtime::new(options).expect("Could not create runtime");
