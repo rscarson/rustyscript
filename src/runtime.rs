@@ -9,10 +9,23 @@ use std::rc::Rc;
 /// Represents the set of options accepted by the runtime constructor
 pub type RuntimeOptions = InnerRuntimeOptions;
 
-/// For functions returning nothing
-pub type Undefined = serde_json::Value;
+/// For functions returning nothing. Acts as a placeholder for the return type
+/// Should accept any type of value from javascript
+///
+/// It is in fact an alias for [crate::js_value::Value]
+/// Note: This used to be an alias for `serde_json::Value`, but was changed for performance reasons
+pub type Undefined = crate::js_value::Value;
 
-/// Represents a configured runtime ready to run modules
+/// A runtime instance that can be used to execute JavaScript code and interact with it
+/// Most runtime functions have 3 variants - blocking, async, and immediate
+/// For example:
+/// - `call_function` will block until the function is resolved and the event loop is empty
+/// - `call_function_async` will return a future that resolves when the function is resolved and the event loop is empty
+/// - `call_function_immediate` will return the result immediately, without resolving promises or running the event loop
+///   (See [crate::js_value::Promise])
+///
+/// Note: For multithreaded applications, you may need to call `init_platform` before creating a `Runtime`
+/// (See [[crate::init_platform])
 pub struct Runtime {
     inner: InnerRuntime,
     tokio: Rc<tokio::runtime::Runtime>,
@@ -125,7 +138,7 @@ impl Runtime {
     ///     function load(obj) {
     ///         console.log(`Hello world: a=${obj.a}, b=${obj.b}`);
     ///     }
-    ///     rustyscript.register_entrypoint(load);
+    ///     export default load;
     /// ");
     ///
     /// #[derive(Serialize)]
@@ -221,6 +234,8 @@ impl Runtime {
     }
 
     /// Register a rust function to be callable from JS
+    /// - The [[crate::sync_callback] macro can be used to simplify this process
+    ///
     /// ```rust
     /// use rustyscript::{ Runtime, Module, serde_json::Value };
     ///
@@ -245,6 +260,8 @@ impl Runtime {
     }
 
     /// Register a non-blocking rust function to be callable from JS
+    /// - The [[crate::async_callback] macro can be used to simplify this process
+    ///
     /// ```rust
     /// use rustyscript::{ Runtime, Module, serde_json::Value, async_callback, Error };
     ///
@@ -269,6 +286,19 @@ impl Runtime {
 
     /// Evaluate a piece of non-ECMAScript-module JavaScript code
     /// The expression is evaluated in the global context, so changes persist
+    ///
+    /// Asynchronous code is supported, partially
+    /// - Top-level await is not supported
+    /// - The event loop will be run to completion after the expression is evaluated
+    /// - Eval must be run inside a tokio runtime for some async operations
+    ///
+    /// For proper async support, use one of:
+    /// - `call_function_async`
+    /// - `call_stored_function_async`
+    /// - `load_module_async`
+    /// - `load_modules_async`
+    ///
+    /// Or any of the `_immmediate` variants, paired with [crate::js_value::Promise]
     ///
     /// # Arguments
     /// * `expr` - A string representing the JavaScript expression to evaluate
@@ -302,6 +332,8 @@ impl Runtime {
     /// - The event loop is resolved, and
     /// - If the value is a promise, the promise is resolved
     ///
+    /// Note that synchronous functions are run synchronously. Returned promises will be run asynchronously, however.
+    ///
     /// # Arguments
     /// * `module_context` - Optional handle to a module providing global context for the function
     /// * `function` - A The function object
@@ -320,12 +352,13 @@ impl Runtime {
     where
         T: serde::de::DeserializeOwned,
     {
-        let function = function.into_global(&mut self.deno_runtime().handle_scope())?;
+        let function = function.as_global(&mut self.deno_runtime().handle_scope());
         let result = self
             .inner
-            .call_function_by_ref(module_context, function, args)?;
+            .call_function_by_ref(module_context, function, args)
+            .await?;
         let result = self.inner.resolve_with_event_loop(result).await?;
-        self.inner.from_v8(result)
+        self.inner.decode_value(result)
     }
 
     /// Calls a stored javascript function and deserializes its return value.
@@ -360,7 +393,7 @@ impl Runtime {
 
     /// Calls a stored javascript function and deserializes its return value.
     /// Will not attempt to resolve promises, or run the event loop
-    /// Promises can be returned by specifying the return type as [js_value::Promise]
+    /// Promises can be returned by specifying the return type as [crate::js_value::Promise]
     /// The event loop should be run using [Runtime::await_event_loop]
     ///
     /// # Arguments
@@ -381,17 +414,22 @@ impl Runtime {
     where
         T: deno_core::serde::de::DeserializeOwned,
     {
-        let function = function.into_global(&mut self.deno_runtime().handle_scope())?;
-        let result = self
-            .inner
-            .call_function_by_ref(module_context, function, args)?;
-        self.inner.from_v8(result)
+        let function = function.as_global(&mut self.deno_runtime().handle_scope());
+        let result = self.run_async_task(|runtime| async move {
+            runtime
+                .inner
+                .call_function_by_ref(module_context, function, args)
+                .await
+        })?;
+        self.inner.decode_value(result)
     }
 
     /// Calls a javascript function within the Deno runtime by its name and deserializes its return value.
     /// Returns a future that resolves when:
     /// - The event loop is resolved, and
     /// - If the value is a promise, the promise is resolved
+    ///
+    /// Note that synchronous functions are run synchronously. Returned promises will be run asynchronously, however.
     ///
     /// # Arguments
     /// * `module_context` - Optional handle to a module to search - if None, or if the search fails, the global context is used
@@ -403,19 +441,7 @@ impl Runtime {
     /// or an error (`Error`) if the function cannot be found, if there are issues with
     /// calling the function, or if the result cannot be deserialized.
     ///
-    /// # Example
-    ///
-    /// ```rust
-    /// use rustyscript::{ json_args, Runtime, Module, Error };
-    ///
-    /// # fn main() -> Result<(), Error> {
-    /// let mut runtime = Runtime::new(Default::default())?;
-    /// let module = Module::new("/path/to/module.js", "export function f() { return 2; };");
-    /// let module = runtime.load_module(&module)?;
-    /// let future = runtime.call_function_async::<usize>(Some(&module), "f", json_args!())?;
-    /// # Ok(())
-    /// # }
-    /// ```
+    /// See [Runtime::call_function] for an example
     pub async fn call_function_async<T>(
         &mut self,
         module_context: Option<&ModuleHandle>,
@@ -428,9 +454,10 @@ impl Runtime {
         let function = self.inner.get_function_by_name(module_context, name)?;
         let result = self
             .inner
-            .call_function_by_ref(module_context, function, args)?;
+            .call_function_by_ref(module_context, function, args)
+            .await?;
         let result = self.inner.resolve_with_event_loop(result).await?;
-        self.inner.from_v8(result)
+        self.inner.decode_value(result)
     }
 
     /// Calls a javascript function within the Deno runtime by its name and deserializes its return value.
@@ -479,7 +506,7 @@ impl Runtime {
 
     /// Calls a javascript function within the Deno runtime by its name and deserializes its return value.
     /// Will not attempt to resolve promises, or run the event loop
-    /// Promises can be returned by specifying the return type as [js_value::Promise]
+    /// Promises can be returned by specifying the return type as [crate::js_value::Promise]
     /// The event loop should be run using [Runtime::await_event_loop]
     ///
     /// # Arguments
@@ -515,10 +542,13 @@ impl Runtime {
         T: deno_core::serde::de::DeserializeOwned,
     {
         let function = self.inner.get_function_by_name(module_context, name)?;
-        let result = self
-            .inner
-            .call_function_by_ref(module_context, function, args)?;
-        self.inner.from_v8(result)
+        let result = self.run_async_task(|runtime| async move {
+            runtime
+                .inner
+                .call_function_by_ref(module_context, function, args)
+                .await
+        })?;
+        self.inner.decode_value(result)
     }
 
     /// Get a value from a runtime instance
@@ -574,18 +604,7 @@ impl Runtime {
     /// A `Result` containing the future or an error (`Error`) if the value cannot be found,
     /// or if the result cannot be deserialized.
     ///
-    /// # Example
-    /// ```rust
-    /// use rustyscript::{ Runtime, Module, Error };
-    ///
-    /// # fn main() -> Result<(), Error> {
-    /// let mut runtime = Runtime::new(Default::default())?;
-    /// let module = Module::new("/path/to/module.js", "globalThis.my_value = 2;");
-    /// let module = runtime.load_module(&module)?;
-    /// let future = runtime.get_value_async::<usize>(Some(&module), "my_value")?;
-    /// # Ok(())
-    /// # }
-    /// ```
+    /// See [Runtime::get_value] for an example
     pub async fn get_value_async<T>(
         &mut self,
         module_context: Option<&ModuleHandle>,
@@ -596,12 +615,12 @@ impl Runtime {
     {
         let result = self.inner.get_value_ref(module_context, name)?;
         let result = self.inner.resolve_with_event_loop(result).await?;
-        self.inner.from_v8(result)
+        self.inner.decode_value(result)
     }
 
     /// Get a value from a runtime instance
     /// Will not attempt to resolve promises, or run the event loop
-    /// Promises can be returned by specifying the return type as [js_value::Promise]
+    /// Promises can be returned by specifying the return type as [crate::js_value::Promise]
     /// The event loop should be run using [Runtime::await_event_loop]
     ///
     /// # Arguments
@@ -635,7 +654,7 @@ impl Runtime {
         T: serde::de::DeserializeOwned,
     {
         let result = self.inner.get_value_ref(module_context, name)?;
-        self.inner.from_v8(result)
+        self.inner.decode_value(result)
     }
 
     /// Executes the given module, and returns a handle allowing you to extract values
@@ -659,7 +678,7 @@ impl Runtime {
     ///
     /// # fn main() -> Result<(), Error> {
     /// let mut runtime = Runtime::new(Default::default())?;
-    /// let module = Module::new("test.js", "rustyscript.register_entrypoint(() => 'test')");
+    /// let module = Module::new("test.js", "export default () => 'test'");
     /// runtime.load_module(&module);
     /// # Ok(())
     /// # }
@@ -681,19 +700,7 @@ impl Runtime {
     /// or an error (`Error`) if there are issues with loading modules, executing the
     /// module, or if the result cannot be deserialized.
     ///
-    /// # Example
-    ///
-    /// ```rust
-    /// // Create a module with filename and contents
-    /// use rustyscript::{Runtime, Module, Error};
-    ///
-    /// # fn main() -> Result<(), Error> {
-    /// let mut runtime = Runtime::new(Default::default())?;
-    /// let module = Module::new("test.js", "rustyscript.register_entrypoint(() => 'test')");
-    /// runtime.load_module_async(&module);
-    /// # Ok(())
-    /// # }
-    /// ```
+    /// See [Runtime::load_module] for an example
     pub async fn load_module_async(&mut self, module: &Module) -> Result<ModuleHandle, Error> {
         self.inner.load_modules(None, vec![module]).await
     }
@@ -723,7 +730,7 @@ impl Runtime {
     ///
     /// # fn main() -> Result<(), Error> {
     /// let mut runtime = Runtime::new(Default::default())?;
-    /// let module = Module::new("test.js", "rustyscript.register_entrypoint(() => 'test')");
+    /// let module = Module::new("test.js", "export default () => 'test'");
     /// runtime.load_modules(&module, vec![]);
     /// # Ok(())
     /// # }
@@ -755,19 +762,7 @@ impl Runtime {
     /// or an error (`Error`) if there are issues with loading modules, executing the
     /// module, or if the result cannot be deserialized.
     ///
-    /// # Example
-    ///
-    /// ```rust
-    /// // Create a module with filename and contents
-    /// use rustyscript::{Runtime, Module, Error};
-    ///
-    /// # fn main() -> Result<(), Error> {
-    /// let mut runtime = Runtime::new(Default::default())?;
-    /// let module = Module::new("test.js", "rustyscript.register_entrypoint(() => 'test')");
-    /// runtime.load_modules_async(&module, vec![]);
-    /// # Ok(())
-    /// # }
-    /// ```
+    /// See [Runtime::load_modules] for an example
     pub async fn load_modules_async(
         &mut self,
         module: &Module,
@@ -796,7 +791,7 @@ impl Runtime {
     ///
     /// # fn main() -> Result<(), Error> {
     /// let mut runtime = Runtime::new(Default::default())?;
-    /// let module = Module::new("test.js", "rustyscript.register_entrypoint(() => 'test')");
+    /// let module = Module::new("test.js", "export default () => 'test'");
     /// let module = runtime.load_module(&module)?;
     ///
     /// // Run the entrypoint and handle the result
@@ -822,6 +817,8 @@ impl Runtime {
     /// - The event loop is resolved, and
     /// - If the value is a promise, the promise is resolved
     ///
+    /// Note that synchronous functions are run synchronously. Returned promises will be run asynchronously, however.
+    ///
     /// # Arguments
     /// * `module_context` - A handle returned by loading a module into the runtime
     ///
@@ -830,21 +827,7 @@ impl Runtime {
     /// if successful, or an error (`Error`) if the entrypoint is missing, the execution fails,
     /// or the result cannot be deserialized.
     ///
-    /// # Example
-    ///
-    /// ```rust
-    /// use rustyscript::{json_args, Runtime, Module, Error};
-    ///
-    /// # fn main() -> Result<(), Error> {
-    /// let mut runtime = Runtime::new(Default::default())?;
-    /// let module = Module::new("test.js", "rustyscript.register_entrypoint(() => 'test')");
-    /// let module = runtime.load_module(&module)?;
-    ///
-    /// // Run the entrypoint and handle the result
-    /// let future = runtime.call_entrypoint_async::<String>(&module, json_args!())?;
-    /// # Ok(())
-    /// # }
-    /// ```
+    /// See [Runtime::call_entrypoint] for an example
     pub async fn call_entrypoint_async<T>(
         &mut self,
         module_context: &ModuleHandle,
@@ -854,11 +837,12 @@ impl Runtime {
         T: deno_core::serde::de::DeserializeOwned,
     {
         if let Some(entrypoint) = module_context.entrypoint() {
-            let result =
-                self.inner
-                    .call_function_by_ref(Some(module_context), entrypoint.clone(), args)?;
+            let result = self
+                .inner
+                .call_function_by_ref(Some(module_context), entrypoint.clone(), args)
+                .await?;
             let result = self.inner.resolve_with_event_loop(result).await?;
-            self.inner.from_v8(result)
+            self.inner.decode_value(result)
         } else {
             Err(Error::MissingEntrypoint(module_context.module().clone()))
         }
@@ -866,7 +850,7 @@ impl Runtime {
 
     /// Executes the entrypoint function of a module within the Deno runtime.
     /// Will not attempt to resolve promises, or run the event loop
-    /// Promises can be returned by specifying the return type as [js_value::Promise]
+    /// Promises can be returned by specifying the return type as [crate::js_value::Promise]
     /// The event loop should be run using [Runtime::await_event_loop]
     ///
     /// # Arguments
@@ -884,7 +868,7 @@ impl Runtime {
     ///
     /// # fn main() -> Result<(), Error> {
     /// let mut runtime = Runtime::new(Default::default())?;
-    /// let module = Module::new("test.js", "rustyscript.register_entrypoint(() => 'test')");
+    /// let module = Module::new("test.js", "export default () => 'test'");
     /// let module = runtime.load_module(&module)?;
     ///
     /// // Run the entrypoint and handle the result
@@ -901,10 +885,13 @@ impl Runtime {
         T: deno_core::serde::de::DeserializeOwned,
     {
         if let Some(entrypoint) = module_context.entrypoint() {
-            let result =
-                self.inner
-                    .call_function_by_ref(Some(module_context), entrypoint.clone(), args)?;
-            self.inner.from_v8(result)
+            let result = self.run_async_task(|runtime| async move {
+                runtime
+                    .inner
+                    .call_function_by_ref(Some(module_context), entrypoint.clone(), args)
+                    .await
+            })?;
+            self.inner.decode_value(result)
         } else {
             Err(Error::MissingEntrypoint(module_context.module().clone()))
         }
@@ -931,7 +918,7 @@ impl Runtime {
     /// use rustyscript::{json_args, Runtime, Module, Error};
     ///
     /// # fn main() -> Result<(), Error> {
-    /// let module = Module::new("test.js", "rustyscript.register_entrypoint(() => 2)");
+    /// let module = Module::new("test.js", "export default () => 2");
     /// let value: usize = Runtime::execute_module(&module, vec![], Default::default(), json_args!())?;
     /// # Ok(())
     /// # }
@@ -1032,7 +1019,7 @@ mod test_runtime {
         let module = Module::new(
             "test.js",
             "
-            rustyscript.register_entrypoint(() => 2);
+            export default () => 2;
         ",
         );
         let module = runtime

@@ -1,4 +1,6 @@
 use deno_core::{extension, Extension};
+use std::path::PathBuf;
+
 extension!(
     init_webstorage,
     deps = [rustyscript],

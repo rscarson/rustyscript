@@ -16,22 +16,106 @@
 //! }
 
 use crate::Error;
+use std::cell::RefCell;
+use std::rc::Rc;
 use std::sync::mpsc::{channel, Receiver, Sender};
 use std::thread::{spawn, JoinHandle};
+
+/// A pool of worker threads that can be used to run javascript code in parallel
+/// Uses a round-robin strategy to distribute work between workers
+/// Each worker is an independent runtime instance
+pub struct WorkerPool<W>
+where
+    W: InnerWorker,
+{
+    workers: Vec<Rc<RefCell<Worker<W>>>>,
+    next_worker: usize,
+}
+
+impl<W> WorkerPool<W>
+where
+    W: InnerWorker,
+{
+    /// Create a new worker pool with the specified number of workers
+    pub fn new(options: W::RuntimeOptions, n_workers: u32) -> Result<Self, Error> {
+        crate::init_platform(n_workers, true);
+        let mut workers = Vec::with_capacity(n_workers as usize + 1);
+        for _ in 0..n_workers {
+            workers.push(Rc::new(RefCell::new(Worker::new(options.clone())?)));
+        }
+
+        Ok(Self {
+            workers,
+            next_worker: 0,
+        })
+    }
+
+    /// Stop all workers in the pool and wait for them to finish
+    pub fn shutdown(self) {
+        for worker in self.workers {
+            worker.borrow_mut().shutdown();
+        }
+    }
+
+    /// Get the number of workers in the pool
+    pub fn len(&self) -> usize {
+        self.workers.len()
+    }
+
+    /// Check if the pool is empty
+    /// This will be true if the pool has no workers
+    /// This can happen if the pool was created with 0 workers
+    /// Which is not particularly useful, but is allowed
+    pub fn is_empty(&self) -> bool {
+        self.workers.is_empty()
+    }
+
+    /// Get a worker by its index in the pool
+    pub fn worker_by_id(&self, id: usize) -> Option<Rc<RefCell<Worker<W>>>> {
+        Some(Rc::clone(self.workers.get(id)?))
+    }
+
+    /// Get the next worker in the pool
+    pub fn next_worker(&mut self) -> Rc<RefCell<Worker<W>>> {
+        let worker = &self.workers[self.next_worker];
+        self.next_worker = (self.next_worker + 1) % self.workers.len();
+        Rc::clone(worker)
+    }
+
+    /// Send a request to the next worker in the pool
+    /// This will block the current thread until the response is received
+    pub fn send_and_await(&mut self, query: W::Query) -> Result<W::Response, Error> {
+        self.next_worker().borrow().send_and_await(query)
+    }
+
+    /// Evaluate a string of non-ecma javascript code in a separate thread
+    /// The code is evaluated in a new runtime instance, which is then destroyed
+    /// Returns a handle to the thread that is running the code
+    pub fn eval_in_thread<T>(code: String) -> std::thread::JoinHandle<Result<T, Error>>
+    where
+        T: serde::de::DeserializeOwned + Send + 'static,
+    {
+        deno_core::JsRuntime::init_platform(None);
+        std::thread::spawn(move || {
+            let mut runtime = crate::Runtime::new(Default::default())?;
+            runtime.eval(&code)
+        })
+    }
+}
 
 /// A worker thread that can be used to run javascript code in a separate thread
 /// Contains a channel pair for communication, and a single runtime instance
 ///
-/// This worker is generic over an implementation of the [worker::InnerWorker] trait
+/// This worker is generic over an implementation of the [InnerWorker] trait
 /// This allows flexibility in the runtime used by the worker, as well as the types of queries and responses that can be used
 ///
-/// For a simple worker that uses the default runtime, see [worker::DefaultWorker]
+/// For a simple worker that uses the default runtime, see [DefaultWorker]
 pub struct Worker<W>
 where
     W: InnerWorker,
 {
-    handle: JoinHandle<()>,
-    tx: Sender<W::Query>,
+    handle: Option<JoinHandle<()>>,
+    tx: Option<Sender<W::Query>>,
     rx: Receiver<W::Response>,
 }
 
@@ -63,8 +147,8 @@ where
         });
 
         let worker = Self {
-            handle,
-            tx: qtx,
+            handle: Some(handle),
+            tx: Some(qtx),
             rx: rrx,
         };
 
@@ -80,6 +164,7 @@ where
                 // This can be replaced with `?` by calling `try_new` on the deno_core::Runtime once that change makes it into a release
                 let e = worker
                     .handle
+                    .expect("Thread handle missing")
                     .join()
                     .err()
                     .and_then(|e| {
@@ -101,13 +186,29 @@ where
         }
     }
 
+    /// Stop the worker and wait for it to finish
+    /// Stops by destroying the sender, which will cause the thread to exit the loop and finish
+    /// If implementing a custom `thread` function, make sure to handle rx failures gracefully
+    /// Otherwise this will block indefinitely
+    pub fn shutdown(&mut self) {
+        if let (Some(tx), Some(hnd)) = (self.tx.take(), self.handle.take()) {
+            // We can stop the thread by destroying the sender
+            // This will cause the thread to exit the loop and finish
+            drop(tx);
+            hnd.join().ok();
+        }
+    }
+
     /// Send a request to the worker
     /// This will not block the current thread
     /// Will return an error if the worker has stopped or panicked
     pub fn send(&self, query: W::Query) -> Result<(), Error> {
-        self.tx
-            .send(query)
-            .map_err(|e| Error::Runtime(e.to_string()))
+        match &self.tx {
+            None => return Err(Error::WorkerHasStopped),
+            Some(tx) => tx,
+        }
+        .send(query)
+        .map_err(|e| Error::Runtime(e.to_string()))
     }
 
     /// Receive a response from the worker
@@ -129,9 +230,12 @@ where
     /// WARNING: This will block the current thread until the worker has finished
     ///          Make sure to send a stop message to the worker before calling this!
     pub fn join(self) -> Result<(), Error> {
-        self.handle
-            .join()
-            .map_err(|_| Error::Runtime("Worker thread panicked".to_string()))
+        match self.handle {
+            Some(hnd) => hnd
+                .join()
+                .map_err(|_| Error::Runtime("Worker thread panicked".to_string())),
+            None => Ok(()),
+        }
     }
 }
 
@@ -140,11 +244,11 @@ where
 /// As well as the types of queries and responses that can be used
 ///
 /// Implement this trait for a specific runtime to use it with the worker
-/// For an example implementation, see [worker::DefaultWorker]
+/// For an example implementation, see [DefaultWorker]
 pub trait InnerWorker
 where
     Self: Send,
-    <Self as InnerWorker>::RuntimeOptions: std::marker::Send + 'static,
+    <Self as InnerWorker>::RuntimeOptions: std::marker::Send + 'static + Clone,
     <Self as InnerWorker>::Query: std::marker::Send + 'static,
     <Self as InnerWorker>::Response: std::marker::Send + 'static,
 {
@@ -207,6 +311,8 @@ impl InnerWorker for DefaultWorker {
         let runtime = crate::Runtime::new(crate::RuntimeOptions {
             default_entrypoint: options.default_entrypoint,
             timeout: options.timeout,
+            shared_array_buffer_store: options.shared_array_buffer_store,
+            startup_snapshot: options.startup_snapshot,
             ..Default::default()
         })?;
         let modules = std::collections::HashMap::new();
@@ -216,8 +322,6 @@ impl InnerWorker for DefaultWorker {
     fn handle_query(runtime: &mut Self::Runtime, query: Self::Query) -> Self::Response {
         let (runtime, modules) = runtime;
         match query {
-            DefaultWorkerQuery::Stop => Self::Response::Ok(()),
-
             DefaultWorkerQuery::Eval(code) => match runtime.eval(&code) {
                 Ok(v) => Self::Response::Value(v),
                 Err(e) => Self::Response::Error(e),
@@ -290,39 +394,11 @@ impl InnerWorker for DefaultWorker {
             }
         }
     }
-
-    // Custom thread impl to handle stop
-    fn thread(mut runtime: Self::Runtime, rx: Receiver<Self::Query>, tx: Sender<Self::Response>) {
-        loop {
-            let msg = match rx.recv() {
-                Ok(msg) => msg,
-                Err(_) => break,
-            };
-
-            match &msg {
-                DefaultWorkerQuery::Stop => {
-                    tx.send(Self::Response::Ok(())).unwrap();
-                    break;
-                }
-                _ => {
-                    let response = Self::handle_query(&mut runtime, msg);
-                    tx.send(response).unwrap();
-                }
-            }
-        }
-    }
 }
 impl DefaultWorker {
     /// Create a new worker instance
     pub fn new(options: DefaultWorkerOptions) -> Result<Self, Error> {
         Worker::new(options).map(Self)
-    }
-
-    /// Stop the worker and wait for it to finish
-    /// Consumes the worker and returns an error if the worker panicked
-    pub fn stop(self) -> Result<(), Error> {
-        self.0.send(DefaultWorkerQuery::Stop)?;
-        self.0.join()
     }
 
     /// Evaluate a string of javascript code
@@ -454,13 +530,20 @@ pub struct DefaultWorkerOptions {
 
     /// The timeout to use for the runtime
     pub timeout: std::time::Duration,
+
+    /// Optional snapshot to load into the runtime
+    /// This will reduce load times, but requires the same extensions to be loaded
+    /// as when the snapshot was created
+    /// If provided, user-supplied extensions must be instantiated with `init_ops` instead of `init_ops_and_esm`
+    pub startup_snapshot: Option<&'static [u8]>,
+
+    /// Optional shared array buffer store to use for the runtime
+    /// Allows data-sharing between runtimes across threads
+    pub shared_array_buffer_store: Option<deno_core::SharedArrayBufferStore>,
 }
 
 /// Query types for the default worker
 pub enum DefaultWorkerQuery {
-    /// Stops the worker
-    Stop,
-
     /// Evaluates a string of javascript code
     Eval(String),
 

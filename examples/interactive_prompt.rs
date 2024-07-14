@@ -31,7 +31,7 @@ fn interactive_prompt() {
             let input = cmd.trim();
             match runtime.eval::<ResponseType>(&input) {
                 Ok(value) => println!("{}\n", value),
-                Err(e) => eprintln!("{}\n", e.as_highlighted()),
+                Err(e) => eprintln!("{}\n", e.as_highlighted(Default::default())),
             }
         }
     }

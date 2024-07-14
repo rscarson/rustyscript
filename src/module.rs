@@ -47,7 +47,6 @@ macro_rules! module {
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize, Default)]
 /// Represents a pice of javascript for execution.
-/// Must be ESM formatted
 pub struct Module {
     filename: String,
     contents: String,

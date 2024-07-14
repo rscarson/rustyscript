@@ -1,8 +1,10 @@
+use crate::{js_value::Function, Error, Module, ModuleHandle, Runtime, RuntimeOptions};
 use deno_core::{serde_json, v8::GetPropertyNamesArgs};
 
-use crate::{js_value::Function, Error, Module, ModuleHandle, Runtime, RuntimeOptions};
-
 /// A wrapper type representing a runtime instance loaded with a single module
+/// Exactly equivalent to [Runtime::new] followed by [Runtime::load_module]
+///
+/// Can also be created using the [[crate::import] function
 pub struct ModuleWrapper {
     module_context: ModuleHandle,
     runtime: Runtime,
@@ -12,7 +14,6 @@ impl ModuleWrapper {
     /// Creates a new `ModuleWrapper` from a given module and runtime options.
     ///
     /// # Arguments
-    ///
     /// * `module` - A reference to the module to load.
     /// * `options` - The runtime options for the module.
     ///
@@ -31,7 +32,6 @@ impl ModuleWrapper {
     /// Creates a new `ModuleWrapper` from a file path and runtime options.
     ///
     /// # Arguments
-    ///
     /// * `path` - The path to the module file.
     /// * `options` - The runtime options for the module.
     ///
@@ -54,19 +54,52 @@ impl ModuleWrapper {
     }
 
     /// Retrieves a value from the module by name and deserializes it.
+    /// See [Runtime::get_value]
     ///
     /// # Arguments
-    ///
     /// * `name` - The name of the value to retrieve.
     ///
     /// # Returns
-    ///
     /// A `Result` containing the deserialized value of type `T` on success or an `Error` on failure.
     pub fn get<T>(&mut self, name: &str) -> Result<T, Error>
     where
         T: serde::de::DeserializeOwned,
     {
         self.runtime.get_value(Some(&self.module_context), name)
+    }
+
+    /// Retrieves a future resolving to a value from the module by name and deserializes it.
+    /// See [Runtime::get_value_async]
+    ///
+    /// # Arguments
+    /// * `name` - The name of the value to retrieve.
+    ///
+    /// # Returns
+    /// A `Result` containing the deserialized value of type `T` on success or an `Error` on failure.
+    pub async fn get_async<T>(&mut self, name: &str) -> Result<T, Error>
+    where
+        T: serde::de::DeserializeOwned,
+    {
+        self.runtime
+            .get_value_async(Some(&self.module_context), name)
+            .await
+    }
+
+    /// Retrieves a value from the module by name and deserializes it.
+    /// Does not await promises or the event loop.
+    /// See [Runtime::get_value_immediate]
+    ///
+    /// # Arguments
+    /// * `name` - The name of the value to retrieve.
+    ///
+    /// # Returns
+    /// A `Result` containing the deserialized value of type `T` on success or an `Error` on failure.
+    pub fn get_immediate<T>(&mut self, name: &str) -> Result<T, Error>
+    where
+        T: serde::de::DeserializeOwned,
+    {
+        self.runtime
+            .get_value_immediate(Some(&self.module_context), name)
     }
 
     /// Checks if a value in the module with the given name is callable as a JavaScript function.
@@ -84,14 +117,13 @@ impl ModuleWrapper {
     }
 
     /// Calls a function in the module with the given name and arguments and deserializes the result.
+    /// See [Runtime::call_function]
     ///
     /// # Arguments
-    ///
     /// * `name` - The name of the function to call.
     /// * `args` - The arguments to pass to the function.
     ///
     /// # Returns
-    ///
     /// A `Result` containing the deserialized result of type `T` on success or an `Error` on failure.
     pub fn call<T>(&mut self, name: &str, args: &[serde_json::Value]) -> Result<T, Error>
     where
@@ -101,8 +133,46 @@ impl ModuleWrapper {
             .call_function(Some(&self.module_context), name, args)
     }
 
-    /// Calls a function using the module's runtime that was previously stored
-    /// as a Function object
+    /// Calls a function in the module with the given name and arguments and deserializes the result.
+    /// See [Runtime::call_function_async]
+    ///
+    /// # Arguments
+    /// * `name` - The name of the function to call.
+    /// * `args` - The arguments to pass to the function.
+    ///
+    /// # Returns
+    /// A `Result` containing the deserialized result of type `T` on success or an `Error` on failure.
+    pub async fn call_async(
+        &mut self,
+        name: &str,
+        args: &[serde_json::Value],
+    ) -> Result<serde_json::Value, Error> {
+        self.runtime
+            .call_function_async(Some(&self.module_context), name, args)
+            .await
+    }
+
+    /// Calls a function in the module with the given name and arguments and deserializes the result.
+    /// Does not await promises or the event loop.
+    /// See [Runtime::call_function_immediate]
+    ///
+    /// # Arguments
+    /// * `name` - The name of the function to call.
+    /// * `args` - The arguments to pass to the function.
+    ///
+    /// # Returns
+    /// A `Result` containing the deserialized result of type `T` on success or an `Error` on failure.
+    pub fn call_immediate(
+        &mut self,
+        name: &str,
+        args: &[serde_json::Value],
+    ) -> Result<serde_json::Value, Error> {
+        self.runtime
+            .call_function_immediate(Some(&self.module_context), name, args)
+    }
+
+    /// Calls a function using the module's runtime that was previously stored as a Function object
+    /// See [Runtime::call_stored_function]
     ///
     /// # Arguments
     /// * `function` - The Function to call.
@@ -120,6 +190,44 @@ impl ModuleWrapper {
     {
         self.runtime
             .call_stored_function(Some(&self.module_context), function, args)
+    }
+
+    /// Calls a function using the module's runtime that was previously stored as a Function object
+    /// See [Runtime::call_stored_function_async]
+    ///
+    /// # Arguments
+    /// * `function` - The Function to call.
+    /// * `args` - The arguments to pass to the function.
+    ///
+    /// # Returns
+    /// A `Result` containing the deserialized result of type `T` on success or an `Error` on failure.
+    pub async fn call_stored_async(
+        &mut self,
+        function: &Function,
+        args: &[serde_json::Value],
+    ) -> Result<serde_json::Value, Error> {
+        self.runtime
+            .call_stored_function_async(Some(&self.module_context), function, args)
+            .await
+    }
+
+    /// Calls a function using the module's runtime that was previously stored as a Function object
+    /// Does not await promises or the event loop.
+    /// See [Runtime::call_stored_function_immediate]
+    ///
+    /// # Arguments
+    /// * `function` - The Function to call.
+    /// * `args` - The arguments to pass to the function.
+    ///
+    /// # Returns
+    /// A `Result` containing the deserialized result of type `T` on success or an `Error` on failure.
+    pub fn call_stored_immediate(
+        &mut self,
+        function: &Function,
+        args: &[serde_json::Value],
+    ) -> Result<serde_json::Value, Error> {
+        self.runtime
+            .call_stored_function_immediate(Some(&self.module_context), function, args)
     }
 
     /// Retrieves the names of the module's exports.

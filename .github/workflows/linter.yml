@@ -1,0 +1,37 @@
+name: Linter
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+
+    # Check if the README is up to date
+    # We will do this before all the time-consuming tests
+    - name: Check if the README is up to date.
+      run: |
+        cargo install cargo-rdme
+        cargo rdme --check
+
+    # Check formatting
+    - name: Run fmt
+      run: cargo fmt --check
+    
+    # Lint all the things
+    - name: Run clippy
+      run: cargo clippy --all-features
+
+    # Test documentation generation
+    - name: Test documentation
+      run: cargo doc --features snapshot_builder

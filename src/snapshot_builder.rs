@@ -1,6 +1,6 @@
 use crate::{
     ext,
-    inner_runtime::{InnerRuntime, InnerRuntimeOptions},
+    inner_runtime::InnerRuntimeOptions,
     module_loader::RustyLoader,
     traits::ToModuleSpecifier,
     transpiler::{self, transpile_extension},
@@ -131,14 +131,14 @@ impl SnapshotBuilder {
     /// snapshot
     ///
     /// WARNING: Returned module id is not guaranteed to be the same when the snapshot is loaded
-    /// Possibly resulting in a runtime panic
+    /// Possibly resulting in a runtime panic if used incorrectly
     pub fn load_module(&mut self, module: &Module) -> Result<ModuleId, Error> {
         let timeout = self.options.timeout;
         let deno_runtime = &mut self.deno_runtime;
         let tokio_runtime = self.tokio_runtime.clone();
 
-        InnerRuntime::run_async_task(
-            async move {
+        tokio_runtime.block_on(async move {
+            tokio::time::timeout(timeout, async move {
                 let module_specifier = module.filename().to_module_specifier()?;
                 let (code, _) = transpiler::transpile(&module_specifier, module.contents())?;
                 let code = deno_core::FastString::from(code);
@@ -152,9 +152,8 @@ impl SnapshotBuilder {
                     .await?;
                 result.await?;
                 Ok::<ModuleId, Error>(modid)
-            },
-            timeout,
-            tokio_runtime,
-        )
+            })
+            .await
+        })?
     }
 }

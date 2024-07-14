@@ -21,5 +21,5 @@ extension!(
     example_extension,
     ops = [op_add_example],
     esm_entry_point = "ext:example_extension/example_extension.js",
-    esm = [ dir "examples/javascript", "example_extension.js" ],
+    esm = [ dir "examples/example_extension", "example_extension.js" ],
 );

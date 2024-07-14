@@ -3,7 +3,7 @@ name = "rustyscript"
 description = "Effortless JS Integration for Rust"
 edition = "2021"
 license = "MIT OR Apache-2.0"
-version = "0.5.0"
+version = "0.5.2"
 repository = "https://github.com/rscarson/rustyscript"
 
 keywords = ["rust", "javascript", "deno", "runtime", "embedding"]
@@ -11,63 +11,117 @@ categories = ["web-programming", "network-programming", "api-bindings", "compile
 readme = "readme.md"
 
 [features]
-default = ["worker", "console", "url", "crypto", "web_stub"]
+default = ["worker", "web_stub", "console", "url", "crypto"]
 no_extensions = []
-all = ["web", "io"]
+all = ["web", "io", "webstorage", "cache", "websocket"]
 
-webidl = ["deno_webidl"]
-webstorage = ["webidl", "deno_webstorage"]
-io = ["deno_web", "deno_io", "rustyline", "winapi", "nix", "libc", "once_cell"]
-url = ["deno_url", "webidl"]
-console = ["deno_console"]
-crypto = ["deno_crypto", "webidl", "web_stub"]
-web_stub = []
-web = ["console", "url", "crypto", "deno_web", "deno_tls", "deno_fetch", "url_import", "fs_import", "deno_net"]
+# By default, an extension stub is included in the runtime if the `web` feature is disabled
+# It provides a minimal set of APIs for parts of the runtime, such as timers and the DOM exception class
+# It maintains sandboxing by not providing access to the network or filesystem
+#
+# It does however require the webidl extension to be enabled
+# By disabling this feature, you can opt out of the web stub extension, and the webidl extension
+#
+# The primary use-case for this is for creating a runtime using a deno_core version incompatible with the deno extensions
+# And for the sake of those googling it:
+# `setTimeout is not enabled in this environment` is happening because neither this feature nor the web feature are enabled
+web_stub = ["webidl"]
+
+#
+# Each feature in this section corresponds to a different deno extension
+# I have annotated each with the section of the w3c spec that it implements
+#
+
+    # [https://w3c.github.io/ServiceWorker/#cache-interface]
+    cache = ["deno_cache", "webidl", "web"]
+
+    # [https://console.spec.whatwg.org/]
+    console = ["deno_console"]
+
+    # [https://www.w3.org/TR/WebCryptoAPI/]
+    crypto = ["deno_crypto", "webidl"]
+
+    # Provides IO primitives for other Deno extensions (stdio streams, etc)
+    io = ["deno_io", "web", "rustyline", "winapi", "nix", "libc", "once_cell"]
+
+    # [https://url.spec.whatwg.org/]
+    # [https://wicg.github.io/urlpattern/]
+    url = ["deno_url", "webidl"]
+
+    # Timers, events, text encoder/decoder, 
+    # [https://w3c.github.io/FileAPI]
+    # [https://fetch.spec.whatwg.org/]
+    web = ["deno_web", "webidl", "deno_tls", "deno_fetch", "deno_net", "console", "url", "crypto", "url_import", "fs_import"]
+
+    # [https://webidl.spec.whatwg.org/]
+    webidl = ["deno_webidl"]
+
+    # [https://html.spec.whatwg.org/multipage/webstorage.html]
+    webstorage = ["deno_webstorage", "webidl"]
+
+    # [https://websockets.spec.whatwg.org/]
+    websocket = ["deno_websocket", "web"]
 
 # Features for the module loader
+# Both will break sandboxing
+# - fs_import allows arbitrary file imports
+# - url_import allows importing from the web
 fs_import = []
 url_import = ["reqwest"]
 import_provider = []
 
-# Enables the use of the SnapshotBuilder
+# Enables the use of the SnapshotBuilder runtime
+# It is used to create a snapshot of a runtime for faster startup times
 snapshot_builder = []
 
 # Enables the threaded worker API
 worker = []
 
-[dev-dependencies]
-version-sync = "0.9.5"
-criterion = "0.5.1"
+#
+# End of feature definitions
+#
 
 [dependencies]
-deno_core = "0.290.0"
-deno_ast = { version = "0.39.2", features = ["transpiling"]}
-thiserror = "1.0.61"
-serde = "1.0.203"
+thiserror = "1.0.62"
+serde = "1.0.204"
+
+# The deno runtime itself, and the webidl extension for the web APIs
+deno_core = "0.293.0"
+
+# For transpiling typescript
+deno_ast = { version = "0.40.0", features = ["transpiling"]}
+
+# Runtime for async tasks
 tokio = "1.38.0"
 
 # For URL imports
 # Pinned for now due to upstream issues
 reqwest = { version = "=0.12.4", optional = true, default-features = false, features = ["blocking", "rustls-tls"] }
 
-# Extension features
-deno_url = {version = "0.158.0", optional = true}
-deno_webidl = {version = "0.158.0", optional = true}
-deno_console = {version = "0.158.0", optional = true}
-deno_crypto = {version = "0.172.0", optional = true}
-deno_fetch = {version = "0.182.0", optional = true}
-deno_web = {version = "0.189.0", optional = true}
-deno_tls = {version = "0.145.0", optional = true}
-deno_net = {version = "0.150.0", optional = true}
-deno_webstorage = {version = "0.153.0", optional = true}
+# Dependencies for the various extension features
+deno_cache = {version = "0.92.0", optional = true}
+deno_console = {version = "0.160.0", optional = true}
+deno_crypto = {version = "0.174.0", optional = true}
+deno_fetch = {version = "0.184.0", optional = true}
+deno_net = {version = "0.152.0", optional = true}
+deno_tls = {version = "0.147.0", optional = true} # Options for the web feature
+deno_url = {version = "0.160.0", optional = true}
+deno_web = {version = "0.191.0", optional = true}
+deno_webidl = {version = "0.160.0", optional = true}
+deno_webstorage = {version = "0.155.0", optional = true}
+deno_websocket = {version = "0.165.0", optional = true }
 
-# io feature deps
-deno_io = {version = "0.68.0", optional = true}
+# Dependencies for the IO feature
+deno_io = {version = "0.70.0", optional = true}
 rustyline = {version = "=14.0.0", optional = true}
 winapi = {version = "=0.3.9", optional = true, features = ["commapi", "knownfolders", "mswsock", "objbase", "psapi", "shlobj", "tlhelp32", "winbase", "winerror", "winuser", "winsock2", "processenv", "wincon", "wincontypes", "consoleapi"]}
 nix = {version = "=0.29.0", optional = true, features = ["term"]}
 libc = {version = "0.2.155", optional = true}
 once_cell = {version = "1.19.0", optional = true}
+
+[dev-dependencies]
+version-sync = "0.9.5"
+criterion = "0.5.1"
 
 [[example]]
 name = "custom_threaded_worker"
@@ -75,6 +129,10 @@ required-features = ["worker"]
 
 [[example]]
 name = "default_threaded_worker"
+required-features = ["worker"]
+
+[[example]]
+name = "worker_pool"
 required-features = ["worker"]
 
 [[example]]
@@ -96,6 +154,10 @@ required-features = ["import_provider", "url_import"]
 [[example]]
 name = "async_javascript"
 required-features = ["web_stub"]
+
+[[example]]
+name = "websocket"
+required-features = ["websocket", "web"]
 
 [[bench]]
 name = "runtime"

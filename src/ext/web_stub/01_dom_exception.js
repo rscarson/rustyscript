@@ -8,14 +8,11 @@ const {
   ObjectDefineProperty,
   ObjectCreate,
   ObjectEntries,
-  ObjectPrototypeIsPrototypeOf,
   ObjectSetPrototypeOf,
   Symbol,
-  SymbolFor,
 } = primordials;
 
 import * as webidl from "ext:deno_webidl/00_webidl.js";
-import { createFilteredInspectProxy } from "ext:deno_console/01_console.js";
 
 const _name = Symbol("name");
 const _message = Symbol("message");
@@ -123,25 +120,6 @@ class DOMException {
   get code() {
     webidl.assertBranded(this, DOMExceptionPrototype);
     return this[_code];
-  }
-
-  [SymbolFor("Deno.privateCustomInspect")](inspect, inspectOptions) {
-    if (ObjectPrototypeIsPrototypeOf(DOMExceptionPrototype, this)) {
-      return this[_error].stack;
-    } else {
-      return inspect(
-        createFilteredInspectProxy({
-          object: this,
-          evaluate: false,
-          keys: [
-            "message",
-            "name",
-            "code",
-          ],
-        }),
-        inspectOptions,
-      );
-    }
   }
 }
 

@@ -84,6 +84,16 @@ pub fn resolve_path(path: &str) -> Result<String, Error> {
     Ok(path.to_module_specifier()?.to_string())
 }
 
+/// Explicitly initialize the V8 platform
+/// Note that all runtimes must have a common parent thread that initalized the V8 platform
+///
+/// This is done automatically the first time Runtime::new is called,
+/// but for multi-threaded applications, it may be necessary to call this function manually
+pub fn init_platform(thread_pool_size: u32, idle_task_support: bool) {
+    let platform = deno_core::v8::Platform::new(thread_pool_size, idle_task_support);
+    deno_core::JsRuntime::init_platform(Some(platform.into()))
+}
+
 #[macro_use]
 mod runtime_macros {
     /// Map a series of values to a slice of `serde_json::Value` objects

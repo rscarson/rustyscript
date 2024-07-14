@@ -15,7 +15,7 @@ fn main() -> Result<(), Error> {
         "test.js",
         "
         function resolve_after(t) {
-            new Promise((resolve) => {
+            return new Promise((resolve) => {
                 return setTimeout(() => {
                     console.log('Finished after ' + t + 'ms');
                     resolve('resolved');
@@ -66,17 +66,10 @@ fn main() -> Result<(), Error> {
     let p2: Promise<String> = runtime.call_function_immediate(Some(&handle), "f2", json_args!())?;
     let p3: Promise<String> = runtime.call_function_immediate(Some(&handle), "f3", json_args!())?;
 
-    // Run the event loop, then await the promises
+    // Now we can convert the promises back into futures
+    // And await them in sequence
+    // Converting them into the actual values we want
     let future = async {
-        // Run the event loop
-        // Normally this is done for us, but we need to do it manually here
-        // because we called `call_function_immediate`
-        // All pending promises will be resolved
-        runtime.await_event_loop(Default::default()).await?;
-
-        // Now we can convert the promises back into futures
-        // And await them in sequence
-        // Converting them into the actual values we want
         println!(
             "p1={}\np2={}\np3={}",
             p1.into_future(&mut runtime).await?,
