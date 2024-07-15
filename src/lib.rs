@@ -291,9 +291,9 @@ pub use error::Error;
 pub use inner_runtime::{FunctionArguments, RsAsyncFunction, RsFunction};
 pub use module::{Module, StaticModule};
 pub use module_handle::ModuleHandle;
-pub use module_wrapper::ModuleWrapper;
 #[cfg(feature = "import_provider")]
 pub use module_loader::ImportProvider;
+pub use module_wrapper::ModuleWrapper;
 pub use runtime::{Runtime, RuntimeOptions, Undefined};
 pub use utilities::{evaluate, import, init_platform, resolve_path, validate};
 

@@ -52,7 +52,7 @@ struct InnerRustyLoader {
 
 impl InnerRustyLoader {
     /// Creates a new instance of InnerRustyLoader
-    /// An optional cache provider can be provided to manage module code caching, as well as an import provider to manage module resolution. 
+    /// An optional cache provider can be provided to manage module code caching, as well as an import provider to manage module resolution.
     fn new(
         cache_provider: Option<Box<dyn ModuleCacheProvider>>,
         import_provider: Option<Box<dyn ImportProvider>>,
