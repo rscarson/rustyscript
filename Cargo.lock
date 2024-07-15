@@ -1005,9 +1005,9 @@ dependencies = [
 
 [[package]]
 name = "deno_url"
-version = "0.160.0"
+version = "0.161.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dff35a7ef4e5056ac18907610a7ce1f39a158ed709989ae7d586846fe1e04399"
+checksum = "a74828afdcfe1187b461b6252fc39755b39bbbb42807a1e6b8389ca25dc141e7"
 dependencies = [
  "deno_core",
  "urlpattern",
