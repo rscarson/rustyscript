@@ -1,4 +1,4 @@
-//! This crate is meant to provide a quick and simple way to integrate a runtime javacript or typescript component from within rust.
+//! This crate is meant to provide a quick and simple way to integrate a runtime javascript or typescript component from within rust.
 //!
 //! It uses the v8 engine through the deno_core crate, and is meant to be as simple as possible to use without sacrificing flexibility or performance.
 //!
