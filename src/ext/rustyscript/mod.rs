@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::rc::Rc;
 
 use crate::{error::Error, RsAsyncFunction, RsFunction};
 use deno_core::{extension, op2, serde_json, v8, Extension, OpState};
