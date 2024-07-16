@@ -13,7 +13,7 @@ readme = "readme.md"
 [features]
 default = ["worker", "web_stub", "console", "url", "crypto"]
 no_extensions = []
-all = ["web", "io", "webstorage", "cache"]
+all = ["web", "io", "webstorage", "cache", "websocket"]
 
 # By default, an extension stub is included in the runtime if the `web` feature is disabled
 # It provides a minimal set of APIs for parts of the runtime, such as timers and the DOM exception class
@@ -59,6 +59,9 @@ web_stub = ["webidl"]
     # [https://html.spec.whatwg.org/multipage/webstorage.html]
     webstorage = ["deno_webstorage", "webidl"]
 
+    # [https://websockets.spec.whatwg.org/]
+    websocket = ["deno_websocket", "web"]
+
 # Features for the module loader
 # Both will break sandboxing
 # - fs_import allows arbitrary file imports
@@ -78,7 +81,7 @@ worker = []
 #
 
 [dependencies]
-thiserror = "1.0.61"
+thiserror = "1.0.62"
 serde = "1.0.204"
 
 # The deno runtime itself, and the webidl extension for the web APIs
@@ -105,6 +108,7 @@ deno_url = {version = "0.161.0", optional = true}
 deno_web = {version = "0.192.0", optional = true}
 deno_webidl = {version = "0.161.0", optional = true}
 deno_webstorage = {version = "0.156.0", optional = true}
+deno_websocket = {version = "0.165.0", optional = true }
 
 # Dependencies for the IO feature
 deno_io = {version = "0.71.0", optional = true}
@@ -137,6 +141,10 @@ required-features = ["snapshot_builder"]
 [[example]]
 name = "url_import"
 required-features = ["fs_import", "url_import"]
+
+[[example]]
+name = "websocket"
+required-features = ["websocket", "web"]
 
 [[bench]]
 name = "runtime"

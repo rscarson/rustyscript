@@ -80,3 +80,6 @@ jobs:
 
     - name: async_eval
       run: cargo run --example async_eval
+
+    - name: websocket
+      run: cargo run --example websocket --features="web websocket"

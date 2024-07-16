@@ -1,4 +1,4 @@
-//! This crate is meant to provide a quick and simple way to integrate a runtime javacript or typescript component from within rust.
+//! This crate is meant to provide a quick and simple way to integrate a runtime javascript or typescript component from within rust.
 //!
 //! It uses the v8 engine through the deno_core crate, and is meant to be as simple as possible to use without sacrificing flexibility or performance.
 //!
@@ -231,6 +231,7 @@
 //! |io              |Provides IO primitives such as stdio streams and abstraction over File System files.               |**NO**            |deno_io, rustyline, winapi, nix, libc, once_cell                                 |
 //! |web             |Provides the Event, TextEncoder, TextDecoder, File, Web Cryptography, and fetch APIs from within JS|**NO**            |deno_webidl, deno_web, deno_crypto, deno_fetch, deno_url, deno_net               |
 //! |webstorage      |Provides the WebStorage API                                                                        |**NO**            |deno_webidl, deno_webstorage                                                     |
+//! |websocket       |Provides the WebSocket API                                                                         |**NO**            |deno_web, deno_websocket                                                         |
 //! |webidl          |Provides the webidl API                                                                            |yes               |deno_webidl                                                                      |
 //! |                |                                                                                                   |                  |                                                                                 |
 //! |default         |Provides only those extensions that preserve sandboxing                                            |yes               |deno_console, deno_crypto, deno_webidl, deno_url                                 |

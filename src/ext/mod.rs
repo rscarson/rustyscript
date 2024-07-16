@@ -31,6 +31,9 @@ pub mod io;
 #[cfg(feature = "webstorage")]
 pub mod webstorage;
 
+#[cfg(feature = "websocket")]
+pub mod websocket;
+
 /// Options for configuring extensions
 pub struct ExtensionOptions {
     /// Options specific to the deno_web, deno_fetch and deno_net extensions
@@ -93,7 +96,7 @@ pub fn all_extensions(
     extensions.extend(url::extensions());
 
     #[cfg(feature = "web")]
-    extensions.extend(web::extensions(options.web));
+    extensions.extend(web::extensions(options.web.clone()));
 
     #[cfg(feature = "cache")]
     extensions.extend(cache::extensions(options.cache));
@@ -111,6 +114,9 @@ pub fn all_extensions(
     extensions.extend(webstorage::extensions(
         options.webstorage_origin_storage_dir,
     ));
+
+    #[cfg(feature = "websocket")]
+    extensions.extend(websocket::extensions(options.web.clone()));
 
     extensions.extend(user_extensions);
     extensions
@@ -134,7 +140,7 @@ pub fn all_snapshot_extensions(
     extensions.extend(url::snapshot_extensions());
 
     #[cfg(feature = "web")]
-    extensions.extend(web::snapshot_extensions(options.web));
+    extensions.extend(web::snapshot_extensions(options.web.clone()));
 
     #[cfg(feature = "cache")]
     extensions.extend(cache::snapshot_extensions(options.cache));
@@ -152,6 +158,9 @@ pub fn all_snapshot_extensions(
     extensions.extend(webstorage::snapshot_extensions(
         options.webstorage_origin_storage_dir,
     ));
+
+    #[cfg(feature = "websocket")]
+    extensions.extend(websocket::snapshot_extensions(options.web.clone()));
 
     extensions.extend(user_extensions);
     extensions
