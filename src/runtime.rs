@@ -104,6 +104,13 @@ impl Runtime {
         self.tokio.clone()
     }
 
+    /// Access the underlying tokio runtime and call `shutdown_background`
+    /// As `shutdown_background` needs the ownership of a tokio runtime
+    /// This can be done only in the `rustyscript::Runtime`
+    /// That's why we expose this function
+    pub fn shutdown_background_tokio_runtime(self) {
+        Rc::into_inner(self.tokio).unwrap().shutdown_background()
+    }
     /// Access the options used to create this runtime
     pub fn options(&self) -> &RuntimeOptions {
         &self.inner.options
