@@ -1,4 +1,3 @@
-use crate::ext::web::Permissions;
 use crate::WebOptions;
 use deno_core::error::AnyError;
 use deno_core::url::Url;
@@ -12,6 +11,7 @@ extension!(
     esm = [ dir "src/ext/websocket", "init_websocket.js" ],
 );
 
+struct Permissions;
 impl WebSocketPermissions for Permissions {
     fn check_net_url(&mut self, _url: &Url, _api_name: &str) -> Result<(), AnyError> {
         Ok(())
