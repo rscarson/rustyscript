@@ -1,0 +1,23 @@
+name: Docs
+# By a huge margin the slowest test, so we run it separately
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+
+    # Run tests with all features
+    - name: Run complete tests
+      run: cargo test --all-features --doc

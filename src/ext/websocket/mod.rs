@@ -4,19 +4,21 @@ use deno_core::url::Url;
 use deno_core::{extension, Extension};
 use deno_websocket::WebSocketPermissions;
 
-extension!(
-    init_websocket,
-    deps = [rustyscript],
-    esm_entry_point = "ext:init_websocket/init_websocket.js",
-    esm = [ dir "src/ext/websocket", "init_websocket.js" ],
-);
-
+#[derive(Clone, Default)]
 struct Permissions;
 impl WebSocketPermissions for Permissions {
     fn check_net_url(&mut self, _url: &Url, _api_name: &str) -> Result<(), AnyError> {
         Ok(())
     }
 }
+
+extension!(
+    init_websocket,
+    deps = [rustyscript],
+    esm_entry_point = "ext:init_websocket/init_websocket.js",
+    esm = [ dir "src/ext/websocket", "init_websocket.js" ],
+    state = |state| state.put(Permissions::default())
+);
 
 pub fn extensions(options: WebOptions) -> Vec<Extension> {
     vec![

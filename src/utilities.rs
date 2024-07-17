@@ -139,11 +139,11 @@ mod runtime_macros {
     ///
     /// Useful if you need more than 16 arguments for a single function call
     /// Warning: This macro is far slower than `json_args!` and should be used sparingly
-    /// Benchmarks place the performance difference at nearly  1,000 times slower!
+    /// Benchmarks place the performance difference at nearly 1,000 times slower!
     ///
     /// # Example
     /// ```rust
-    /// use rustyscript::{ Runtime, RuntimeOptions, Module, json_args };
+    /// use rustyscript::{ Runtime, RuntimeOptions, Module, big_json_args };
     /// use std::time::Duration;
     ///
     /// # fn main() -> Result<(), rustyscript::Error> {
