@@ -167,7 +167,7 @@ mod runtime_macros {
     macro_rules! big_json_args {
         ($($arg:expr),*) => {
             &vec![
-                $(serde_json::Value::from($arg)),*
+                $($crate::deno_core::serde_json::Value::from($arg)),*
             ]
         };
     }
