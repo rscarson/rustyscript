@@ -11,7 +11,7 @@ categories = ["web-programming", "network-programming", "api-bindings", "compile
 readme = "readme.md"
 
 [features]
-default = ["worker", "web_stub", "console", "url", "crypto", "web"]
+default = ["worker", "web_stub", "console", "url", "crypto"]
 no_extensions = []
 all = ["web", "io", "webstorage", "cache", "websocket"]
 
