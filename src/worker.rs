@@ -8,6 +8,7 @@
 //!     let worker = DefaultWorker::new(DefaultWorkerOptions {
 //!         default_entrypoint: None,
 //!         timeout: Duration::from_secs(5),
+//!         ..Default::default()
 //!     })?;
 //!
 //!     let result: i32 = worker.eval("5 + 5".to_string())?;

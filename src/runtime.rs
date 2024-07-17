@@ -1,7 +1,7 @@
 use crate::{
     inner_runtime::{InnerRuntime, InnerRuntimeOptions, RsAsyncFunction, RsFunction},
     js_value::Function,
-    Error, FunctionArguments, Module, ModuleHandle,
+    Error, Module, ModuleHandle,
 };
 use deno_core::serde_json;
 use std::rc::Rc;
@@ -32,10 +32,6 @@ pub struct Runtime {
 }
 
 impl Runtime {
-    /// The lack of any arguments - used to simplify calling functions
-    /// Prevents you from needing to specify the type using ::<serde_json::Value>
-    pub const EMPTY_ARGS: &'static FunctionArguments = &[];
-
     /// Creates a new instance of the runtime with the provided options.
     ///
     /// # Arguments
@@ -186,6 +182,10 @@ impl Runtime {
     /// # Ok(())
     /// # }
     /// ```
+    #[deprecated(
+        since = "0.6.0",
+        note = "No longer needed, pass values and tuples directly"
+    )]
     pub fn into_arg<A>(value: A) -> serde_json::Value
     where
         serde_json::Value: From<A>,
@@ -347,7 +347,7 @@ impl Runtime {
         &mut self,
         module_context: Option<&ModuleHandle>,
         function: &Function,
-        args: &FunctionArguments,
+        args: &impl serde::ser::Serialize,
     ) -> Result<T, Error>
     where
         T: serde::de::DeserializeOwned,
@@ -379,7 +379,7 @@ impl Runtime {
         &mut self,
         module_context: Option<&ModuleHandle>,
         function: &Function,
-        args: &FunctionArguments,
+        args: &impl serde::ser::Serialize,
     ) -> Result<T, Error>
     where
         T: deno_core::serde::de::DeserializeOwned,
@@ -409,7 +409,7 @@ impl Runtime {
         &mut self,
         module_context: Option<&ModuleHandle>,
         function: &Function,
-        args: &FunctionArguments,
+        args: &impl serde::ser::Serialize,
     ) -> Result<T, Error>
     where
         T: deno_core::serde::de::DeserializeOwned,
@@ -446,7 +446,7 @@ impl Runtime {
         &mut self,
         module_context: Option<&ModuleHandle>,
         name: &str,
-        args: &FunctionArguments,
+        args: &impl serde::ser::Serialize,
     ) -> Result<T, Error>
     where
         T: deno_core::serde::de::DeserializeOwned,
@@ -492,7 +492,7 @@ impl Runtime {
         &mut self,
         module_context: Option<&ModuleHandle>,
         name: &str,
-        args: &FunctionArguments,
+        args: &impl serde::ser::Serialize,
     ) -> Result<T, Error>
     where
         T: deno_core::serde::de::DeserializeOwned,
@@ -536,7 +536,7 @@ impl Runtime {
         &mut self,
         module_context: Option<&ModuleHandle>,
         name: &str,
-        args: &FunctionArguments,
+        args: &impl serde::ser::Serialize,
     ) -> Result<T, Error>
     where
         T: deno_core::serde::de::DeserializeOwned,
@@ -802,7 +802,7 @@ impl Runtime {
     pub fn call_entrypoint<T>(
         &mut self,
         module_context: &ModuleHandle,
-        args: &FunctionArguments,
+        args: &impl serde::ser::Serialize,
     ) -> Result<T, Error>
     where
         T: deno_core::serde::de::DeserializeOwned,
@@ -831,7 +831,7 @@ impl Runtime {
     pub async fn call_entrypoint_async<T>(
         &mut self,
         module_context: &ModuleHandle,
-        args: &FunctionArguments,
+        args: &impl serde::ser::Serialize,
     ) -> Result<T, Error>
     where
         T: deno_core::serde::de::DeserializeOwned,
@@ -879,7 +879,7 @@ impl Runtime {
     pub fn call_entrypoint_immediate<T>(
         &mut self,
         module_context: &ModuleHandle,
-        args: &FunctionArguments,
+        args: &impl serde::ser::Serialize,
     ) -> Result<T, Error>
     where
         T: deno_core::serde::de::DeserializeOwned,
@@ -927,7 +927,7 @@ impl Runtime {
         module: &Module,
         side_modules: Vec<&Module>,
         runtime_options: RuntimeOptions,
-        entrypoint_args: &FunctionArguments,
+        entrypoint_args: &impl serde::ser::Serialize,
     ) -> Result<T, Error>
     where
         T: deno_core::serde::de::DeserializeOwned,
@@ -971,6 +971,7 @@ mod test_runtime {
     }
 
     #[test]
+    #[allow(deprecated)]
     fn test_into_arg() {
         assert_eq!(2, Runtime::into_arg(2));
         assert_eq!("test", Runtime::into_arg("test"));

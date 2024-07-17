@@ -96,8 +96,15 @@ pub fn init_platform(thread_pool_size: u32, idle_task_support: bool) {
 
 #[macro_use]
 mod runtime_macros {
-    /// Map a series of values to a slice of `serde_json::Value` objects
-    /// that javascript functions can understand
+    /// Map a series of values into a form which javascript functions can understand
+    /// Accepts a maximum of 16 arguments, of any combination of compatible types
+    /// For more than 16 arguments, use `big_json_args!` instead
+    ///
+    /// NOTE: Since 0.6.0, this macro is now effectively a no-op
+    /// It simply builds a tuple reference from the provided arguments
+    ///
+    /// You can also just pass a &tuple directly, or an &array, or even a single value
+    ///
     /// # Example
     /// ```rust
     /// use rustyscript::{ Runtime, RuntimeOptions, Module, json_args };
@@ -122,14 +129,46 @@ mod runtime_macros {
     ///
     #[macro_export]
     macro_rules! json_args {
-        ($($arg:expr),+) => {
-            &[
-                $($crate::Runtime::into_arg($arg)),+
-            ]
+        ($($arg:expr),*) => {
+            &($($arg),*)
         };
+    }
 
-        () => {
-            $crate::Runtime::EMPTY_ARGS
+    /// Map a series of values into a form which javascript functions can understand
+    /// This forms a `Vec<serde_json::Value>` from the provided arguments
+    ///
+    /// Useful if you need more than 16 arguments for a single function call
+    /// Warning: This macro is far slower than `json_args!` and should be used sparingly
+    /// Benchmarks place the performance difference at nearly 1,000 times slower!
+    ///
+    /// # Example
+    /// ```rust
+    /// use rustyscript::{ Runtime, RuntimeOptions, Module, big_json_args };
+    /// use std::time::Duration;
+    ///
+    /// # fn main() -> Result<(), rustyscript::Error> {
+    /// let module = Module::new("test.js", "
+    ///     function load(a, b) {
+    ///         console.log(`Hello world: a=${a}, b=${b}`);
+    ///     }
+    ///     rustyscript.register_entrypoint(load);
+    /// ");
+    ///
+    /// Runtime::execute_module(
+    ///     &module, vec![],
+    ///     Default::default(),
+    ///     big_json_args!("test", 5)
+    /// )?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    ///
+    #[macro_export]
+    macro_rules! big_json_args {
+        ($($arg:expr),*) => {
+            &vec![
+                $($crate::deno_core::serde_json::Value::from($arg)),*
+            ]
         };
     }
 

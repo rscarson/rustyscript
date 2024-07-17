@@ -80,7 +80,7 @@ impl Default for ExtensionOptions {
 
 ///
 /// Add up all required extensions
-pub fn all_extensions(
+pub(crate) fn all_extensions(
     user_extensions: Vec<Extension>,
     options: ExtensionOptions,
 ) -> Vec<Extension> {
@@ -124,7 +124,7 @@ pub fn all_extensions(
 
 ///
 /// Add up all required extensions, in snapshot mode
-pub fn all_snapshot_extensions(
+pub(crate) fn all_snapshot_extensions(
     user_extensions: Vec<Extension>,
     options: ExtensionOptions,
 ) -> Vec<Extension> {

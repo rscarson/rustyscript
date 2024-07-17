@@ -5,6 +5,8 @@ use std::collections::HashMap;
 type FnCache = HashMap<String, Box<dyn RsFunction>>;
 type AsyncFnCache = HashMap<String, Box<dyn RsAsyncFunction>>;
 
+mod callbacks;
+
 #[op2]
 /// Registers a JS function with the runtime as being the entrypoint for the module
 ///

@@ -13,9 +13,12 @@ use serde::de::DeserializeOwned;
 use std::{collections::HashMap, pin::Pin, rc::Rc, time::Duration};
 
 /// Represents a function that can be registered with the runtime
-pub trait RsFunction: Fn(&FunctionArguments) -> Result<serde_json::Value, Error> + 'static {}
+pub trait RsFunction:
+    Fn(&[serde_json::Value]) -> Result<serde_json::Value, Error> + 'static
+{
+}
 impl<F> RsFunction for F where
-    F: Fn(&FunctionArguments) -> Result<serde_json::Value, Error> + 'static
+    F: Fn(&[serde_json::Value]) -> Result<serde_json::Value, Error> + 'static
 {
 }
 
@@ -35,8 +38,31 @@ impl<F> RsAsyncFunction for F where
 {
 }
 
-/// Type required to pass arguments to Functions
-pub type FunctionArguments = [serde_json::Value];
+/// Decodes a set of arguments into a vector of v8 values
+/// This is used to pass arguments to a javascript function
+/// And is faster and more flexible than using `json_args!`
+fn decode_args<'a>(
+    args: &impl serde::ser::Serialize,
+    scope: &mut v8::HandleScope<'a>,
+) -> Result<Vec<v8::Local<'a, v8::Value>>, Error> {
+    let args = deno_core::serde_v8::to_v8(scope, args)?;
+    match v8::Local::<v8::Array>::try_from(args) {
+        Ok(args) => {
+            let len = args.length();
+            let mut result = Vec::with_capacity(len as usize);
+            for i in 0..len {
+                let index = v8::Integer::new(scope, i as i32);
+                let arg = args
+                    .get(scope, index.into())
+                    .ok_or(Error::Runtime(format!("Invalid argument at index {i}")))?;
+                result.push(arg);
+            }
+            Ok(result)
+        }
+        Err(_) if args.is_undefined() || args.is_null() => Ok(vec![]),
+        Err(_) => Ok(vec![args]),
+    }
+}
 
 /// Represents the set of options accepted by the runtime constructor
 pub struct InnerRuntimeOptions {
@@ -366,7 +392,7 @@ impl InnerRuntime {
         &mut self,
         module_context: Option<&ModuleHandle>,
         function: v8::Global<v8::Function>,
-        args: &FunctionArguments,
+        args: &impl serde::ser::Serialize,
     ) -> Result<v8::Global<v8::Value>, Error> {
         // Namespace, if provided
         let module_namespace = if let Some(module_context) = module_context {
@@ -395,15 +421,11 @@ impl InnerRuntime {
 
         let function_instance = function.open(&mut scope);
 
-        // Prep argument
-        let f_args: Result<Vec<v8::Local<v8::Value>>, deno_core::serde_v8::Error> = args
-            .iter()
-            .map(|f| deno_core::serde_v8::to_v8(&mut scope, f))
-            .collect();
-        let final_args = f_args?;
+        // Prep arguments
+        let args = decode_args(args, &mut scope)?;
 
         // Call the function
-        let result = function_instance.call(&mut scope, namespace, &final_args);
+        let result = function_instance.call(&mut scope, namespace, &args);
         match result {
             Some(value) => {
                 let value = v8::Global::new(&mut scope, value);
@@ -567,7 +589,7 @@ impl InnerRuntime {
 mod test_inner_runtime {
     use serde::Deserialize;
 
-    use crate::{async_callback, js_value::Function, json_args, sync_callback};
+    use crate::{async_callback, big_json_args, js_value::Function, json_args, sync_callback};
 
     #[cfg(any(feature = "web", feature = "web_stub"))]
     use crate::js_value::Promise;
@@ -599,6 +621,51 @@ mod test_inner_runtime {
         ($l:expr, $r:expr, $t:ty, $rt:expr) => {
             assert_eq!($rt.decode_value::<$t>($l).expect("Wrong type"), $r,)
         };
+    }
+
+    #[test]
+    fn test_decode_args() {
+        let mut runtime = InnerRuntime::new(Default::default()).expect("Could not load runtime");
+        let mut scope = runtime.deno_runtime.handle_scope();
+
+        // empty
+        let args = decode_args(&json_args!(), &mut scope).expect("Could not decode args");
+        assert_eq!(args.len(), 0);
+
+        // single
+        let args = decode_args(&json_args!(2), &mut scope).expect("Could not decode args");
+        assert_eq!(args.len(), 1);
+
+        // single raw
+        let args = decode_args(&2, &mut scope).expect("Could not decode args");
+        assert_eq!(args.len(), 1);
+
+        // multiple heterogeneous
+        let args = decode_args(&json_args!(2, "test"), &mut scope).expect("Could not decode args");
+        assert_eq!(args.len(), 2);
+
+        // multiple homogeneous
+        let args = decode_args(&json_args!(2, 3), &mut scope).expect("Could not decode args");
+        assert_eq!(args.len(), 2);
+
+        // 16 args
+        let args = decode_args(
+            &(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15),
+            &mut scope,
+        )
+        .expect("Could not decode args");
+        assert_eq!(args.len(), 16);
+
+        // 32 args
+        let args = decode_args(
+            &big_json_args!(
+                0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+                10, 11, 12, 13, 14, 15
+            ),
+            &mut scope,
+        )
+        .expect("Could not decode args");
+        assert_eq!(args.len(), 32);
     }
 
     #[test]

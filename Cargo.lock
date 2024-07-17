@@ -2864,7 +2864,7 @@ dependencies = [
 
 [[package]]
 name = "rustyscript"
-version = "0.5.3"
+version = "0.6.0"
 dependencies = [
  "criterion",
  "deno_ast",
@@ -2884,6 +2884,7 @@ dependencies = [
  "libc",
  "nix 0.29.0",
  "once_cell",
+ "paste",
  "reqwest",
  "rustyline",
  "serde",

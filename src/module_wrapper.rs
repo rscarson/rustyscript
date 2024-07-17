@@ -125,7 +125,7 @@ impl ModuleWrapper {
     ///
     /// # Returns
     /// A `Result` containing the deserialized result of type `T` on success or an `Error` on failure.
-    pub fn call<T>(&mut self, name: &str, args: &[serde_json::Value]) -> Result<T, Error>
+    pub fn call<T>(&mut self, name: &str, args: &impl serde::ser::Serialize) -> Result<T, Error>
     where
         T: serde::de::DeserializeOwned,
     {
@@ -145,7 +145,7 @@ impl ModuleWrapper {
     pub async fn call_async(
         &mut self,
         name: &str,
-        args: &[serde_json::Value],
+        args: &impl serde::ser::Serialize,
     ) -> Result<serde_json::Value, Error> {
         self.runtime
             .call_function_async(Some(&self.module_context), name, args)
@@ -165,7 +165,7 @@ impl ModuleWrapper {
     pub fn call_immediate(
         &mut self,
         name: &str,
-        args: &[serde_json::Value],
+        args: &impl serde::ser::Serialize,
     ) -> Result<serde_json::Value, Error> {
         self.runtime
             .call_function_immediate(Some(&self.module_context), name, args)
@@ -183,7 +183,7 @@ impl ModuleWrapper {
     pub fn call_stored<T>(
         &mut self,
         function: &Function,
-        args: &[serde_json::Value],
+        args: &impl serde::ser::Serialize,
     ) -> Result<T, Error>
     where
         T: serde::de::DeserializeOwned,
@@ -204,7 +204,7 @@ impl ModuleWrapper {
     pub async fn call_stored_async(
         &mut self,
         function: &Function,
-        args: &[serde_json::Value],
+        args: &impl serde::ser::Serialize,
     ) -> Result<serde_json::Value, Error> {
         self.runtime
             .call_stored_function_async(Some(&self.module_context), function, args)
@@ -224,7 +224,7 @@ impl ModuleWrapper {
     pub fn call_stored_immediate(
         &mut self,
         function: &Function,
-        args: &[serde_json::Value],
+        args: &impl serde::ser::Serialize,
     ) -> Result<serde_json::Value, Error> {
         self.runtime
             .call_stored_function_immediate(Some(&self.module_context), function, args)

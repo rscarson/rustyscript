@@ -3,7 +3,7 @@ name = "rustyscript"
 description = "Effortless JS Integration for Rust"
 edition = "2021"
 license = "MIT OR Apache-2.0"
-version = "0.5.3"
+version = "0.6.0"
 repository = "https://github.com/rscarson/rustyscript"
 
 keywords = ["rust", "javascript", "deno", "runtime", "embedding"]
@@ -11,7 +11,7 @@ categories = ["web-programming", "network-programming", "api-bindings", "compile
 readme = "readme.md"
 
 [features]
-default = ["worker", "web_stub", "console", "url", "crypto"]
+default = ["worker", "web_stub", "console", "url", "crypto", "web"]
 no_extensions = []
 all = ["web", "io", "webstorage", "cache", "websocket"]
 
@@ -83,6 +83,9 @@ worker = []
 [dependencies]
 thiserror = "1.0.62"
 serde = "1.0.204"
+
+# Used to generate identifiers for callbacks
+paste = "1.0.15"
 
 # The deno runtime itself, and the webidl extension for the web APIs
 deno_core = "0.293.0"
