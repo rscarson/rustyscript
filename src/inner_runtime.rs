@@ -59,6 +59,7 @@ fn decode_args<'a>(
             }
             Ok(result)
         }
+        Err(_) if args.is_undefined() || args.is_null() => Ok(vec![]),
         Err(_) => Ok(vec![args]),
     }
 }
@@ -588,7 +589,7 @@ impl InnerRuntime {
 mod test_inner_runtime {
     use serde::Deserialize;
 
-    use crate::{async_callback, js_value::Function, json_args, sync_callback};
+    use crate::{async_callback, big_json_args, js_value::Function, json_args, sync_callback};
 
     #[cfg(any(feature = "web", feature = "web_stub"))]
     use crate::js_value::Promise;
@@ -620,6 +621,51 @@ mod test_inner_runtime {
         ($l:expr, $r:expr, $t:ty, $rt:expr) => {
             assert_eq!($rt.decode_value::<$t>($l).expect("Wrong type"), $r,)
         };
+    }
+
+    #[test]
+    fn test_decode_args() {
+        let mut runtime = InnerRuntime::new(Default::default()).expect("Could not load runtime");
+        let mut scope = runtime.deno_runtime.handle_scope();
+
+        // empty
+        let args = decode_args(&json_args!(), &mut scope).expect("Could not decode args");
+        assert_eq!(args.len(), 0);
+
+        // single
+        let args = decode_args(&json_args!(2), &mut scope).expect("Could not decode args");
+        assert_eq!(args.len(), 1);
+
+        // single raw
+        let args = decode_args(&2, &mut scope).expect("Could not decode args");
+        assert_eq!(args.len(), 1);
+
+        // multiple heterogeneous
+        let args = decode_args(&json_args!(2, "test"), &mut scope).expect("Could not decode args");
+        assert_eq!(args.len(), 2);
+
+        // multiple homogeneous
+        let args = decode_args(&json_args!(2, 3), &mut scope).expect("Could not decode args");
+        assert_eq!(args.len(), 2);
+
+        // 16 args
+        let args = decode_args(
+            &(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15),
+            &mut scope,
+        )
+        .expect("Could not decode args");
+        assert_eq!(args.len(), 16);
+
+        // 32 args
+        let args = decode_args(
+            &big_json_args!(
+                0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+                10, 11, 12, 13, 14, 15
+            ),
+            &mut scope,
+        )
+        .expect("Could not decode args");
+        assert_eq!(args.len(), 32);
     }
 
     #[test]
