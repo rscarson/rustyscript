@@ -13,9 +13,12 @@ use serde::de::DeserializeOwned;
 use std::{collections::HashMap, pin::Pin, rc::Rc, time::Duration};
 
 /// Represents a function that can be registered with the runtime
-pub trait RsFunction: Fn(&FunctionArguments) -> Result<serde_json::Value, Error> + 'static {}
+pub trait RsFunction:
+    Fn(&[serde_json::Value]) -> Result<serde_json::Value, Error> + 'static
+{
+}
 impl<F> RsFunction for F where
-    F: Fn(&FunctionArguments) -> Result<serde_json::Value, Error> + 'static
+    F: Fn(&[serde_json::Value]) -> Result<serde_json::Value, Error> + 'static
 {
 }
 
@@ -35,8 +38,30 @@ impl<F> RsAsyncFunction for F where
 {
 }
 
-/// Type required to pass arguments to Functions
-pub type FunctionArguments = [serde_json::Value];
+/// Decodes a set of arguments into a vector of v8 values
+/// This is used to pass arguments to a javascript function
+/// And is faster and more flexible than using `json_args!`
+fn decode_args<'a>(
+    args: &impl serde::ser::Serialize,
+    scope: &mut v8::HandleScope<'a>,
+) -> Result<Vec<v8::Local<'a, v8::Value>>, Error> {
+    let args = deno_core::serde_v8::to_v8(scope, args)?;
+    match v8::Local::<v8::Array>::try_from(args) {
+        Ok(args) => {
+            let len = args.length();
+            let mut result = Vec::with_capacity(len as usize);
+            for i in 0..len {
+                let index = v8::Integer::new(scope, i as i32);
+                let arg = args
+                    .get(scope, index.into())
+                    .ok_or(Error::Runtime(format!("Invalid argument at index {i}")))?;
+                result.push(arg);
+            }
+            Ok(result)
+        }
+        Err(_) => Ok(vec![args]),
+    }
+}
 
 /// Represents the set of options accepted by the runtime constructor
 pub struct InnerRuntimeOptions {
@@ -366,7 +391,7 @@ impl InnerRuntime {
         &mut self,
         module_context: Option<&ModuleHandle>,
         function: v8::Global<v8::Function>,
-        args: &FunctionArguments,
+        args: &impl serde::ser::Serialize,
     ) -> Result<v8::Global<v8::Value>, Error> {
         // Namespace, if provided
         let module_namespace = if let Some(module_context) = module_context {
@@ -395,15 +420,11 @@ impl InnerRuntime {
 
         let function_instance = function.open(&mut scope);
 
-        // Prep argument
-        let f_args: Result<Vec<v8::Local<v8::Value>>, deno_core::serde_v8::Error> = args
-            .iter()
-            .map(|f| deno_core::serde_v8::to_v8(&mut scope, f))
-            .collect();
-        let final_args = f_args?;
+        // Prep arguments
+        let args = decode_args(args, &mut scope)?;
 
         // Call the function
-        let result = function_instance.call(&mut scope, namespace, &final_args);
+        let result = function_instance.call(&mut scope, namespace, &args);
         match result {
             Some(value) => {
                 let value = v8::Global::new(&mut scope, value);

@@ -11,9 +11,7 @@
 /// Extensions consist of a set of #[op2] functions, an extension! macro,
 /// and one or more optional JS modules.
 ///
-use rustyscript::{
-    module, serde_json, Error, Module, ModuleHandle, Runtime, RuntimeOptions, StaticModule,
-};
+use rustyscript::{module, Error, Module, ModuleHandle, Runtime, RuntimeOptions, StaticModule};
 use std::time::Duration;
 
 // See example_extension for a demonstration
@@ -52,7 +50,7 @@ impl MyRuntime {
         &mut self,
         module_context: &ModuleHandle,
         name: &str,
-        args: &[serde_json::Value],
+        args: &impl serde::ser::Serialize,
     ) -> Result<T, Error>
     where
         T: deno_core::serde::de::DeserializeOwned,

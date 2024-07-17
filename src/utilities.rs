@@ -96,8 +96,11 @@ pub fn init_platform(thread_pool_size: u32, idle_task_support: bool) {
 
 #[macro_use]
 mod runtime_macros {
-    /// Map a series of values to a slice of `serde_json::Value` objects
-    /// that javascript functions can understand
+    /// Map a series of values into a form which javascript functions can understand
+    ///
+    /// NOTE: Since 0.6.0, this macro is now effectively a no-op
+    /// It simply builds a tuple reference from the provided arguments
+    ///
     /// # Example
     /// ```rust
     /// use rustyscript::{ Runtime, RuntimeOptions, Module, json_args };
@@ -122,14 +125,8 @@ mod runtime_macros {
     ///
     #[macro_export]
     macro_rules! json_args {
-        ($($arg:expr),+) => {
-            &[
-                $($crate::Runtime::into_arg($arg)),+
-            ]
-        };
-
-        () => {
-            $crate::Runtime::EMPTY_ARGS
+        ($($arg:expr),*) => {
+            &($($arg),*)
         };
     }
 

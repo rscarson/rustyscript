@@ -31,7 +31,7 @@ impl Function {
         &self,
         runtime: &mut crate::Runtime,
         module_context: Option<&crate::ModuleHandle>,
-        args: &crate::FunctionArguments,
+        args: &impl serde::ser::Serialize,
     ) -> Result<T, crate::Error>
     where
         T: serde::de::DeserializeOwned,
@@ -47,7 +47,7 @@ impl Function {
         &self,
         runtime: &mut crate::Runtime,
         module_context: Option<&crate::ModuleHandle>,
-        args: &crate::FunctionArguments,
+        args: &impl serde::ser::Serialize,
     ) -> Result<T, crate::Error>
     where
         T: serde::de::DeserializeOwned,
@@ -63,7 +63,7 @@ impl Function {
         &self,
         runtime: &mut crate::Runtime,
         module_context: Option<&crate::ModuleHandle>,
-        args: &crate::FunctionArguments,
+        args: &impl serde::ser::Serialize,
     ) -> Result<T, crate::Error>
     where
         T: serde::de::DeserializeOwned,

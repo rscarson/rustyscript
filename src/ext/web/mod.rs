@@ -1,16 +1,17 @@
 use deno_core::{extension, Extension, ModuleSpecifier};
 use std::{rc::Rc, sync::Arc};
 
-#[derive(Clone)]
-pub struct Permissions;
+#[derive(Clone, Default)]
+struct DefaultPermissions;
+impl WebPermissions for DefaultPermissions {}
 
-impl deno_web::TimersPermission for Permissions {
+impl deno_web::TimersPermission for DefaultPermissions {
     fn allow_hrtime(&mut self) -> bool {
         true
     }
 }
 
-impl deno_fetch::FetchPermissions for Permissions {
+impl deno_fetch::FetchPermissions for DefaultPermissions {
     fn check_net_url(
         &mut self,
         _url: &deno_core::url::Url,
@@ -28,7 +29,7 @@ impl deno_fetch::FetchPermissions for Permissions {
     }
 }
 
-impl deno_net::NetPermissions for Permissions {
+impl deno_net::NetPermissions for DefaultPermissions {
     fn check_net<T: AsRef<str>>(
         &mut self,
         _host: &(T, Option<u16>),
@@ -54,27 +55,41 @@ impl deno_net::NetPermissions for Permissions {
     }
 }
 
+trait WebPermissions:
+    deno_fetch::FetchPermissions
+    + deno_web::TimersPermission
+    + deno_net::NetPermissions
+    + Clone
+    + Default
+    + 'static
+{
+}
+
 extension!(
     init_web,
     deps = [rustyscript],
+    parameters = [Permissions: WebPermissions],
     esm_entry_point = "ext:init_web/init_web.js",
     esm = [ dir "src/ext/web", "init_web.js" ],
-    state = |state| state.put(Permissions{})
+    state = |state| state.put(Permissions::default())
 );
 
 extension!(
     init_fetch,
     deps = [rustyscript],
+    parameters = [Permissions: WebPermissions],
     esm_entry_point = "ext:init_fetch/init_fetch.js",
     esm = [ dir "src/ext/web", "init_fetch.js" ],
-    state = |state| state.put(Permissions{})
+    state = |state| state.put(Permissions::default())
 );
 
 extension!(
     init_net,
     deps = [rustyscript],
+    parameters = [Permissions: WebPermissions],
     esm_entry_point = "ext:init_net/init_net.js",
     esm = [ dir "src/ext/web", "init_net.js" ],
+    state = |state| state.put(Permissions::default())
 );
 
 /// Options for configuring the web related extensions
@@ -126,15 +141,15 @@ impl Default for WebOptions {
 
 pub fn extensions(options: WebOptions) -> Vec<Extension> {
     vec![
-        deno_web::deno_web::init_ops_and_esm::<Permissions>(
+        deno_web::deno_web::init_ops_and_esm::<DefaultPermissions>(
             Default::default(),
             options.base_url.clone(),
         ),
-        deno_net::deno_net::init_ops_and_esm::<Permissions>(
+        deno_net::deno_net::init_ops_and_esm::<DefaultPermissions>(
             options.root_cert_store_provider.clone(),
             options.unsafely_ignore_certificate_errors.clone(),
         ),
-        deno_fetch::deno_fetch::init_ops_and_esm::<Permissions>(deno_fetch::Options {
+        deno_fetch::deno_fetch::init_ops_and_esm::<DefaultPermissions>(deno_fetch::Options {
             user_agent: options.user_agent,
             root_cert_store_provider: options.root_cert_store_provider,
             proxy: options.proxy,
@@ -143,20 +158,23 @@ pub fn extensions(options: WebOptions) -> Vec<Extension> {
             client_cert_chain_and_key: options.client_cert_chain_and_key,
             file_fetch_handler: options.file_fetch_handler,
         }),
-        init_web::init_ops_and_esm(),
-        init_fetch::init_ops_and_esm(),
-        init_net::init_ops_and_esm(),
+        init_web::init_ops_and_esm::<DefaultPermissions>(),
+        init_fetch::init_ops_and_esm::<DefaultPermissions>(),
+        init_net::init_ops_and_esm::<DefaultPermissions>(),
     ]
 }
 
 pub fn snapshot_extensions(options: WebOptions) -> Vec<Extension> {
     vec![
-        deno_web::deno_web::init_ops::<Permissions>(Default::default(), options.base_url.clone()),
-        deno_net::deno_net::init_ops::<Permissions>(
+        deno_web::deno_web::init_ops::<DefaultPermissions>(
+            Default::default(),
+            options.base_url.clone(),
+        ),
+        deno_net::deno_net::init_ops::<DefaultPermissions>(
             options.root_cert_store_provider.clone(),
             options.unsafely_ignore_certificate_errors.clone(),
         ),
-        deno_fetch::deno_fetch::init_ops::<Permissions>(deno_fetch::Options {
+        deno_fetch::deno_fetch::init_ops::<DefaultPermissions>(deno_fetch::Options {
             user_agent: options.user_agent,
             root_cert_store_provider: options.root_cert_store_provider,
             proxy: options.proxy,
@@ -165,8 +183,8 @@ pub fn snapshot_extensions(options: WebOptions) -> Vec<Extension> {
             client_cert_chain_and_key: options.client_cert_chain_and_key,
             file_fetch_handler: options.file_fetch_handler,
         }),
-        init_web::init_ops(),
-        init_fetch::init_ops(),
-        init_net::init_ops(),
+        init_web::init_ops::<DefaultPermissions>(),
+        init_fetch::init_ops::<DefaultPermissions>(),
+        init_net::init_ops::<DefaultPermissions>(),
     ]
 }
