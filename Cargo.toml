@@ -85,7 +85,7 @@ thiserror = "1.0.62"
 serde = "1.0.204"
 
 # The deno runtime itself, and the webidl extension for the web APIs
-deno_core = "0.293.0"
+deno_core = "0.294.0"
 
 # For transpiling typescript
 deno_ast = { version = "0.40.0", features = ["transpiling"]}
