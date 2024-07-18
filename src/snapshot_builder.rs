@@ -50,11 +50,11 @@ use std::rc::Rc;
 pub struct SnapshotBuilder {
     deno_runtime: JsRuntimeForSnapshot,
     tokio_runtime: Rc<tokio::runtime::Runtime>,
-    options: untimeOptions,
+    options: RuntimeOptions,
 }
 impl SnapshotBuilder {
     /// Creates a new snapshot builder with the given options
-    pub fn new(options: InnerRuntimeOptions) -> Result<Self, Error> {
+    pub fn new(options: RuntimeOptions) -> Result<Self, Error> {
         let loader = Rc::new(RustyLoader::new(options.module_cache));
 
         // If a snapshot is provided, do not reload ops
@@ -87,7 +87,7 @@ impl SnapshotBuilder {
                     .build()?,
             ),
 
-            options: InnerRuntimeOptions {
+            options: RuntimeOptions {
                 timeout: options.timeout,
                 default_entrypoint: options.default_entrypoint,
                 ..Default::default()
