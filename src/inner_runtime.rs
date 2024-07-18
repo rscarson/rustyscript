@@ -264,10 +264,6 @@ impl InnerRuntime {
     where
         T: DeserializeOwned,
     {
-        // Update source map cache
-        self.module_loader
-            .insert_source_map("", expr.to_string(), None);
-
         let result = self.deno_runtime().execute_script("", expr.to_string())?;
 
         let mut scope = self.deno_runtime.handle_scope();

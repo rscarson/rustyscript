@@ -51,6 +51,9 @@ globalThis.rustyscript = {
 };
 Object.freeze(globalThis.rustyscript);
 
+// Stub out the panic function
+Deno.core.ops.op_panic = (msg) => { throw new Error(msg) };
+
 export {
     nonEnumerable, readOnly, writeable, getterOnly, applyToGlobal
 };
