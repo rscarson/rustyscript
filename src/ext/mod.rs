@@ -1,7 +1,6 @@
 #![allow(unused_variables)]
 #![allow(clippy::derivable_impls)]
 use deno_core::Extension;
-use deno_io::Stdio;
 
 pub mod rustyscript;
 
@@ -68,7 +67,7 @@ impl Default for ExtensionOptions {
             crypto_seed: None,
 
             #[cfg(feature = "io")]
-            io_pipes: Some(Stdio::default()),
+            io_pipes: Some(deno_io::Stdio::default()),
 
             #[cfg(feature = "webstorage")]
             webstorage_origin_storage_dir: None,
