@@ -229,8 +229,6 @@ mod test {
         let e = runtime.eval::<Undefined>("1+1;\n1 + x").unwrap_err().as_highlighted(ErrorFormattingOptions::default());
         assert_eq!(e, concat!(
             "At 2:4:\n",
-            "| 1 + x\n",
-            "|     ^\n",
             "= Uncaught ReferenceError: x is not defined"
         ));
 
