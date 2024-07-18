@@ -1,5 +1,8 @@
 use super::V8Value;
-use deno_core::v8::{self};
+use deno_core::{
+    v8::{self},
+    PollEventLoopOptions,
+};
 use serde::Deserialize;
 
 /// A Deserializable javascript promise, that can be stored and used later
@@ -13,7 +16,7 @@ where
     T: serde::de::DeserializeOwned;
 impl_v8!(Promise<T>, PromiseTypeChecker);
 impl_checker!(PromiseTypeChecker, Promise, is_promise, |e| {
-    crate::Error::JsonDecode(format!("Expected a promise, found `{}`", e))
+    crate::Error::JsonDecode(format!("Expected a promise, found `{e}`"))
 });
 
 impl<T> Promise<T>
@@ -26,7 +29,7 @@ where
     ) -> Result<T, crate::Error> {
         let future = runtime.resolve(self.0 .0);
         let result = runtime
-            .with_event_loop_future(future, Default::default())
+            .with_event_loop_future(future, PollEventLoopOptions::default())
             .await?;
         let mut scope = runtime.handle_scope();
         let local = v8::Local::new(&mut scope, &result);
@@ -34,11 +37,19 @@ where
     }
 
     /// Returns a future that resolves the promise
+    ///
+    /// # Errors
+    /// Will return an error if the promise cannot be resolved into the given type,
+    /// or if a runtime error occurs
     pub async fn into_future<'a>(self, runtime: &mut crate::Runtime) -> Result<T, crate::Error> {
         self.resolve(runtime.deno_runtime()).await
     }
 
     /// Blocks until the promise is resolved
+    ///
+    /// # Errors
+    /// Will return an error if the promise cannot be resolved into the given type,
+    /// or if a runtime error occurs
     pub fn into_value(self, runtime: &mut crate::Runtime) -> Result<T, crate::Error> {
         runtime.run_async_task(move |runtime| async move { self.into_future(runtime).await })
     }
@@ -47,7 +58,7 @@ where
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::{js_value::Function, json_args, Module, Runtime};
+    use crate::{js_value::Function, json_args, Module, Runtime, RuntimeOptions};
 
     #[test]
     fn test_promise() {
@@ -58,7 +69,7 @@ mod test {
         ",
         );
 
-        let mut runtime = Runtime::new(Default::default()).unwrap();
+        let mut runtime = Runtime::new(RuntimeOptions::default()).unwrap();
         let handle = runtime.load_module(&module).unwrap();
 
         let f: Function = runtime.get_value(Some(&handle), "f").unwrap();

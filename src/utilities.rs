@@ -1,9 +1,11 @@
+use std::path::Path;
+
 use crate::traits::ToModuleSpecifier;
-use crate::{Error, Module, ModuleWrapper, Runtime};
+use crate::{Error, Module, ModuleWrapper, Runtime, RuntimeOptions};
 
 /// Evaluate a piece of non-ECMAScript-module JavaScript code
 /// Effects on the global scope will not persist
-/// For a persistant variant, see [Runtime::eval]
+/// For a persistant variant, see [`Runtime::eval`]
 ///
 /// # Arguments
 /// * `javascript` - A single javascript expression
@@ -11,6 +13,10 @@ use crate::{Error, Module, ModuleWrapper, Runtime};
 /// # Returns
 /// A `Result` containing the deserialized result of the expression if successful,
 /// or an error if execution fails, or the result cannot be deserialized.
+///
+/// # Errors
+/// Will return an error if the runtime cannot be started (usually due to extension issues)
+/// Or if the expression is invalid, or if the result cannot be deserialized into the given type
 ///
 /// # Example
 ///
@@ -22,7 +28,7 @@ pub fn evaluate<T>(javascript: &str) -> Result<T, Error>
 where
     T: deno_core::serde::de::DeserializeOwned,
 {
-    let mut runtime = Runtime::new(Default::default())?;
+    let mut runtime = Runtime::new(RuntimeOptions::default())?;
     runtime.eval(javascript)
 }
 
@@ -32,8 +38,11 @@ where
 /// * `javascript` - A snippet of JS code
 ///
 /// # Returns
-/// A `Result` containing a boolean determining the validity of the JS,
-/// or an error if something went wrong.
+/// A `Result` containing a boolean determining the validity of the JS
+///
+/// # Errors
+/// Will return an error if the runtime cannot be started (usually due to extension issues)
+/// Or if something went wrong and the validity could not be determined
 ///
 /// # Example
 ///
@@ -42,11 +51,10 @@ where
 /// ```
 pub fn validate(javascript: &str) -> Result<bool, Error> {
     let module = Module::new("test.js", javascript);
-    let mut runtime = Runtime::new(Default::default())?;
+    let mut runtime = Runtime::new(RuntimeOptions::default())?;
     match runtime.load_modules(&module, vec![]) {
         Ok(_) => Ok(true),
-        Err(Error::Runtime(_)) => Ok(false),
-        Err(Error::JsError(_)) => Ok(false),
+        Err(Error::Runtime(_) | Error::JsError(_)) => Ok(false),
         Err(e) => Err(e),
     }
 }
@@ -60,19 +68,29 @@ pub fn validate(javascript: &str) -> Result<bool, Error> {
 /// A `Result` containing a handle to the imported module,
 /// or an error if something went wrong.
 ///
+/// # Errors
+/// Will return an error if the file cannot be found, execution fails, or the runtime
+/// cannot be started (usually due to extension issues)
+///
 /// # Example
 ///
 /// ```no_run
 /// let mut module = rustyscript::import("js/my_module.js").expect("Something went wrong!");
 /// ```
 pub fn import(path: &str) -> Result<ModuleWrapper, Error> {
-    ModuleWrapper::new_from_file(path, Default::default())
+    ModuleWrapper::new_from_file(path, RuntimeOptions::default())
 }
 
-/// Resolve a path to absolute path
+/// Resolve a path to absolute path, relative to the current working directory
+/// or an optional base directory
 ///
 /// # Arguments
 /// * `path` - A path
+/// * `base_dir` - An optional base directory to resolve the path from
+///                If not provided, the current working directory is used
+///
+/// # Errors
+/// Will return an error if the given path is invalid
 ///
 /// # Example
 ///
@@ -80,18 +98,18 @@ pub fn import(path: &str) -> Result<ModuleWrapper, Error> {
 /// let full_path = rustyscript::resolve_path("test.js").expect("Something went wrong!");
 /// assert!(full_path.ends_with("test.js"));
 /// ```
-pub fn resolve_path(path: &str) -> Result<String, Error> {
-    Ok(path.to_module_specifier()?.to_string())
+pub fn resolve_path(path: &str, base_dir: Option<&Path>) -> Result<String, Error> {
+    Ok(path.to_module_specifier(base_dir)?.to_string())
 }
 
 /// Explicitly initialize the V8 platform
 /// Note that all runtimes must have a common parent thread that initalized the V8 platform
 ///
-/// This is done automatically the first time Runtime::new is called,
+/// This is done automatically the first time [`Runtime::new`] is called,
 /// but for multi-threaded applications, it may be necessary to call this function manually
 pub fn init_platform(thread_pool_size: u32, idle_task_support: bool) {
     let platform = deno_core::v8::Platform::new(thread_pool_size, idle_task_support);
-    deno_core::JsRuntime::init_platform(Some(platform.into()))
+    deno_core::JsRuntime::init_platform(Some(platform.into()));
 }
 
 #[macro_use]
@@ -196,7 +214,7 @@ mod runtime_macros {
                     };
                 )*
                 let result = $body?;
-                Ok($crate::serde_json::Value::try_from(result).map_err(|e| $crate::Error::Runtime(e.to_string()))?)
+                $crate::serde_json::Value::try_from(result).map_err(|e| $crate::Error::Runtime(e.to_string()))
             }
         }
     }
@@ -263,13 +281,13 @@ mod test_runtime {
 
     #[test]
     fn test_validate() {
-        assert_eq!(true, validate("3 + 2").expect("invalid expression"));
-        assert_eq!(false, validate("5;+-").expect("invalid expression"));
+        assert!(validate("3 + 2").expect("invalid expression"));
+        assert!(!validate("5;+-").expect("invalid expression"));
     }
 
     #[test]
     fn test_resolve_path() {
-        assert!(resolve_path("test.js")
+        assert!(resolve_path("test.js", None)
             .expect("invalid path")
             .ends_with("test.js"));
     }

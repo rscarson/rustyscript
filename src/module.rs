@@ -8,13 +8,15 @@ use std::path::Path;
 /// use `.to_module()` to get a module instance to use with a runtime
 pub struct StaticModule(&'static str, &'static str);
 impl StaticModule {
-    /// Create a new StaticModule
+    /// Create a new `StaticModule`
     /// use the module!(filename, contents) macro instead!
+    #[must_use]
     pub const fn new(filename: &'static str, contents: &'static str) -> Self {
         Self(filename, contents)
     }
 
-    /// Get an instance of this StaticModule that can be used with a runtime
+    /// Get an instance of this `StaticModule` that can be used with a runtime
+    #[must_use]
     pub fn to_module(&self) -> Module {
         Module::new(self.0, self.1)
     }
@@ -76,6 +78,7 @@ impl Module {
     ///
     /// let module = Module::new("module.js", "console.log('Hello, World!');");
     /// ```
+    #[must_use]
     pub fn new(filename: &str, contents: &str) -> Self {
         Self {
             filename: filename.to_string(),
@@ -92,6 +95,9 @@ impl Module {
     /// A `Result` containing the loaded `Module` instance or an `std::io::Error` if there
     /// are issues reading the file.
     ///
+    /// # Errors
+    /// Will return an error if the file cannot be read.
+    ///
     /// # Example
     ///
     /// ```rust
@@ -107,7 +113,7 @@ impl Module {
         Ok(Self::new(filename, &contents))
     }
 
-    /// Attempt to load all js/ts files in a given directory
+    /// Attempt to load all `.js`/`.ts` files in a given directory
     /// Fails if any of the files cannot be loaded
     ///
     /// # Arguments
@@ -116,6 +122,9 @@ impl Module {
     /// # Returns
     /// A `Result` containing a vec of loaded `Module` instances or an `std::io::Error` if there
     /// are issues reading a file.
+    ///
+    /// # Errors
+    /// Will return an error if the directory cannot be read, or if any contained file cannot be read.
     ///
     /// # Example
     ///
@@ -161,6 +170,7 @@ impl Module {
     /// let module = Module::new("module.js", "console.log('Hello, World!');");
     /// println!("Filename: {}", module.filename());
     /// ```
+    #[must_use]
     pub fn filename(&self) -> &str {
         &self.filename
     }
@@ -178,6 +188,7 @@ impl Module {
     /// let module = Module::new("module.js", "console.log('Hello, World!');");
     /// println!("Module Contents: {}", module.contents());
     /// ```
+    #[must_use]
     pub fn contents(&self) -> &str {
         &self.contents
     }
@@ -205,6 +216,6 @@ mod test_module {
     fn test_load_dir() {
         let modules =
             Module::load_dir("src/ext/rustyscript").expect("Failed to load modules from directory");
-        assert!(modules.len() > 0);
+        assert!(!modules.is_empty());
     }
 }

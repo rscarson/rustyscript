@@ -1,5 +1,5 @@
 //! This module provides a way to store and use javascript values, functions, and promises
-//! The are a deserialized version of the v8::Value
+//! The are a deserialized version of the `v8::Value`
 //!
 //! [Function] and [Promise] are both specializations of [Value] providing deserialize-time type checking
 //! and additional utility functions for interacting with the runtime
@@ -12,8 +12,9 @@ macro_rules! impl_v8 {
     ($name:ident$(<$generic:ident>)?, $checker:ident $(,)?) => {
         impl $(<$generic>)? $name $(<$generic>)? where
         $( $generic: serde::de::DeserializeOwned, )? {
-            /// Returns the underlying [deno_core::v8::Global]
-            /// This is useful if you want to pass the value to a [deno_core::JsRuntime] function directly
+            /// Returns the underlying [`crate::deno_core::v8::Global`]
+            /// This is useful if you want to pass the value to a [`crate::deno_core::JsRuntime`] function directly
+            #[must_use]
             pub fn into_v8(self) -> v8::Global<v8::Value> {
                 self.0 .0
             }
@@ -146,9 +147,12 @@ pub struct Value(V8Value<DefaultTypeChecker>);
 impl_v8!(Value, DefaultTypeChecker);
 impl Value {
     /// Converts the value to an arbitrary rust type
-    /// Mimics the auto-decoding using from_v8 that normally happens
+    /// Mimics the auto-decoding using `from_v8` that normally happens
     /// Note: This will not await the event loop, or resolve promises
-    /// Use [crate::js_value::Promise] as the generic T for that
+    /// Use [`crate::js_value::Promise`] as the generic T for that
+    ///
+    /// # Errors
+    /// Will return an error if the value cannot be deserialized into the given type
     pub fn try_into<T>(self, runtime: &mut crate::Runtime) -> Result<T, crate::Error>
     where
         T: serde::de::DeserializeOwned,
@@ -158,10 +162,10 @@ impl Value {
         Ok(deno_core::serde_v8::from_v8(&mut scope, local)?)
     }
 
-    /// Contructs a new Value from a v8::Value global
-    pub fn from_v8(value: v8::Global<v8::Value>) -> Result<Self, crate::Error> {
-        DefaultTypeChecker::validate(value.clone())?;
-        Ok(Self(V8Value(value, std::marker::PhantomData)))
+    /// Contructs a new Value from a `v8::Value` global
+    #[must_use]
+    pub fn from_v8(value: v8::Global<v8::Value>) -> Self {
+        Self(V8Value(value, std::marker::PhantomData))
     }
 }
 
@@ -180,7 +184,7 @@ pub use map::*;
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::{Module, Runtime};
+    use crate::{Module, Runtime, RuntimeOptions};
 
     #[test]
     fn test_value() {
@@ -191,7 +195,7 @@ mod test {
         ",
         );
 
-        let mut runtime = Runtime::new(Default::default()).unwrap();
+        let mut runtime = Runtime::new(RuntimeOptions::default()).unwrap();
         let handle = runtime.load_module(&module).unwrap();
 
         let f: Value = runtime.get_value(Some(&handle), "f").unwrap();

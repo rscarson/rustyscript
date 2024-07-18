@@ -13,6 +13,7 @@ pub type StartTime = Instant;
 // If the High precision flag is not set, the
 // nanoseconds are rounded on 2ms.
 #[op2(fast)]
+#[allow(clippy::cast_possible_truncation)]
 pub fn op_now(state: &mut OpState, #[buffer] buf: &mut [u8]) {
     let start_time = state.borrow::<StartTime>();
     let elapsed = start_time.elapsed();
@@ -30,7 +31,7 @@ pub fn op_now(state: &mut OpState, #[buffer] buf: &mut [u8]) {
     }
     let buf: &mut [u32] =
     // SAFETY: buffer is at least 8 bytes long.
-    unsafe { std::slice::from_raw_parts_mut(buf.as_mut_ptr() as _, 2) };
+    unsafe { std::slice::from_raw_parts_mut(buf.as_mut_ptr().cast(), 2) };
     buf[0] = seconds as u32;
     buf[1] = subsec_nanos;
 }

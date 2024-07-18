@@ -11,13 +11,14 @@ use deno_core::{
 use std::{
     cell::RefCell,
     collections::{HashMap, HashSet},
+    path::Path,
     rc::Rc,
 };
 
 /// Stores the source code and source map for loaded modules
 type SourceMapCache = HashMap<String, (String, Option<Vec<u8>>)>;
 
-/// Internal implementation ModuleLoader
+/// Internal implementation `ModuleLoader`
 #[derive(Clone)]
 struct InnerRustyLoader {
     cache_provider: Rc<Option<Box<dyn ModuleCacheProvider>>>,
@@ -26,7 +27,7 @@ struct InnerRustyLoader {
 }
 
 impl InnerRustyLoader {
-    /// Creates a new instance of InnerRustyLoader
+    /// Creates a new instance of `InnerRustyLoader`
     /// An optional cache provider can be provided to manage module code caching
     fn new(cache_provider: Option<Box<dyn ModuleCacheProvider>>) -> Self {
         Self {
@@ -62,44 +63,46 @@ impl InnerRustyLoader {
     {
         // Check if the module is in the cache first
         let cache_provider = self.cache_provider.clone();
-        let cache_provider = cache_provider.as_ref().as_ref().map(|p| p.as_ref());
-        match cache_provider.map(|p| p.get(&module_specifier)) {
-            Some(Some(source)) => Ok(source),
-            _ => {
-                // Not in the cache, load the module from the handler
+        let cache_provider = cache_provider.as_ref().as_ref().map(AsRef::as_ref);
+        if let Some(Some(source)) = cache_provider.map(|p| p.get(&module_specifier)) {
+            Ok(source)
+        } else {
+            // Not in the cache, load the module from the handler
 
-                // Get the module type first
-                let module_type = if module_specifier.path().ends_with(".json") {
-                    ModuleType::Json
-                } else {
-                    ModuleType::JavaScript
-                };
+            // Get the module type first
+            let extension = Path::new(module_specifier.path())
+                .extension()
+                .unwrap_or_default();
+            let module_type = if extension.eq_ignore_ascii_case("json") {
+                ModuleType::Json
+            } else {
+                ModuleType::JavaScript
+            };
 
-                // Load the module code, and transpile it if necessary
-                let code = handler(module_specifier.clone()).await?;
-                let (tcode, source_map) = transpiler::transpile(&module_specifier, &code)?;
+            // Load the module code, and transpile it if necessary
+            let code = handler(module_specifier.clone()).await?;
+            let (tcode, source_map) = transpiler::transpile(&module_specifier, &code)?;
 
-                // Create the module source
-                let source = ModuleSource::new(
-                    module_type,
-                    ModuleSourceCode::String(tcode.into()),
-                    &module_specifier,
-                    None,
-                );
+            // Create the module source
+            let source = ModuleSource::new(
+                module_type,
+                ModuleSourceCode::String(tcode.into()),
+                &module_specifier,
+                None,
+            );
 
-                // Add the source to our source cache
-                self.source_map_cache.borrow_mut().insert(
-                    module_specifier.to_string(),
-                    (code, source_map.map(|s| s.to_vec())),
-                );
+            // Add the source to our source cache
+            self.source_map_cache.borrow_mut().insert(
+                module_specifier.to_string(),
+                (code, source_map.map(|s| s.to_vec())),
+            );
 
-                // Cache the source if a cache provider is available
-                // Could speed up loads on some future runtime
-                if let Some(p) = cache_provider {
-                    p.set(&module_specifier, source.clone(&module_specifier));
-                }
-                Ok(source)
+            // Cache the source if a cache provider is available
+            // Could speed up loads on some future runtime
+            if let Some(p) = cache_provider {
+                p.set(&module_specifier, source.clone(&module_specifier));
             }
+            Ok(source)
         }
     }
 
@@ -197,7 +200,7 @@ impl ModuleLoader for RustyLoader {
                         .load(module_specifier, |specifier| async move {
                             let path = specifier
                                 .to_file_path()
-                                .map_err(|_| anyhow!("`{specifier}` is not a valid file URL."))?;
+                                .map_err(|()| anyhow!("`{specifier}` is not a valid file URL."))?;
                             Ok(tokio::fs::read_to_string(path).await?)
                         })
                         .await
@@ -217,7 +220,7 @@ impl ModuleLoader for RustyLoader {
 
 #[allow(dead_code)]
 impl RustyLoader {
-    /// Creates a new instance of RustyLoader
+    /// Creates a new instance of `RustyLoader`
     /// An optional cache provider can be provided to manage module code caching
     pub fn new(cache_provider: Option<Box<dyn ModuleCacheProvider>>) -> Self {
         Self {
@@ -257,7 +260,7 @@ impl SourceMapGetter for RustyLoader {
         let sref = self.inner.source_map_cache();
         let sref = sref.borrow();
         let sref = sref.get(file_name)?;
-        sref.1.as_ref().map(|s| s.to_vec())
+        sref.1.clone()
     }
 
     /// Get a specific line from a source file in the cache
@@ -284,7 +287,7 @@ mod test {
     #[tokio::test]
     async fn test_loader() {
         let cache_provider = MemoryModuleCacheProvider::default();
-        let specifier = "file:///test.ts".to_module_specifier().unwrap();
+        let specifier = "file:///test.ts".to_module_specifier(None).unwrap();
         let source = ModuleSource::new(
             ModuleType::JavaScript,
             ModuleSourceCode::String("console.log('Hello, World!')".to_string().into()),
@@ -308,19 +311,17 @@ mod test {
             ModuleLoadResponse::Async(future) => {
                 let source = future.await.expect("Expected to get source");
 
-                let source = if let ModuleSourceCode::String(s) = source.code {
-                    s
-                } else {
+                let ModuleSourceCode::String(source) = source.code else {
                     panic!("Unexpected source code type");
                 };
-                let cached_source = if let ModuleSourceCode::String(s) = cached_source.code {
-                    s
-                } else {
+
+                let ModuleSourceCode::String(cached_source) = cached_source.code else {
                     panic!("Unexpected source code type");
                 };
+
                 assert_eq!(source, cached_source);
             }
-            _ => panic!("Unexpected response"),
+            ModuleLoadResponse::Sync(_) => panic!("Unexpected response"),
         }
     }
 }

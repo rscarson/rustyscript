@@ -16,7 +16,7 @@
 //!     Ok(())
 //! }
 
-use crate::Error;
+use crate::{Error, RuntimeOptions};
 use std::cell::RefCell;
 use std::rc::Rc;
 use std::sync::mpsc::{channel, Receiver, Sender};
@@ -31,6 +31,7 @@ where
 {
     workers: Vec<Rc<RefCell<Worker<W>>>>,
     next_worker: usize,
+    options: W::RuntimeOptions,
 }
 
 impl<W> WorkerPool<W>
@@ -38,6 +39,9 @@ where
     W: InnerWorker,
 {
     /// Create a new worker pool with the specified number of workers
+    ///
+    /// # Errors
+    /// Can fail if a runtime cannot be initialized (usually due to extension issues)
     pub fn new(options: W::RuntimeOptions, n_workers: u32) -> Result<Self, Error> {
         crate::init_platform(n_workers, true);
         let mut workers = Vec::with_capacity(n_workers as usize + 1);
@@ -48,7 +52,14 @@ where
         Ok(Self {
             workers,
             next_worker: 0,
+            options,
         })
+    }
+
+    /// Returns the runtime options used by the workers in the pool
+    #[must_use]
+    pub fn options(&self) -> &W::RuntimeOptions {
+        &self.options
     }
 
     /// Stop all workers in the pool and wait for them to finish
@@ -59,6 +70,7 @@ where
     }
 
     /// Get the number of workers in the pool
+    #[must_use]
     pub fn len(&self) -> usize {
         self.workers.len()
     }
@@ -67,11 +79,13 @@ where
     /// This will be true if the pool has no workers
     /// This can happen if the pool was created with 0 workers
     /// Which is not particularly useful, but is allowed
+    #[must_use]
     pub fn is_empty(&self) -> bool {
         self.workers.is_empty()
     }
 
     /// Get a worker by its index in the pool
+    #[must_use]
     pub fn worker_by_id(&self, id: usize) -> Option<Rc<RefCell<Worker<W>>>> {
         Some(Rc::clone(self.workers.get(id)?))
     }
@@ -85,6 +99,9 @@ where
 
     /// Send a request to the next worker in the pool
     /// This will block the current thread until the response is received
+    ///
+    /// # Errors
+    /// Will return an error if the worker has already been stopped, or if the worker thread panicked
     pub fn send_and_await(&mut self, query: W::Query) -> Result<W::Response, Error> {
         self.next_worker().borrow().send_and_await(query)
     }
@@ -92,13 +109,14 @@ where
     /// Evaluate a string of non-ecma javascript code in a separate thread
     /// The code is evaluated in a new runtime instance, which is then destroyed
     /// Returns a handle to the thread that is running the code
+    #[must_use = "The returned thread handle will return a Result<T, Error> when joined"]
     pub fn eval_in_thread<T>(code: String) -> std::thread::JoinHandle<Result<T, Error>>
     where
         T: serde::de::DeserializeOwned + Send + 'static,
     {
         deno_core::JsRuntime::init_platform(None);
         std::thread::spawn(move || {
-            let mut runtime = crate::Runtime::new(Default::default())?;
+            let mut runtime = crate::Runtime::new(RuntimeOptions::default())?;
             runtime.eval(&code)
         })
     }
@@ -107,10 +125,10 @@ where
 /// A worker thread that can be used to run javascript code in a separate thread
 /// Contains a channel pair for communication, and a single runtime instance
 ///
-/// This worker is generic over an implementation of the [InnerWorker] trait
+/// This worker is generic over an implementation of the [`InnerWorker`] trait
 /// This allows flexibility in the runtime used by the worker, as well as the types of queries and responses that can be used
 ///
-/// For a simple worker that uses the default runtime, see [DefaultWorker]
+/// For a simple worker that uses the default runtime, see [`DefaultWorker`]
 pub struct Worker<W>
 where
     W: InnerWorker,
@@ -125,6 +143,9 @@ where
     W: InnerWorker,
 {
     /// Create a new worker instance
+    ///
+    /// # Errors
+    /// Can fail if the runtime cannot be initialized (usually due to extension issues)
     pub fn new(options: W::RuntimeOptions) -> Result<Self, Error> {
         let (qtx, qrx) = channel();
         let (rtx, rrx) = channel();
@@ -138,13 +159,14 @@ where
             let runtime = match W::init_runtime(options) {
                 Ok(rt) => rt,
                 Err(e) => {
-                    itx.send(Some(e)).unwrap();
+                    itx.send(Some(e)).ok(); // Stopping anyway, so no need to check for errors
                     return;
                 }
             };
 
-            itx.send(None).unwrap();
-            W::thread(runtime, rx, tx);
+            if itx.send(None).is_ok() {
+                W::thread(runtime, rx, tx);
+            }
         });
 
         let worker = Self {
@@ -162,18 +184,25 @@ where
 
             // Parser crashed on startup
             _ => {
-                // This can be replaced with `?` by calling `try_new` on the deno_core::Runtime once that change makes it into a release
-                let e = worker
-                    .handle
-                    .expect("Thread handle missing")
-                    .join()
-                    .err()
-                    .and_then(|e| {
-                        e.downcast_ref::<String>()
-                            .cloned()
-                            .or_else(|| e.downcast_ref::<&str>().map(|s| s.to_string()))
-                    })
-                    .unwrap_or_else(|| "Could not start runtime thread".to_string());
+                let Some(handle) = worker.handle else {
+                    return Err(Error::Runtime(
+                        "Could not start runtime thread: Worker handle missing".to_string(),
+                    ));
+                };
+
+                // Attempt to join the thread to get the error message
+                let Err(e) = handle.join() else {
+                    return Err(Error::Runtime("Could not start runtime thread".to_string()));
+                };
+
+                // Get the actual error message - String, &str, or default message
+                let e = if let Some(e) = e.downcast_ref::<String>() {
+                    e.clone()
+                } else if let Some(e) = e.downcast_ref::<&str>() {
+                    (*e).to_string()
+                } else {
+                    "Could not start runtime thread".to_string()
+                };
 
                 // Remove everything after the words 'Stack backtrace'
                 let e = match e.split("Stack backtrace").next() {
@@ -189,8 +218,9 @@ where
 
     /// Stop the worker and wait for it to finish
     /// Stops by destroying the sender, which will cause the thread to exit the loop and finish
-    /// If implementing a custom `thread` function, make sure to handle rx failures gracefully
-    /// Otherwise this will block indefinitely
+    ///
+    /// WARNING: If implementing a custom `thread` function, make sure to handle rx failures gracefully
+    ///          Otherwise this will block indefinitely
     pub fn shutdown(&mut self) {
         if let (Some(tx), Some(hnd)) = (self.tx.take(), self.handle.take()) {
             // We can stop the thread by destroying the sender
@@ -202,7 +232,9 @@ where
 
     /// Send a request to the worker
     /// This will not block the current thread
-    /// Will return an error if the worker has stopped or panicked
+    ///
+    /// # Errors
+    /// Will return an error if the worker has already been stopped, or if the worker thread panicked
     pub fn send(&self, query: W::Query) -> Result<(), Error> {
         match &self.tx {
             None => return Err(Error::WorkerHasStopped),
@@ -214,7 +246,9 @@ where
 
     /// Receive a response from the worker
     /// This will block the current thread until a response is received
-    /// Will return an error if the worker has stopped or panicked
+    ///
+    /// # Errors
+    /// Will return an error if the worker has already been stopped, or if the worker thread panicked
     pub fn receive(&self) -> Result<W::Response, Error> {
         self.rx.recv().map_err(|e| Error::Runtime(e.to_string()))
     }
@@ -222,15 +256,23 @@ where
     /// Send a request to the worker and wait for a response
     /// This will block the current thread until a response is received
     /// Will return an error if the worker has stopped or panicked
+    ///
+    /// # Errors
+    /// Will return an error if the worker has already been stopped, or if the worker thread panicked
     pub fn send_and_await(&self, query: W::Query) -> Result<W::Response, Error> {
         self.send(query)?;
         self.receive()
     }
 
     /// Consume the worker and wait for the thread to finish
-    /// WARNING: This will block the current thread until the worker has finished
-    ///          Make sure to send a stop message to the worker before calling this!
-    pub fn join(self) -> Result<(), Error> {
+    ///
+    /// WARNING: If implementing a custom `thread` function, make sure to handle rx failures gracefully
+    ///          Otherwise this will block indefinitely
+    ///
+    /// # Errors
+    /// Will return an error if the worker has already been stopped, or if the worker thread panicked
+    pub fn join(mut self) -> Result<(), Error> {
+        self.shutdown();
         match self.handle {
             Some(hnd) => hnd
                 .join()
@@ -245,7 +287,7 @@ where
 /// As well as the types of queries and responses that can be used
 ///
 /// Implement this trait for a specific runtime to use it with the worker
-/// For an example implementation, see [DefaultWorker]
+/// For an example implementation, see [`DefaultWorker`]
 pub trait InnerWorker
 where
     Self: Send,
@@ -271,6 +313,9 @@ where
 
     /// Initialize the runtime used by the worker
     /// This should return a new instance of the runtime that will respond to queries
+    ///
+    /// # Errors
+    /// Can fail if the runtime cannot be initialized (usually due to extension issues)
     fn init_runtime(options: Self::RuntimeOptions) -> Result<Self::Runtime, Error>;
 
     /// Handle a query sent to the worker
@@ -281,13 +326,14 @@ where
     /// This should handle all incoming queries and send responses back
     fn thread(mut runtime: Self::Runtime, rx: Receiver<Self::Query>, tx: Sender<Self::Response>) {
         loop {
-            let msg = match rx.recv() {
-                Ok(msg) => msg,
-                Err(_) => break,
+            let Ok(msg) = rx.recv() else {
+                break;
             };
 
             let response = Self::handle_query(&mut runtime, msg);
-            tx.send(response).unwrap();
+            if tx.send(response).is_err() {
+                break;
+            }
         }
     }
 }
@@ -296,7 +342,7 @@ where
 /// This is the simplest way to use the worker, as it requires no additional setup
 /// It attempts to provide as much functionality as possible from the standard runtime
 ///
-/// Please note that it uses serde_json::Value for queries and responses, which comes with a performance cost
+/// Please note that it uses `serde_json::Value` for queries and responses, which comes with a performance cost
 /// For a more performant worker, or to use extensions and/or loader caches, you'll need to implement your own worker
 pub struct DefaultWorker(Worker<DefaultWorker>);
 impl InnerWorker for DefaultWorker {
@@ -328,14 +374,16 @@ impl InnerWorker for DefaultWorker {
                 Err(e) => Self::Response::Error(e),
             },
 
-            DefaultWorkerQuery::LoadMainModule(module) => match runtime.load_module(&module) {
-                Ok(handle) => {
-                    let id = handle.id();
-                    modules.insert(id, handle);
-                    Self::Response::ModuleId(id)
+            DefaultWorkerQuery::LoadMainModule(module) => {
+                match runtime.load_modules(&module, vec![]) {
+                    Ok(handle) => {
+                        let id = handle.id();
+                        modules.insert(id, handle);
+                        Self::Response::ModuleId(id)
+                    }
+                    Err(e) => Self::Response::Error(e),
                 }
-                Err(e) => Self::Response::Error(e),
-            },
+            }
 
             DefaultWorkerQuery::LoadModule(module) => match runtime.load_module(&module) {
                 Ok(handle) => {
@@ -398,12 +446,18 @@ impl InnerWorker for DefaultWorker {
 }
 impl DefaultWorker {
     /// Create a new worker instance
+    ///
+    /// # Errors
+    /// Can fail if the runtime cannot be initialized (usually due to extension issues)
     pub fn new(options: DefaultWorkerOptions) -> Result<Self, Error> {
         Worker::new(options).map(Self)
     }
 
     /// Evaluate a string of javascript code
     /// Returns the result of the evaluation
+    ///
+    /// # Errors
+    /// Can fail a runtime error occurs during evaluation, or if the return value cannot be deserialized into the requested type
     pub fn eval<T>(&self, code: String) -> Result<T, Error>
     where
         T: serde::de::DeserializeOwned,
@@ -419,6 +473,9 @@ impl DefaultWorker {
 
     /// Load a module into the worker as the main module
     /// Returns the module id of the loaded module
+    ///
+    /// # Errors
+    /// Can fail if execution of the module fails
     pub fn load_main_module(&self, module: crate::Module) -> Result<deno_core::ModuleId, Error> {
         match self
             .0
@@ -434,6 +491,9 @@ impl DefaultWorker {
 
     /// Load a module into the worker as a side module
     /// Returns the module id of the loaded module
+    ///
+    /// # Errors
+    /// Can fail if execution of the module fails
     pub fn load_module(&self, module: crate::Module) -> Result<deno_core::ModuleId, Error> {
         match self
             .0
@@ -450,6 +510,10 @@ impl DefaultWorker {
     /// Call the entrypoint function in a module
     /// Returns the result of the function call
     /// The module id must be the id of a module loaded with `load_main_module` or `load_module`
+    ///
+    /// # Errors
+    /// Can fail the module is not found, if there is no entrypoint function, if the entrypoint function returns an error,
+    /// Or if the return value cannot be deserialized into the requested type
     pub fn call_entrypoint<T>(
         &self,
         id: deno_core::ModuleId,
@@ -475,6 +539,10 @@ impl DefaultWorker {
     /// Call a function in a module
     /// Returns the result of the function call
     /// The module id must be the id of a module loaded with `load_main_module` or `load_module`
+    ///
+    /// # Errors
+    /// Can fail if the function is not found, if the function returns an error,
+    /// Or if the return value cannot be deserialized into the requested type
     pub fn call_function<T>(
         &self,
         module_context: Option<deno_core::ModuleId>,
@@ -500,6 +568,9 @@ impl DefaultWorker {
 
     /// Get a value from a module
     /// The module id must be the id of a module loaded with `load_main_module` or `load_module`
+    ///
+    /// # Errors
+    /// Can fail if the value is not found or if the value cannot be deserialized into the requested type
     pub fn get_value<T>(
         &self,
         module_context: Option<deno_core::ModuleId>,

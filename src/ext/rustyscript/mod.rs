@@ -7,30 +7,27 @@ type AsyncFnCache = HashMap<String, Box<dyn RsAsyncFunction>>;
 
 mod callbacks;
 
-#[op2]
 /// Registers a JS function with the runtime as being the entrypoint for the module
 ///
 /// # Arguments
 /// * `state` - The runtime's state, into which the function will be put
 /// * `callback` - The function to register
-fn op_register_entrypoint(
-    state: &mut OpState,
-    #[global] callback: v8::Global<v8::Function>,
-) -> Result<(), Error> {
+#[op2]
+fn op_register_entrypoint(state: &mut OpState, #[global] callback: v8::Global<v8::Function>) {
     state.put(callback);
-    Ok(())
 }
 
 #[op2]
 #[serde]
+#[allow(clippy::needless_pass_by_value)]
 fn call_registered_function(
-    #[string] name: String,
+    #[string] name: &str,
     #[serde] args: Vec<serde_json::Value>,
     state: &mut OpState,
 ) -> Result<serde_json::Value, Error> {
     if state.has::<FnCache>() {
         let table = state.borrow_mut::<FnCache>();
-        if let Some(callback) = table.get(&name) {
+        if let Some(callback) = table.get(name) {
             return callback(&args);
         }
     }

@@ -27,8 +27,9 @@ impl ModuleHandle {
 
     /// Create a new module handle from raw parts
     /// # Safety
-    /// This function is unsafe because it allows using potentially invalid ModuleIds.
+    /// This function is unsafe because it allows using potentially invalid `ModuleIds`.
     /// Use of an unloaded module ID will result in a panic.
+    #[must_use]
     pub unsafe fn from_raw(
         module: &Module,
         module_id: ModuleId,
@@ -38,16 +39,19 @@ impl ModuleHandle {
     }
 
     /// Return this module's contents
+    #[must_use]
     pub fn module(&self) -> &Module {
         &self.module
     }
 
     /// Return this module's ID
+    #[must_use]
     pub fn id(&self) -> ModuleId {
         self.module_id
     }
 
     /// Return this module's entrypoint
+    #[must_use]
     pub fn entrypoint(&self) -> &Option<v8::Global<v8::Function>> {
         &self.entrypoint
     }

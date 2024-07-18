@@ -17,7 +17,7 @@ extension!(
     deps = [rustyscript],
     esm_entry_point = "ext:init_websocket/init_websocket.js",
     esm = [ dir "src/ext/websocket", "init_websocket.js" ],
-    state = |state| state.put(Permissions::default())
+    state = |state| state.put(Permissions)
 );
 
 pub fn extensions(options: WebOptions) -> Vec<Extension> {

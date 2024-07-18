@@ -1,5 +1,6 @@
 // Copyright 2018-2024 the Deno authors. All rights reserved. MIT license.
 // Used with expressed written permission from the Deno project
+#![allow(clippy::pedantic)] // Disable pedantic linting as it's too strict for this file
 
 use std::io::Error;
 

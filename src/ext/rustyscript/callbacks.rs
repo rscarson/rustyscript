@@ -28,7 +28,7 @@ pub trait RsCallback: 'static {
     /// Function body
     async fn body(args: Self::Arguments) -> Result<Self::Return, Error>;
 
-    /// Convert a series of v8::Value objects into a tuple of arguments
+    /// Convert a series of `v8::Value` objects into a tuple of arguments
     fn args_from_v8(
         args: Vec<v8::Global<v8::Value>>,
         scope: &mut v8::HandleScope,
@@ -42,25 +42,33 @@ pub trait RsCallback: 'static {
         deno_core::serde_json::to_value(args).map_err(Error::from)
     }
 
-    /// Convert a series of v8::Value objects into a tuple of arguments
+    /// Convert a series of `v8::Value` objects into a tuple of arguments
     fn decode_v8(
         args: v8::Global<v8::Value>,
         scope: &mut v8::HandleScope,
     ) -> Result<Self::Arguments, Error> {
         let args = v8::Local::new(scope, args);
-        let args = match args.is_array() {
-            false => vec![v8::Global::new(scope, args)],
-            true => {
-                let args: v8::Local<v8::Array> = v8::Local::new(scope, args).try_into()?;
-                let len = args.length() as usize;
-                let mut result = Vec::with_capacity(len);
-                for i in 0..len {
-                    let index = v8::Integer::new(scope, i as i32);
-                    let value = args.get(scope, index.into()).unwrap();
-                    result.push(v8::Global::new(scope, value));
-                }
-                result
+        let args = if args.is_array() {
+            let args: v8::Local<v8::Array> = v8::Local::new(scope, args).try_into()?;
+            let len = args.length() as usize;
+            let mut result = Vec::with_capacity(len);
+            for i in 0..len {
+                let index = v8::Integer::new(
+                    scope,
+                    i.try_into().map_err(|_| {
+                        Error::Runtime(format!(
+                            "Could not decode {len} arguments - use `big_json_args`"
+                        ))
+                    })?,
+                );
+                let arg = args
+                    .get(scope, index.into())
+                    .ok_or_else(|| Error::Runtime(format!("Invalid argument at index {i}")))?;
+                result.push(v8::Global::new(scope, arg));
             }
+            result
+        } else {
+            vec![v8::Global::new(scope, args)]
         };
 
         Self::args_from_v8(args, scope)
@@ -149,13 +157,13 @@ type CallbackTable = std::collections::HashMap<String, Rc<Box<dyn RsStoredCallba
 #[op2(async)]
 #[serde]
 pub fn rscallback(
-    #[string] name: String,
+    #[string] name: &str,
     #[serde] args: deno_core::serde_json::Value,
     state: &mut OpState,
 ) -> impl std::future::Future<Output = Result<serde_json::Value, Error>> {
     let callback = state
         .try_borrow::<CallbackTable>()
-        .and_then(|t| t.get(&name).cloned())
-        .ok_or_else(|| Error::ValueNotCallable(name.clone()));
+        .and_then(|t| t.get(name).cloned())
+        .ok_or_else(|| Error::ValueNotCallable(name.to_string()));
     async move { callback?.call(args).await }
 }

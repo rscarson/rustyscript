@@ -95,7 +95,7 @@ extension!(
 /// Options for configuring the web related extensions
 #[derive(Clone)]
 pub struct WebOptions {
-    /// Base URL for some deno_web OPs
+    /// Base URL for some `deno_web` OPs
     pub base_url: Option<ModuleSpecifier>,
 
     /// User agent to use for fetch
@@ -128,7 +128,7 @@ impl Default for WebOptions {
     fn default() -> Self {
         Self {
             base_url: None,
-            user_agent: "".to_string(),
+            user_agent: String::new(),
             root_cert_store_provider: None,
             proxy: None,
             request_builder_hook: None,
@@ -142,7 +142,7 @@ impl Default for WebOptions {
 pub fn extensions(options: WebOptions) -> Vec<Extension> {
     vec![
         deno_web::deno_web::init_ops_and_esm::<DefaultPermissions>(
-            Default::default(),
+            Arc::default(),
             options.base_url.clone(),
         ),
         deno_net::deno_net::init_ops_and_esm::<DefaultPermissions>(
@@ -167,7 +167,7 @@ pub fn extensions(options: WebOptions) -> Vec<Extension> {
 pub fn snapshot_extensions(options: WebOptions) -> Vec<Extension> {
     vec![
         deno_web::deno_web::init_ops::<DefaultPermissions>(
-            Default::default(),
+            Arc::default(),
             options.base_url.clone(),
         ),
         deno_net::deno_net::init_ops::<DefaultPermissions>(

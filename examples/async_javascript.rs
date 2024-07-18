@@ -52,7 +52,7 @@ fn main() -> Result<(), Error> {
 
         Ok::<(), Error>(())
     };
-    tokio_runtime.block_on(async move { future.await })?;
+    tokio_runtime.block_on(future)?;
 
     // Another way to do it is to export the promises first
     // Then await them in sequence after running the event loop
@@ -79,7 +79,7 @@ fn main() -> Result<(), Error> {
 
         Ok::<(), Error>(())
     };
-    tokio_runtime.block_on(async move { future.await })?;
+    tokio_runtime.block_on(future)?;
 
     Ok(())
 }

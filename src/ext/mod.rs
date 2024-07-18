@@ -1,6 +1,7 @@
 #![allow(unused_variables)]
 #![allow(clippy::derivable_impls)]
 use deno_core::Extension;
+use deno_io::Stdio;
 
 pub mod rustyscript;
 
@@ -36,15 +37,15 @@ pub mod websocket;
 
 /// Options for configuring extensions
 pub struct ExtensionOptions {
-    /// Options specific to the deno_web, deno_fetch and deno_net extensions
+    /// Options specific to the `deno_web`, `deno_fetch` and `deno_net` extensions
     #[cfg(feature = "web")]
     pub web: web::WebOptions,
 
-    /// Optional seed for the deno_crypto extension
+    /// Optional seed for the `deno_crypto` extension
     #[cfg(feature = "crypto")]
     pub crypto_seed: Option<u64>,
 
-    /// Configures the stdin/out/err pipes for the deno_io extension
+    /// Configures the stdin/out/err pipes for the `deno_io` extension
     #[cfg(feature = "io")]
     pub io_pipes: Option<deno_io::Stdio>,
 
@@ -52,7 +53,7 @@ pub struct ExtensionOptions {
     #[cfg(feature = "webstorage")]
     pub webstorage_origin_storage_dir: Option<std::path::PathBuf>,
 
-    /// Optional cache configuration for the deno_cache extension
+    /// Optional cache configuration for the `deno_cache` extension
     #[cfg(feature = "cache")]
     pub cache: Option<deno_cache::CreateCache<deno_cache::SqliteBackedCache>>,
 }
@@ -67,7 +68,7 @@ impl Default for ExtensionOptions {
             crypto_seed: None,
 
             #[cfg(feature = "io")]
-            io_pipes: Some(Default::default()),
+            io_pipes: Some(Stdio::default()),
 
             #[cfg(feature = "webstorage")]
             webstorage_origin_storage_dir: None,
