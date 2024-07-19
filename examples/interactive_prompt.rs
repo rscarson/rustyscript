@@ -29,7 +29,7 @@ fn interactive_prompt() {
         } else {
             // Process the next command
             let input = cmd.trim();
-            match runtime.eval::<ResponseType>(&input) {
+            match runtime.eval::<ResponseType>(input) {
                 Ok(value) => println!("{}\n", value),
                 Err(e) => eprintln!("{}\n", e.as_highlighted(Default::default())),
             }
@@ -106,10 +106,10 @@ impl std::fmt::Debug for ResponseType {
             ResponseType::String(s) => {
                 // Escape string
                 let s = s
-                    .replace("\n", "\\n")
-                    .replace("\r", "\\r")
-                    .replace("\t", "\\t")
-                    .replace("\"", "\\\"");
+                    .replace('\n', "\\n")
+                    .replace('\r', "\\r")
+                    .replace('\t', "\\t")
+                    .replace('\"', "\\\"");
                 write!(f, "\"{}\"", s)?;
             }
 

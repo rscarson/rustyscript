@@ -2,7 +2,7 @@
 /// This example is meant to demonstrate sending and receiving custom types
 /// between JS and rust
 ///
-use rustyscript::{module, Error, ModuleWrapper, Runtime, StaticModule};
+use rustyscript::{module, Error, ModuleWrapper, StaticModule};
 use serde::{Deserialize, Serialize};
 
 // Modules can be defined statically using this macro!
@@ -67,22 +67,22 @@ fn main() -> Result<(), Error> {
     // More complicated types must use `Runtime::arg`
     let result: BridgeCrossingResult = module.call(
         "checkAttempt",
-        &[Runtime::arg(BridgeCrossingAttempt {
+        &BridgeCrossingAttempt {
             name: "Lancelot".to_string(),
             quest: Quest::Groceries,
             favourite_colour: "blue".to_string(),
-        })?],
+        },
     )?;
     assert_eq!(result, BridgeCrossingResult::Denied);
 
     // Let us try again with different values...
     let result: BridgeCrossingResult = module.call(
         "checkAttempt",
-        &[Runtime::arg(BridgeCrossingAttempt {
+        &BridgeCrossingAttempt {
             name: "Lancelot".to_string(),
             quest: Quest::HolyGrail,
             favourite_colour: "blue".to_string(),
-        })?],
+        },
     )?;
     assert_eq!(result, BridgeCrossingResult::Permitted);
 

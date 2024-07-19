@@ -1,3 +1,4 @@
+#![allow(clippy::thread_local_initializer_can_be_made_const)]
 ///
 /// rustyscript is not thread-safe
 /// This is due to a limitation of the underlying engine, deno_core

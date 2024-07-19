@@ -1,12 +1,12 @@
 use crate::{
     ext,
-    inner_runtime::InnerRuntimeOptions,
+    inner_runtime::RuntimeOptions,
     module_loader::RustyLoader,
     traits::ToModuleSpecifier,
     transpiler::{self, transpile_extension},
     Error, Module,
 };
-use deno_core::{JsRuntimeForSnapshot, ModuleId, PollEventLoopOptions, RuntimeOptions};
+use deno_core::{JsRuntimeForSnapshot, ModuleId, PollEventLoopOptions};
 use std::rc::Rc;
 
 /// A more restricted version of the `Runtime` struct that is used to create a snapshot of the runtime state
@@ -50,11 +50,11 @@ use std::rc::Rc;
 pub struct SnapshotBuilder {
     deno_runtime: JsRuntimeForSnapshot,
     tokio_runtime: Rc<tokio::runtime::Runtime>,
-    options: InnerRuntimeOptions,
+    options: RuntimeOptions,
 }
 impl SnapshotBuilder {
     /// Creates a new snapshot builder with the given options
-    pub fn new(options: InnerRuntimeOptions) -> Result<Self, Error> {
+    pub fn new(options: RuntimeOptions) -> Result<Self, Error> {
         let loader = Rc::new(RustyLoader::new(
             options.module_cache,
             #[cfg(feature = "import_provider")]
@@ -69,11 +69,11 @@ impl SnapshotBuilder {
         };
 
         Ok(Self {
-            deno_runtime: JsRuntimeForSnapshot::try_new(RuntimeOptions {
+            deno_runtime: JsRuntimeForSnapshot::try_new(deno_core::RuntimeOptions {
                 module_loader: Some(loader.clone()),
 
                 extension_transpiler: Some(Rc::new(|specifier, code| {
-                    transpile_extension(specifier, code)
+                    transpile_extension(&specifier, &code)
                 })),
 
                 source_map_getter: Some(loader),
@@ -91,7 +91,7 @@ impl SnapshotBuilder {
                     .build()?,
             ),
 
-            options: InnerRuntimeOptions {
+            options: RuntimeOptions {
                 timeout: options.timeout,
                 default_entrypoint: options.default_entrypoint,
                 ..Default::default()
@@ -143,7 +143,7 @@ impl SnapshotBuilder {
 
         tokio_runtime.block_on(async move {
             tokio::time::timeout(timeout, async move {
-                let module_specifier = module.filename().to_module_specifier()?;
+                let module_specifier = module.filename().to_module_specifier(None)?;
                 let (code, _) = transpiler::transpile(&module_specifier, module.contents())?;
                 let code = deno_core::FastString::from(code);
 

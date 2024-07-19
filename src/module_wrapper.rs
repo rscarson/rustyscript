@@ -2,9 +2,9 @@ use crate::{js_value::Function, Error, Module, ModuleHandle, Runtime, RuntimeOpt
 use deno_core::{serde_json, v8::GetPropertyNamesArgs};
 
 /// A wrapper type representing a runtime instance loaded with a single module
-/// Exactly equivalent to [Runtime::new] followed by [Runtime::load_module]
+/// Exactly equivalent to [`Runtime::new`] followed by [`Runtime::load_module`]
 ///
-/// Can also be created using the [[crate::import] function
+/// Can also be created using the [`crate::import`] function
 pub struct ModuleWrapper {
     module_context: ModuleHandle,
     runtime: Runtime,
@@ -18,8 +18,10 @@ impl ModuleWrapper {
     /// * `options` - The runtime options for the module.
     ///
     /// # Returns
-    ///
     /// A `Result` containing `Self` on success or an `Error` on failure.
+    ///
+    /// # Errors
+    /// Will return an error if module execution fails
     pub fn new_from_module(module: &Module, options: RuntimeOptions) -> Result<Self, Error> {
         let mut runtime = Runtime::new(options)?;
         let module_context = runtime.load_module(module)?;
@@ -36,14 +38,17 @@ impl ModuleWrapper {
     /// * `options` - The runtime options for the module.
     ///
     /// # Returns
-    ///
     /// A `Result` containing `Self` on success or an `Error` on failure.
+    ///
+    /// # Errors
+    /// Will return an error if the file cannot be loaded, or if module execution fails
     pub fn new_from_file(path: &str, options: RuntimeOptions) -> Result<Self, Error> {
         let module = Module::load(path)?;
         Self::new_from_module(&module, options)
     }
 
     /// Returns a reference to the module context.
+    #[must_use]
     pub fn get_module_context(&self) -> &ModuleHandle {
         &self.module_context
     }
@@ -54,13 +59,16 @@ impl ModuleWrapper {
     }
 
     /// Retrieves a value from the module by name and deserializes it.
-    /// See [Runtime::get_value]
+    /// See [`Runtime::get_value`]
     ///
     /// # Arguments
     /// * `name` - The name of the value to retrieve.
     ///
     /// # Returns
     /// A `Result` containing the deserialized value of type `T` on success or an `Error` on failure.
+    ///
+    /// # Errors
+    /// Will return an error if the value cannot be found, or deserialized into the given type
     pub fn get<T>(&mut self, name: &str) -> Result<T, Error>
     where
         T: serde::de::DeserializeOwned,
@@ -69,13 +77,16 @@ impl ModuleWrapper {
     }
 
     /// Retrieves a future resolving to a value from the module by name and deserializes it.
-    /// See [Runtime::get_value_async]
+    /// See [`Runtime::get_value_async`]
     ///
     /// # Arguments
     /// * `name` - The name of the value to retrieve.
     ///
     /// # Returns
     /// A `Result` containing the deserialized value of type `T` on success or an `Error` on failure.
+    ///
+    /// # Errors
+    /// Will return an error if the value cannot be found, or deserialized into the given type
     pub async fn get_async<T>(&mut self, name: &str) -> Result<T, Error>
     where
         T: serde::de::DeserializeOwned,
@@ -87,13 +98,16 @@ impl ModuleWrapper {
 
     /// Retrieves a value from the module by name and deserializes it.
     /// Does not await promises or the event loop.
-    /// See [Runtime::get_value_immediate]
+    /// See [`Runtime::get_value_immediate`]
     ///
     /// # Arguments
     /// * `name` - The name of the value to retrieve.
     ///
     /// # Returns
     /// A `Result` containing the deserialized value of type `T` on success or an `Error` on failure.
+    ///
+    /// # Errors
+    /// Will return an error if the value cannot be found, or deserialized into the given type
     pub fn get_immediate<T>(&mut self, name: &str) -> Result<T, Error>
     where
         T: serde::de::DeserializeOwned,
@@ -105,11 +119,9 @@ impl ModuleWrapper {
     /// Checks if a value in the module with the given name is callable as a JavaScript function.
     ///
     /// # Arguments
-    ///
     /// * `name` - The name of the value to check for callability.
     ///
     /// # Returns
-    ///
     /// `true` if the value is callable as a JavaScript function, `false` otherwise.
     pub fn is_callable(&mut self, name: &str) -> bool {
         let test = self.get::<Function>(name);
@@ -117,7 +129,7 @@ impl ModuleWrapper {
     }
 
     /// Calls a function in the module with the given name and arguments and deserializes the result.
-    /// See [Runtime::call_function]
+    /// See [`Runtime::call_function`]
     ///
     /// # Arguments
     /// * `name` - The name of the function to call.
@@ -125,7 +137,11 @@ impl ModuleWrapper {
     ///
     /// # Returns
     /// A `Result` containing the deserialized result of type `T` on success or an `Error` on failure.
-    pub fn call<T>(&mut self, name: &str, args: &[serde_json::Value]) -> Result<T, Error>
+    ///
+    /// # Errors
+    /// Will return an error if the function cannot be called, if the function returns an error,
+    /// or if the function returns a value that cannot be deserialized into the given type
+    pub fn call<T>(&mut self, name: &str, args: &impl serde::ser::Serialize) -> Result<T, Error>
     where
         T: serde::de::DeserializeOwned,
     {
@@ -134,7 +150,7 @@ impl ModuleWrapper {
     }
 
     /// Calls a function in the module with the given name and arguments and deserializes the result.
-    /// See [Runtime::call_function_async]
+    /// See [`Runtime::call_function_async`]
     ///
     /// # Arguments
     /// * `name` - The name of the function to call.
@@ -142,10 +158,14 @@ impl ModuleWrapper {
     ///
     /// # Returns
     /// A `Result` containing the deserialized result of type `T` on success or an `Error` on failure.
+    ///
+    /// # Errors
+    /// Will return an error if the function cannot be called, if the function returns an error,
+    /// or if the function returns a value that cannot be deserialized into the given type
     pub async fn call_async(
         &mut self,
         name: &str,
-        args: &[serde_json::Value],
+        args: &impl serde::ser::Serialize,
     ) -> Result<serde_json::Value, Error> {
         self.runtime
             .call_function_async(Some(&self.module_context), name, args)
@@ -154,7 +174,7 @@ impl ModuleWrapper {
 
     /// Calls a function in the module with the given name and arguments and deserializes the result.
     /// Does not await promises or the event loop.
-    /// See [Runtime::call_function_immediate]
+    /// See [`Runtime::call_function_immediate`]
     ///
     /// # Arguments
     /// * `name` - The name of the function to call.
@@ -162,17 +182,21 @@ impl ModuleWrapper {
     ///
     /// # Returns
     /// A `Result` containing the deserialized result of type `T` on success or an `Error` on failure.
+    ///
+    /// # Errors
+    /// Will return an error if the function cannot be called, if the function returns an error,
+    /// or if the function returns a value that cannot be deserialized into the given type
     pub fn call_immediate(
         &mut self,
         name: &str,
-        args: &[serde_json::Value],
+        args: &impl serde::ser::Serialize,
     ) -> Result<serde_json::Value, Error> {
         self.runtime
             .call_function_immediate(Some(&self.module_context), name, args)
     }
 
     /// Calls a function using the module's runtime that was previously stored as a Function object
-    /// See [Runtime::call_stored_function]
+    /// See [`Runtime::call_stored_function`]
     ///
     /// # Arguments
     /// * `function` - The Function to call.
@@ -180,10 +204,14 @@ impl ModuleWrapper {
     ///
     /// # Returns
     /// A `Result` containing the deserialized result of type `T` on success or an `Error` on failure.
+    ///
+    /// # Errors
+    /// Will return an error if the function cannot be called, if the function returns an error,
+    /// or if the function returns a value that cannot be deserialized into the given type
     pub fn call_stored<T>(
         &mut self,
         function: &Function,
-        args: &[serde_json::Value],
+        args: &impl serde::ser::Serialize,
     ) -> Result<T, Error>
     where
         T: serde::de::DeserializeOwned,
@@ -193,7 +221,7 @@ impl ModuleWrapper {
     }
 
     /// Calls a function using the module's runtime that was previously stored as a Function object
-    /// See [Runtime::call_stored_function_async]
+    /// See [`Runtime::call_stored_function_async`]
     ///
     /// # Arguments
     /// * `function` - The Function to call.
@@ -201,10 +229,14 @@ impl ModuleWrapper {
     ///
     /// # Returns
     /// A `Result` containing the deserialized result of type `T` on success or an `Error` on failure.
+    ///
+    /// # Errors
+    /// Will return an error if the function cannot be called, if the function returns an error,
+    /// or if the function returns a value that cannot be deserialized into the given type
     pub async fn call_stored_async(
         &mut self,
         function: &Function,
-        args: &[serde_json::Value],
+        args: &impl serde::ser::Serialize,
     ) -> Result<serde_json::Value, Error> {
         self.runtime
             .call_stored_function_async(Some(&self.module_context), function, args)
@@ -213,7 +245,7 @@ impl ModuleWrapper {
 
     /// Calls a function using the module's runtime that was previously stored as a Function object
     /// Does not await promises or the event loop.
-    /// See [Runtime::call_stored_function_immediate]
+    /// See [`Runtime::call_stored_function_immediate`]
     ///
     /// # Arguments
     /// * `function` - The Function to call.
@@ -221,19 +253,23 @@ impl ModuleWrapper {
     ///
     /// # Returns
     /// A `Result` containing the deserialized result of type `T` on success or an `Error` on failure.
+    ///
+    /// # Errors
+    /// Will return an error if the function cannot be called, if the function returns an error,
+    /// or if the function returns a value that cannot be deserialized into the given type
     pub fn call_stored_immediate(
         &mut self,
         function: &Function,
-        args: &[serde_json::Value],
+        args: &impl serde::ser::Serialize,
     ) -> Result<serde_json::Value, Error> {
         self.runtime
             .call_stored_function_immediate(Some(&self.module_context), function, args)
     }
 
     /// Retrieves the names of the module's exports.
+    /// (Keys that are not valid UTF-8, may not work as intended due to encoding issues)
     ///
     /// # Returns
-    ///
     /// A `Vec` of `String` containing the names of the keys.
     pub fn keys(&mut self) -> Vec<String> {
         let mut keys: Vec<String> = Vec::new();
@@ -251,7 +287,7 @@ impl ModuleWrapper {
                     if let Ok(key_index) = deno_core::serde_v8::to_v8(&mut scope, i) {
                         if let Some(key_name_v8) = keys_obj.get(&mut scope, key_index) {
                             let name = key_name_v8.to_rust_string_lossy(&mut scope);
-                            keys.push(name)
+                            keys.push(name);
                         }
                     }
                 }
@@ -315,8 +351,8 @@ mod test_runtime {
         let mut module = ModuleWrapper::new_from_module(&module, RuntimeOptions::default())
             .expect("Could not create wrapper");
 
-        assert_eq!(true, module.is_callable("func"));
-        assert_eq!(false, module.is_callable("value"));
+        assert!(module.is_callable("func"));
+        assert!(!module.is_callable("value"));
     }
 
     #[test]

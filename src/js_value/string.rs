@@ -8,7 +8,7 @@ use serde::Deserialize;
 pub struct String(V8Value<StringTypeChecker>);
 impl_v8!(String, StringTypeChecker);
 impl_checker!(StringTypeChecker, String, is_string, |e| {
-    crate::Error::JsonDecode(format!("Expected a string, found `{}`", e))
+    crate::Error::JsonDecode(format!("Expected a string, found `{e}`"))
 });
 
 impl String {
@@ -68,7 +68,7 @@ impl String {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::{Module, Runtime};
+    use crate::{Module, Runtime, RuntimeOptions};
 
     #[test]
     fn test_string() {
@@ -83,7 +83,7 @@ mod test {
         ",
         );
 
-        let mut runtime = Runtime::new(Default::default()).unwrap();
+        let mut runtime = Runtime::new(RuntimeOptions::default()).unwrap();
         let handle = runtime.load_module(&module).unwrap();
 
         let f: String = runtime.get_value(Some(&handle), "good").unwrap();

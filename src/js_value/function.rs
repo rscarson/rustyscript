@@ -17,21 +17,26 @@ impl Function {
     }
 
     /// Returns true if the function is async
+    #[must_use]
     pub fn is_async(&self) -> bool {
         // Safe because we aren't applying this to an isolate
         let unsafe_f = unsafe { v8::Handle::get_unchecked(&self.0 .0) };
         unsafe_f.is_async_function()
     }
 
-    /// Calls this function. See [crate::Runtime::call_stored_function]
+    /// Calls this function. See [`crate::Runtime::call_stored_function`]
     /// Blocks until:
     /// - The event loop is resolved, and
     /// - If the value is a promise, the promise is resolved
+    ///
+    /// # Errors
+    /// Will return an error if the function cannot be called, if the function returns an error
+    /// Or if the function returns a value that cannot be deserialized into the given type
     pub fn call<T>(
         &self,
         runtime: &mut crate::Runtime,
         module_context: Option<&crate::ModuleHandle>,
-        args: &crate::FunctionArguments,
+        args: &impl serde::ser::Serialize,
     ) -> Result<T, crate::Error>
     where
         T: serde::de::DeserializeOwned,
@@ -39,15 +44,19 @@ impl Function {
         runtime.call_stored_function(module_context, self, args)
     }
 
-    /// Calls this function. See [crate::Runtime::call_stored_function_async]
+    /// Calls this function. See [`crate::Runtime::call_stored_function_async`]
     /// Returns a future that resolves when:
     /// - The event loop is resolved, and
     /// - If the value is a promise, the promise is resolved
+    ///
+    /// # Errors
+    /// Will return an error if the function cannot be called, if the function returns an error
+    /// Or if the function returns a value that cannot be deserialized into the given type
     pub async fn call_async<T>(
         &self,
         runtime: &mut crate::Runtime,
         module_context: Option<&crate::ModuleHandle>,
-        args: &crate::FunctionArguments,
+        args: &impl serde::ser::Serialize,
     ) -> Result<T, crate::Error>
     where
         T: serde::de::DeserializeOwned,
@@ -57,13 +66,17 @@ impl Function {
             .await
     }
 
-    /// Calls this function. See [crate::Runtime::call_stored_function_immediate]
+    /// Calls this function. See [`crate::Runtime::call_stored_function_immediate`]
     /// Does not wait for the event loop to resolve, or attempt to resolve promises
+    ///
+    /// # Errors
+    /// Will return an error if the function cannot be called, if the function returns an error
+    /// Or if the function returns a value that cannot be deserialized into the given type
     pub fn call_immediate<T>(
         &self,
         runtime: &mut crate::Runtime,
         module_context: Option<&crate::ModuleHandle>,
-        args: &crate::FunctionArguments,
+        args: &impl serde::ser::Serialize,
     ) -> Result<T, crate::Error>
     where
         T: serde::de::DeserializeOwned,
@@ -75,7 +88,7 @@ impl Function {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::{js_value::Promise, json_args, Module, Runtime};
+    use crate::{js_value::Promise, json_args, Module, Runtime, RuntimeOptions};
 
     #[test]
     fn test_function() {
@@ -87,7 +100,7 @@ mod test {
         ",
         );
 
-        let mut runtime = Runtime::new(Default::default()).unwrap();
+        let mut runtime = Runtime::new(RuntimeOptions::default()).unwrap();
         let handle = runtime.load_module(&module).unwrap();
 
         let f: Function = runtime.get_value(Some(&handle), "f").unwrap();

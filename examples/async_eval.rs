@@ -19,7 +19,7 @@ fn main() -> Result<(), Error> {
 
         Ok::<(), Error>(())
     };
-    tokio_runtime.block_on(async move { future.await })?;
+    tokio_runtime.block_on(future)?;
 
     Ok(())
 }

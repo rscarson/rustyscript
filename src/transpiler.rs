@@ -19,28 +19,25 @@ use crate::traits::ToModuleSpecifier;
 
 pub type ModuleContents = (String, Option<SourceMapData>);
 
-fn should_transpile(media_type: &MediaType) -> bool {
-    match media_type {
-        MediaType::JavaScript | MediaType::Mjs | MediaType::Cjs | MediaType::Json => false,
-
-        MediaType::Jsx => true,
-        MediaType::TypeScript
-        | MediaType::Mts
-        | MediaType::Cts
-        | MediaType::Dts
-        | MediaType::Dmts
-        | MediaType::Dcts
-        | MediaType::Tsx => true,
-
-        _ => false,
-    }
+fn should_transpile(media_type: MediaType) -> bool {
+    matches!(
+        media_type,
+        MediaType::Jsx
+            | MediaType::TypeScript
+            | MediaType::Mts
+            | MediaType::Cts
+            | MediaType::Dts
+            | MediaType::Dmts
+            | MediaType::Dcts
+            | MediaType::Tsx
+    )
 }
 
 ///
 /// Transpiles source code from TS to JS without typechecking
 pub fn transpile(module_specifier: &ModuleSpecifier, code: &str) -> Result<ModuleContents, Error> {
     let media_type = MediaType::from_specifier(module_specifier);
-    let should_transpile = should_transpile(&media_type);
+    let should_transpile = should_transpile(media_type);
 
     let code = if should_transpile {
         let sti = SourceTextInfo::from_string(code.to_string());
@@ -72,7 +69,7 @@ pub fn transpile(module_specifier: &ModuleSpecifier, code: &str) -> Result<Modul
         // Convert utf8 bytes to a string
         let text = String::from_utf8(text)?;
 
-        let source_map: Option<SourceMapData> = res.source_map.map(|sm| sm.into());
+        let source_map: Option<SourceMapData> = res.source_map.map(Into::into);
 
         (text, source_map)
     } else {
@@ -86,11 +83,11 @@ pub fn transpile(module_specifier: &ModuleSpecifier, code: &str) -> Result<Modul
 /// Transpile an extension
 #[allow(clippy::type_complexity)]
 pub fn transpile_extension(
-    specifier: FastString,
-    code: FastString,
+    specifier: &FastString,
+    code: &FastString,
 ) -> Result<(FastString, Option<Cow<'static, [u8]>>), AnyError> {
     // Get the ModuleSpecifier from the FastString
-    let specifier = specifier.as_str().to_module_specifier()?;
+    let specifier = specifier.as_str().to_module_specifier(None)?;
     let code = code.as_str();
 
     let (code, source_map) = transpile(&specifier, code)?;

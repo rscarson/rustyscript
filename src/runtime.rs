@@ -1,18 +1,18 @@
 use crate::{
-    inner_runtime::{InnerRuntime, InnerRuntimeOptions, RsAsyncFunction, RsFunction},
+    inner_runtime::{InnerRuntime, RsAsyncFunction, RsFunction},
     js_value::Function,
-    Error, FunctionArguments, Module, ModuleHandle,
+    Error, Module, ModuleHandle,
 };
 use deno_core::serde_json;
 use std::rc::Rc;
 
 /// Represents the set of options accepted by the runtime constructor
-pub type RuntimeOptions = InnerRuntimeOptions;
+pub use crate::inner_runtime::RuntimeOptions;
 
 /// For functions returning nothing. Acts as a placeholder for the return type
 /// Should accept any type of value from javascript
 ///
-/// It is in fact an alias for [crate::js_value::Value]
+/// It is in fact an alias for [`crate::js_value::Value`]
 /// Note: This used to be an alias for `serde_json::Value`, but was changed for performance reasons
 pub type Undefined = crate::js_value::Value;
 
@@ -22,20 +22,16 @@ pub type Undefined = crate::js_value::Value;
 /// - `call_function` will block until the function is resolved and the event loop is empty
 /// - `call_function_async` will return a future that resolves when the function is resolved and the event loop is empty
 /// - `call_function_immediate` will return the result immediately, without resolving promises or running the event loop
-///   (See [crate::js_value::Promise])
+///   (See [`crate::js_value::Promise`])
 ///
 /// Note: For multithreaded applications, you may need to call `init_platform` before creating a `Runtime`
-/// (See [[crate::init_platform])
+/// (See [[`crate::init_platform`])
 pub struct Runtime {
     inner: InnerRuntime,
     tokio: Rc<tokio::runtime::Runtime>,
 }
 
 impl Runtime {
-    /// The lack of any arguments - used to simplify calling functions
-    /// Prevents you from needing to specify the type using ::<serde_json::Value>
-    pub const EMPTY_ARGS: &'static FunctionArguments = &[];
-
     /// Creates a new instance of the runtime with the provided options.
     ///
     /// # Arguments
@@ -71,6 +67,10 @@ impl Runtime {
     /// # }
     /// ```
     ///
+    /// # Errors
+    /// Can fail if the tokio runtime cannot be created,
+    /// Or if the deno runtime initialization fails (usually issues with extensions)
+    ///
     pub fn new(options: RuntimeOptions) -> Result<Self, Error> {
         let tokio = Rc::new(
             tokio::runtime::Builder::new_current_thread()
@@ -83,7 +83,10 @@ impl Runtime {
     }
 
     /// Creates a new instance of the runtime with the provided options and a pre-configured tokio runtime.
-    /// See [Runtime::new] for more information.
+    /// See [`Runtime::new`] for more information.
+    ///
+    /// # Errors
+    /// Can fail if the deno runtime initialization fails (usually issues with extensions)
     pub fn with_tokio_runtime(
         options: RuntimeOptions,
         tokio: Rc<tokio::runtime::Runtime>,
@@ -100,17 +103,25 @@ impl Runtime {
     }
 
     /// Access the underlying tokio runtime used for blocking operations
+    #[must_use]
     pub fn tokio_runtime(&self) -> std::rc::Rc<tokio::runtime::Runtime> {
         self.tokio.clone()
     }
 
     /// Access the options used to create this runtime
+    #[must_use]
     pub fn options(&self) -> &RuntimeOptions {
         &self.inner.options
     }
 
     /// Run the JS event loop to completion
     /// Required when using the `_immediate` variants of functions
+    ///
+    /// # Arguments
+    /// * `options` - Options for the event loop polling, see [`deno_core::PollEventLoopOptions`]
+    ///
+    /// # Errors
+    /// Can fail if a runtime error occurs during the event loop's execution
     pub async fn await_event_loop(
         &mut self,
         options: deno_core::PollEventLoopOptions,
@@ -120,6 +131,14 @@ impl Runtime {
 
     /// Run the JS event loop to completion
     /// Required when using the `_immediate` variants of functions
+    ///
+    /// This is the blocking variant of [`Runtime::await_event_loop`]
+    ///
+    /// # Arguments
+    /// * `options` - Options for the event loop polling, see [`deno_core::PollEventLoopOptions`]
+    ///
+    /// # Errors
+    /// Can fail if a runtime error occurs during the event loop's execution
     pub fn block_on_event_loop(
         &mut self,
         options: deno_core::PollEventLoopOptions,
@@ -154,6 +173,17 @@ impl Runtime {
     /// # Ok(())
     /// # }
     /// ```
+    ///
+    /// # Deprecated
+    /// This function is deprecated in favor of passing values and tuples directly
+    /// Or using the `json_args!` macro
+    ///
+    /// # Errors
+    /// This conversion can fail if A's implementation of Serialize decides to fail, or if A contains a map with non-string keys
+    #[deprecated(
+        since = "0.6.0",
+        note = "No longer needed, pass values and tuples directly, or with json_args!()"
+    )]
     pub fn arg<A>(value: A) -> Result<serde_json::Value, Error>
     where
         A: serde::Serialize,
@@ -186,6 +216,10 @@ impl Runtime {
     /// # Ok(())
     /// # }
     /// ```
+    #[deprecated(
+        since = "0.6.0",
+        note = "No longer needed, pass values and tuples directly"
+    )]
     pub fn into_arg<A>(value: A) -> serde_json::Value
     where
         serde_json::Value: From<A>,
@@ -215,6 +249,10 @@ impl Runtime {
     /// Add a value to the state
     /// Only one value of each type is stored - additional calls to put overwrite the
     /// old value
+    ///
+    /// # Errors
+    /// Can fail if the inner state cannot be borrowed mutably
+    ///
     /// ```rust
     /// use rustyscript::{ Runtime };
     ///
@@ -234,7 +272,10 @@ impl Runtime {
     }
 
     /// Register a rust function to be callable from JS
-    /// - The [[crate::sync_callback] macro can be used to simplify this process
+    /// - The [`crate::sync_callback`] macro can be used to simplify this process
+    ///
+    /// # Errors
+    /// Since this function borrows the state, it can fail if the state cannot be borrowed mutably
     ///
     /// ```rust
     /// use rustyscript::{ Runtime, Module, serde_json::Value };
@@ -260,7 +301,10 @@ impl Runtime {
     }
 
     /// Register a non-blocking rust function to be callable from JS
-    /// - The [[crate::async_callback] macro can be used to simplify this process
+    /// - The [`crate::async_callback`] macro can be used to simplify this process
+    ///
+    /// # Errors
+    /// Since this function borrows the state, it can fail if the state cannot be borrowed mutably
     ///
     /// ```rust
     /// use rustyscript::{ Runtime, Module, serde_json::Value, async_callback, Error };
@@ -298,7 +342,7 @@ impl Runtime {
     /// - `load_module_async`
     /// - `load_modules_async`
     ///
-    /// Or any of the `_immmediate` variants, paired with [crate::js_value::Promise]
+    /// Or any of the `_immmediate` variants, paired with [`crate::js_value::Promise`]
     ///
     /// # Arguments
     /// * `expr` - A string representing the JavaScript expression to evaluate
@@ -307,6 +351,9 @@ impl Runtime {
     /// A `Result` containing the deserialized result of the expression (`T`)
     /// or an error (`Error`) if the expression cannot be evaluated or if the
     /// result cannot be deserialized.
+    ///
+    /// # Errors
+    /// Can fail if the expression cannot be evaluated, or if the result cannot be deserialized into the requested type
     ///
     /// # Example
     /// ```rust
@@ -332,6 +379,8 @@ impl Runtime {
     /// - The event loop is resolved, and
     /// - If the value is a promise, the promise is resolved
     ///
+    /// See [`Runtime::call_function`] for an example
+    ///
     /// Note that synchronous functions are run synchronously. Returned promises will be run asynchronously, however.
     ///
     /// # Arguments
@@ -341,13 +390,16 @@ impl Runtime {
     ///
     /// # Returns
     /// A `Result` containing the deserialized result of the function call (`T`)
-    /// or an error (`Error`) if the function cannot be found, if there are issues with
-    /// calling the function, or if the result cannot be deserialized.
+    /// or an error (`Error`) if there are issues with calling the function,
+    /// or if the result cannot be deserialized.
+    ///
+    /// # Errors
+    /// Can fail if there are issues with calling the function, or if the result cannot be deserialized into the requested type
     pub async fn call_stored_function_async<T>(
         &mut self,
         module_context: Option<&ModuleHandle>,
         function: &Function,
-        args: &FunctionArguments,
+        args: &impl serde::ser::Serialize,
     ) -> Result<T, Error>
     where
         T: serde::de::DeserializeOwned,
@@ -355,8 +407,7 @@ impl Runtime {
         let function = function.as_global(&mut self.deno_runtime().handle_scope());
         let result = self
             .inner
-            .call_function_by_ref(module_context, function, args)
-            .await?;
+            .call_function_by_ref(module_context, &function, args)?;
         let result = self.inner.resolve_with_event_loop(result).await?;
         self.inner.decode_value(result)
     }
@@ -366,6 +417,8 @@ impl Runtime {
     /// - The event loop is resolved, and
     /// - If the value is a promise, the promise is resolved
     ///
+    /// See [`Runtime::call_function`] for an example
+    ///
     /// # Arguments
     /// * `module_context` - Optional handle to a module providing global context for the function
     /// * `function` - A The function object
@@ -373,13 +426,16 @@ impl Runtime {
     ///
     /// # Returns
     /// A `Result` containing the deserialized result of the function call (`T`)
-    /// or an error (`Error`) if the function cannot be found, if there are issues with
-    /// calling the function, or if the result cannot be deserialized.
+    /// or an error (`Error`) if there are issues with calling the function,
+    /// or if the result cannot be deserialized.
+    ///
+    /// # Errors
+    /// Can fail if there are issues with calling the function, or if the result cannot be deserialized into the requested type
     pub fn call_stored_function<T>(
         &mut self,
         module_context: Option<&ModuleHandle>,
         function: &Function,
-        args: &FunctionArguments,
+        args: &impl serde::ser::Serialize,
     ) -> Result<T, Error>
     where
         T: deno_core::serde::de::DeserializeOwned,
@@ -393,8 +449,10 @@ impl Runtime {
 
     /// Calls a stored javascript function and deserializes its return value.
     /// Will not attempt to resolve promises, or run the event loop
-    /// Promises can be returned by specifying the return type as [crate::js_value::Promise]
-    /// The event loop should be run using [Runtime::await_event_loop]
+    /// Promises can be returned by specifying the return type as [`crate::js_value::Promise`]
+    /// The event loop should be run using [`Runtime::await_event_loop`]
+    ///
+    /// See [`Runtime::call_function`] for an example
     ///
     /// # Arguments
     /// * `module_context` - Optional handle to a module providing global context for the function
@@ -403,13 +461,16 @@ impl Runtime {
     ///
     /// # Returns
     /// A `Result` containing the deserialized result of the function call (`T`)
-    /// or an error (`Error`) if the function cannot be found, if there are issues with
-    /// calling the function, or if the result cannot be deserialized.
+    /// or an error (`Error`) if there are issues with calling the function,
+    /// or if the result cannot be deserialized.
+    ///
+    /// # Errors
+    /// Can fail if there are issues with calling the function, or if the result cannot be deserialized into the requested type
     pub fn call_stored_function_immediate<T>(
         &mut self,
         module_context: Option<&ModuleHandle>,
         function: &Function,
-        args: &FunctionArguments,
+        args: &impl serde::ser::Serialize,
     ) -> Result<T, Error>
     where
         T: deno_core::serde::de::DeserializeOwned,
@@ -418,8 +479,7 @@ impl Runtime {
         let result = self.run_async_task(|runtime| async move {
             runtime
                 .inner
-                .call_function_by_ref(module_context, function, args)
-                .await
+                .call_function_by_ref(module_context, &function, args)
         })?;
         self.inner.decode_value(result)
     }
@@ -431,6 +491,8 @@ impl Runtime {
     ///
     /// Note that synchronous functions are run synchronously. Returned promises will be run asynchronously, however.
     ///
+    /// See [`Runtime::call_function`] for an example
+    ///
     /// # Arguments
     /// * `module_context` - Optional handle to a module to search - if None, or if the search fails, the global context is used
     /// * `name` - A string representing the name of the javascript function to call.
@@ -441,12 +503,14 @@ impl Runtime {
     /// or an error (`Error`) if the function cannot be found, if there are issues with
     /// calling the function, or if the result cannot be deserialized.
     ///
-    /// See [Runtime::call_function] for an example
+    /// # Errors
+    /// Fails if the function cannot be found, if there are issues with calling the function,
+    /// Or if the result cannot be deserialized into the requested type
     pub async fn call_function_async<T>(
         &mut self,
         module_context: Option<&ModuleHandle>,
         name: &str,
-        args: &FunctionArguments,
+        args: &impl serde::ser::Serialize,
     ) -> Result<T, Error>
     where
         T: deno_core::serde::de::DeserializeOwned,
@@ -454,8 +518,7 @@ impl Runtime {
         let function = self.inner.get_function_by_name(module_context, name)?;
         let result = self
             .inner
-            .call_function_by_ref(module_context, function, args)
-            .await?;
+            .call_function_by_ref(module_context, &function, args)?;
         let result = self.inner.resolve_with_event_loop(result).await?;
         self.inner.decode_value(result)
     }
@@ -474,6 +537,10 @@ impl Runtime {
     /// A `Result` containing the deserialized result of the function call (`T`)
     /// or an error (`Error`) if the function cannot be found, if there are issues with
     /// calling the function, or if the result cannot be deserialized.
+    ///
+    /// # Errors
+    /// Fails if the function cannot be found, if there are issues with calling the function,
+    /// Or if the result cannot be deserialized into the requested type
     ///
     /// # Example
     ///
@@ -492,7 +559,7 @@ impl Runtime {
         &mut self,
         module_context: Option<&ModuleHandle>,
         name: &str,
-        args: &FunctionArguments,
+        args: &impl serde::ser::Serialize,
     ) -> Result<T, Error>
     where
         T: deno_core::serde::de::DeserializeOwned,
@@ -506,8 +573,8 @@ impl Runtime {
 
     /// Calls a javascript function within the Deno runtime by its name and deserializes its return value.
     /// Will not attempt to resolve promises, or run the event loop
-    /// Promises can be returned by specifying the return type as [crate::js_value::Promise]
-    /// The event loop should be run using [Runtime::await_event_loop]
+    /// Promises can be returned by specifying the return type as [`crate::js_value::Promise`]
+    /// The event loop should be run using [`Runtime::await_event_loop`]
     ///
     /// # Arguments
     /// * `module_context` - Optional handle to a module to search - if None, or if the search fails, the global context is used
@@ -518,6 +585,10 @@ impl Runtime {
     /// A `Result` containing the deserialized result of the function call (`T`)
     /// or an error (`Error`) if the function cannot be found, if there are issues with
     /// calling the function, or if the result cannot be deserialized.
+    ///
+    /// # Errors
+    /// Fails if the function cannot be found, if there are issues with calling the function,
+    /// Or if the result cannot be deserialized into the requested type
     ///
     /// # Example
     ///
@@ -536,7 +607,7 @@ impl Runtime {
         &mut self,
         module_context: Option<&ModuleHandle>,
         name: &str,
-        args: &FunctionArguments,
+        args: &impl serde::ser::Serialize,
     ) -> Result<T, Error>
     where
         T: deno_core::serde::de::DeserializeOwned,
@@ -545,8 +616,7 @@ impl Runtime {
         let result = self.run_async_task(|runtime| async move {
             runtime
                 .inner
-                .call_function_by_ref(module_context, function, args)
-                .await
+                .call_function_by_ref(module_context, &function, args)
         })?;
         self.inner.decode_value(result)
     }
@@ -561,9 +631,11 @@ impl Runtime {
     /// * `name` - A string representing the name of the value to find
     ///
     /// # Returns
-    /// A `Result` containing the deserialized result or an error (`Error`) if the
-    /// value cannot be found, if there are issues with, or if the result cannot be
-    ///  deserialized.
+    /// A `Result` containing the deserialized result or an error (`Error`) if the value cannot be found,
+    /// Or if the result cannot be deserialized into the requested type
+    ///
+    /// # Errors
+    /// Can fail if the value cannot be found, or if the result cannot be deserialized.
     ///
     /// # Example
     ///
@@ -596,15 +668,18 @@ impl Runtime {
     /// - The event loop is resolved, and
     /// - If the value is a promise, the promise is resolved
     ///
+    /// See [`Runtime::get_value`] for an example
+    ///
     /// # Arguments
     /// * `module_context` - Optional handle to a module to search - if None, or if the search fails, the global context is used
     /// * `name` - A string representing the name of the value to find
     ///
     /// # Returns
-    /// A `Result` containing the future or an error (`Error`) if the value cannot be found,
-    /// or if the result cannot be deserialized.
+    /// A `Result` containing the deserialized result or an error (`Error`) if the value cannot be found,
+    /// Or if the result cannot be deserialized into the requested type
     ///
-    /// See [Runtime::get_value] for an example
+    /// # Errors
+    /// Can fail if the value cannot be found, or if the result cannot be deserialized.
     pub async fn get_value_async<T>(
         &mut self,
         module_context: Option<&ModuleHandle>,
@@ -620,17 +695,19 @@ impl Runtime {
 
     /// Get a value from a runtime instance
     /// Will not attempt to resolve promises, or run the event loop
-    /// Promises can be returned by specifying the return type as [crate::js_value::Promise]
-    /// The event loop should be run using [Runtime::await_event_loop]
+    /// Promises can be returned by specifying the return type as [`crate::js_value::Promise`]
+    /// The event loop should be run using [`Runtime::await_event_loop`]
     ///
     /// # Arguments
     /// * `module_context` - Optional handle to a module to search - if None, or if the search fails, the global context is used
     /// * `name` - A string representing the name of the value to find
     ///
     /// # Returns
-    /// A `Result` containing the deserialized result or an error (`Error`) if the
-    /// value cannot be found, if there are issues with, or if the result cannot be
-    ///  deserialized.
+    /// A `Result` containing the deserialized result or an error (`Error`) if the value cannot be found,
+    /// Or if the result cannot be deserialized into the requested type
+    ///
+    /// # Errors
+    /// Can fail if the value cannot be found, or if the result cannot be deserialized.
     ///
     /// # Example
     ///
@@ -667,8 +744,10 @@ impl Runtime {
     ///
     /// # Returns
     /// A `Result` containing a handle for the loaded module
-    /// or an error (`Error`) if there are issues with loading modules, executing the
-    /// module, or if the result cannot be deserialized.
+    /// or an error (`Error`) if there are issues with loading or executing the module
+    ///
+    /// # Errors
+    /// Can fail if the module cannot be loaded, or execution fails
     ///
     /// # Example
     ///
@@ -697,10 +776,12 @@ impl Runtime {
     ///
     /// # Returns
     /// A `Result` containing a handle for the loaded module
-    /// or an error (`Error`) if there are issues with loading modules, executing the
-    /// module, or if the result cannot be deserialized.
+    /// or an error (`Error`) if there are issues with loading or executing the module
     ///
-    /// See [Runtime::load_module] for an example
+    /// # Errors
+    /// Can fail if the module cannot be loaded, or execution fails
+    ///
+    /// See [`Runtime::load_module`] for an example
     pub async fn load_module_async(&mut self, module: &Module) -> Result<ModuleHandle, Error> {
         self.inner.load_modules(None, vec![module]).await
     }
@@ -719,8 +800,10 @@ impl Runtime {
     ///
     /// # Returns
     /// A `Result` containing a handle for the loaded module
-    /// or an error (`Error`) if there are issues with loading modules, executing the
-    /// module, or if the result cannot be deserialized.
+    /// or an error (`Error`) if there are issues with loading or executing the module
+    ///
+    /// # Errors
+    /// Can fail if the module cannot be loaded, or execution fails
     ///
     /// # Example
     ///
@@ -753,16 +836,18 @@ impl Runtime {
     /// This will load 'module' as the main module, and the others as side-modules.
     /// Only one main module can be loaded per runtime
     ///
+    /// See [`Runtime::load_modules`] for an example
+    ///
     /// # Arguments
     /// * `module` - A `Module` object containing the module's filename and contents.
     /// * `side_modules` - A set of additional modules to be loaded into memory for use
     ///
     /// # Returns
-    /// A `Result` containing a handle for the loaded module
-    /// or an error (`Error`) if there are issues with loading modules, executing the
-    /// module, or if the result cannot be deserialized.
+    /// A `Result` containing a handle for the loaded main module, or the last side-module
+    /// or an error (`Error`) if there are issues with loading or executing the modules
     ///
-    /// See [Runtime::load_modules] for an example
+    /// # Errors
+    /// Can fail if the modules cannot be loaded, or execution fails
     pub async fn load_modules_async(
         &mut self,
         module: &Module,
@@ -784,6 +869,10 @@ impl Runtime {
     /// if successful, or an error (`Error`) if the entrypoint is missing, the execution fails,
     /// or the result cannot be deserialized.
     ///
+    /// # Errors
+    /// Can fail if the module cannot be loaded, if the entrypoint is missing, if the execution fails,
+    /// Or if the result cannot be deserialized into the requested type
+    ///
     /// # Example
     ///
     /// ```rust
@@ -802,7 +891,7 @@ impl Runtime {
     pub fn call_entrypoint<T>(
         &mut self,
         module_context: &ModuleHandle,
-        args: &FunctionArguments,
+        args: &impl serde::ser::Serialize,
     ) -> Result<T, Error>
     where
         T: deno_core::serde::de::DeserializeOwned,
@@ -819,6 +908,8 @@ impl Runtime {
     ///
     /// Note that synchronous functions are run synchronously. Returned promises will be run asynchronously, however.
     ///
+    /// See [`Runtime::call_entrypoint`] for an example
+    ///
     /// # Arguments
     /// * `module_context` - A handle returned by loading a module into the runtime
     ///
@@ -827,11 +918,13 @@ impl Runtime {
     /// if successful, or an error (`Error`) if the entrypoint is missing, the execution fails,
     /// or the result cannot be deserialized.
     ///
-    /// See [Runtime::call_entrypoint] for an example
+    /// # Errors
+    /// Can fail if the module cannot be loaded, if the entrypoint is missing, if the execution fails,
+    /// Or if the result cannot be deserialized into the requested type
     pub async fn call_entrypoint_async<T>(
         &mut self,
         module_context: &ModuleHandle,
-        args: &FunctionArguments,
+        args: &impl serde::ser::Serialize,
     ) -> Result<T, Error>
     where
         T: deno_core::serde::de::DeserializeOwned,
@@ -839,8 +932,7 @@ impl Runtime {
         if let Some(entrypoint) = module_context.entrypoint() {
             let result = self
                 .inner
-                .call_function_by_ref(Some(module_context), entrypoint.clone(), args)
-                .await?;
+                .call_function_by_ref(Some(module_context), entrypoint, args)?;
             let result = self.inner.resolve_with_event_loop(result).await?;
             self.inner.decode_value(result)
         } else {
@@ -850,8 +942,8 @@ impl Runtime {
 
     /// Executes the entrypoint function of a module within the Deno runtime.
     /// Will not attempt to resolve promises, or run the event loop
-    /// Promises can be returned by specifying the return type as [crate::js_value::Promise]
-    /// The event loop should be run using [Runtime::await_event_loop]
+    /// Promises can be returned by specifying the return type as [`crate::js_value::Promise`]
+    /// The event loop should be run using [`Runtime::await_event_loop`]
     ///
     /// # Arguments
     /// * `module_context` - A handle returned by loading a module into the runtime
@@ -860,6 +952,10 @@ impl Runtime {
     /// A `Result` containing the deserialized result of the entrypoint execution (`T`)
     /// if successful, or an error (`Error`) if the entrypoint is missing, the execution fails,
     /// or the result cannot be deserialized.
+    ///
+    /// # Errors
+    /// Can fail if the module cannot be loaded, if the entrypoint is missing, if the execution fails,
+    /// Or if the result cannot be deserialized into the requested type
     ///
     /// # Example
     ///
@@ -879,7 +975,7 @@ impl Runtime {
     pub fn call_entrypoint_immediate<T>(
         &mut self,
         module_context: &ModuleHandle,
-        args: &FunctionArguments,
+        args: &impl serde::ser::Serialize,
     ) -> Result<T, Error>
     where
         T: deno_core::serde::de::DeserializeOwned,
@@ -888,8 +984,7 @@ impl Runtime {
             let result = self.run_async_task(|runtime| async move {
                 runtime
                     .inner
-                    .call_function_by_ref(Some(module_context), entrypoint.clone(), args)
-                    .await
+                    .call_function_by_ref(Some(module_context), entrypoint, args)
             })?;
             self.inner.decode_value(result)
         } else {
@@ -911,6 +1006,10 @@ impl Runtime {
     /// if successful, or an error (`Error`) if the entrypoint is missing, the execution fails,
     /// or the result cannot be deserialized.
     ///
+    /// # Errors
+    /// Can fail if the module cannot be loaded, if the entrypoint is missing, if the execution fails,
+    /// Or if the result cannot be deserialized into the requested type
+    ///
     /// # Example
     ///
     /// ```rust
@@ -927,7 +1026,7 @@ impl Runtime {
         module: &Module,
         side_modules: Vec<&Module>,
         runtime_options: RuntimeOptions,
-        entrypoint_args: &FunctionArguments,
+        entrypoint_args: &impl serde::ser::Serialize,
     ) -> Result<T, Error>
     where
         T: deno_core::serde::de::DeserializeOwned,
@@ -960,7 +1059,7 @@ mod test_runtime {
 
     #[test]
     fn test_new() {
-        Runtime::new(Default::default()).expect("Could not create the runtime");
+        Runtime::new(RuntimeOptions::default()).expect("Could not create the runtime");
 
         extension!(test_extension);
         Runtime::new(RuntimeOptions {
@@ -971,6 +1070,7 @@ mod test_runtime {
     }
 
     #[test]
+    #[allow(deprecated)]
     fn test_into_arg() {
         assert_eq!(2, Runtime::into_arg(2));
         assert_eq!("test", Runtime::into_arg("test"));
@@ -988,7 +1088,8 @@ mod test_runtime {
         ",
         );
 
-        let mut runtime = Runtime::new(Default::default()).expect("Could not create the runtime");
+        let mut runtime =
+            Runtime::new(RuntimeOptions::default()).expect("Could not create the runtime");
         let module = runtime
             .load_modules(&module, vec![])
             .expect("Could not load module");
@@ -1015,7 +1116,8 @@ mod test_runtime {
 
     #[test]
     fn test_load_module() {
-        let mut runtime = Runtime::new(Default::default()).expect("Could not create the runtime");
+        let mut runtime =
+            Runtime::new(RuntimeOptions::default()).expect("Could not create the runtime");
         let module = Module::new(
             "test.js",
             "
@@ -1027,7 +1129,8 @@ mod test_runtime {
             .expect("Could not load module");
         assert_ne!(0, module.id());
 
-        let mut runtime = Runtime::new(Default::default()).expect("Could not create the runtime");
+        let mut runtime =
+            Runtime::new(RuntimeOptions::default()).expect("Could not create the runtime");
         let module1 = Module::new(
             "importme.js",
             "
@@ -1070,7 +1173,8 @@ mod test_runtime {
 
     #[test]
     fn test_load_modules() {
-        let mut runtime = Runtime::new(Default::default()).expect("Could not create the runtime");
+        let mut runtime =
+            Runtime::new(RuntimeOptions::default()).expect("Could not create the runtime");
         let module = Module::new(
             "test.js",
             "
@@ -1082,7 +1186,8 @@ mod test_runtime {
             .expect("Could not load module");
         assert_ne!(0, module.id());
 
-        let mut runtime = Runtime::new(Default::default()).expect("Could not create the runtime");
+        let mut runtime =
+            Runtime::new(RuntimeOptions::default()).expect("Could not create the runtime");
         let module1 = Module::new(
             "importme.js",
             "
@@ -1122,7 +1227,8 @@ mod test_runtime {
 
     #[test]
     fn test_call_entrypoint() {
-        let mut runtime = Runtime::new(Default::default()).expect("Could not create the runtime");
+        let mut runtime =
+            Runtime::new(RuntimeOptions::default()).expect("Could not create the runtime");
         let module = Module::new(
             "test.js",
             "
@@ -1156,7 +1262,8 @@ mod test_runtime {
             .expect("Could not call exported fn");
         assert_eq!(2, value);
 
-        let mut runtime = Runtime::new(Default::default()).expect("Could not create the runtime");
+        let mut runtime =
+            Runtime::new(RuntimeOptions::default()).expect("Could not create the runtime");
         let module = Module::new(
             "test.js",
             "
@@ -1180,7 +1287,7 @@ mod test_runtime {
         ",
         );
         let value: usize =
-            Runtime::execute_module(&module, vec![], Default::default(), json_args!())
+            Runtime::execute_module(&module, vec![], RuntimeOptions::default(), json_args!())
                 .expect("Could not exec module");
         assert_eq!(2, value);
 
@@ -1190,8 +1297,13 @@ mod test_runtime {
             function load() { return 2; }
         ",
         );
-        Runtime::execute_module::<Undefined>(&module, vec![], Default::default(), json_args!())
-            .expect_err("Could not detect no entrypoint");
+        Runtime::execute_module::<Undefined>(
+            &module,
+            vec![],
+            RuntimeOptions::default(),
+            json_args!(),
+        )
+        .expect_err("Could not detect no entrypoint");
     }
 
     #[test]
@@ -1206,7 +1318,8 @@ mod test_runtime {
         ",
         );
 
-        let mut runtime = Runtime::new(Default::default()).expect("Could not create the runtime");
+        let mut runtime =
+            Runtime::new(RuntimeOptions::default()).expect("Could not create the runtime");
         let module = runtime
             .load_modules(&module, vec![])
             .expect("Could not load module");

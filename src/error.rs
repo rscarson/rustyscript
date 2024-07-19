@@ -3,8 +3,8 @@
 use crate::Module;
 use thiserror::Error;
 
-/// Options for [Error::as_highlighted]
-#[derive(Debug, Clone)]
+/// Options for [`Error::as_highlighted`]
+#[derive(Debug, Clone, Copy)]
 pub struct ErrorFormattingOptions {
     /// Include the filename in the output
     /// Appears on the first line
@@ -74,7 +74,7 @@ pub enum Error {
 
 impl Error {
     /// Formats an error for display in a terminal
-    /// If the error is a JsError, it will attempt to highlight the source line
+    /// If the error is a `JsError`, it will attempt to highlight the source line
     /// in this format:
     /// ```text
     /// | let x = 1 + 2
@@ -83,85 +83,86 @@ impl Error {
     /// ```
     ///
     /// Otherwise, it will just display the error message normally
+    #[must_use]
     pub fn as_highlighted(&self, options: ErrorFormattingOptions) -> String {
-        match self {
-            Error::JsError(e) => {
-                // Extract basic information about position
-                let (filename, row, col) = match e.frames.first() {
-                    Some(f) => (
-                        match &f.file_name {
-                            Some(f) if f.is_empty() => None::<&str>,
-                            Some(f) => Some(f.as_ref()),
-                            None => None,
-                        },
-                        f.line_number.unwrap_or(1) as usize,
-                        f.line_number.unwrap_or(1) as usize,
-                    ),
-                    None => (None, 1, 1),
-                };
+        if let Error::JsError(e) = self {
+            // Extract basic information about position
+            let (filename, row, col) = match e.frames.first() {
+                Some(f) => (
+                    match &f.file_name {
+                        Some(f) if f.is_empty() => None::<&str>,
+                        Some(f) => Some(f.as_ref()),
+                        None => None,
+                    },
+                    usize::try_from(f.line_number.unwrap_or(1)).unwrap_or_default(),
+                    usize::try_from(f.column_number.unwrap_or(1)).unwrap_or_default(),
+                ),
+                None => (None, 1, 1),
+            };
 
-                let mut line = e.source_line.as_ref().map(|s| s.trim_end());
-                let col = col - 1;
+            let mut line = e.source_line.as_ref().map(|s| s.trim_end());
+            let col = col - 1;
 
-                // Get at most 50 characters, centered on column_number
-                let mut padding = String::new();
-                match line {
-                    None => {}
-                    Some(s) => {
-                        let (start, end) = if s.len() < 50 {
-                            (0, s.len())
-                        } else if col < 25 {
-                            (0, 50)
-                        } else if col > s.len() - 25 {
-                            (s.len() - 50, s.len())
-                        } else {
-                            (col - 25, col + 25)
-                        };
+            // Get at most 50 characters, centered on column_number
+            let mut padding = String::new();
+            match line {
+                None => {}
+                Some(s) => {
+                    let (start, end) = if s.len() < 50 {
+                        (0, s.len())
+                    } else if col < 25 {
+                        (0, 50)
+                    } else if col > s.len() - 25 {
+                        (s.len() - 50, s.len())
+                    } else {
+                        (col - 25, col + 25)
+                    };
 
-                        line = Some(s.get(start..end).unwrap_or(s));
-                        padding = " ".repeat(col - start - 1);
-                    }
+                    line = Some(s.get(start..end).unwrap_or(s));
+                    padding = " ".repeat(col - start);
                 }
-
-                let msg_lines = e.exception_message.split('\n').collect::<Vec<_>>();
-
-                //
-                // Format all the parts using the options
-                //
-
-                let line_number_part = match options.include_line_number {
-                    true => format!("{}:", row),
-                    false => String::new(),
-                };
-
-                let col_number_part = match options.include_column_number {
-                    true => format!("{}:", col),
-                    false => String::new(),
-                };
-
-                let source_line_part = match line {
-                    Some(s) => format!("| {s}\n| {padding}^\n"),
-                    None => String::new(),
-                };
-
-                let msg_part = msg_lines
-                    .into_iter()
-                    .map(|l| format!("= {l}"))
-                    .collect::<Vec<_>>()
-                    .join("\n");
-
-                let position_part = format!("{line_number_part}{col_number_part}");
-                let position_part = match filename {
-                    None if position_part.is_empty() => String::new(),
-                    Some(f) if options.include_filename => format!("{f}:{position_part}\n"),
-                    _ => format!("At {position_part}\n"),
-                };
-
-                // Combine all the parts
-                format!("{position_part}{source_line_part}{msg_part}",)
             }
 
-            _ => format!("{}", self),
+            let msg_lines = e.exception_message.split('\n').collect::<Vec<_>>();
+
+            //
+            // Format all the parts using the options
+            //
+
+            let line_number_part = if options.include_line_number {
+                format!("{row}:")
+            } else {
+                String::new()
+            };
+
+            let col_number_part = if options.include_column_number {
+                format!("{col}:")
+            } else {
+                String::new()
+            };
+
+            let source_line_part = match line {
+                Some(s) => format!("| {s}\n| {padding}^\n"),
+                None => String::new(),
+            };
+
+            let msg_part = msg_lines
+                .into_iter()
+                .map(|l| format!("= {l}"))
+                .collect::<Vec<_>>()
+                .join("\n");
+
+            let position_part = format!("{line_number_part}{col_number_part}");
+            let position_part = match filename {
+                None if position_part.is_empty() => String::new(),
+                Some(f) if options.include_filename => format!("{f}:{position_part}\n"),
+                _ => format!("At {position_part}\n"),
+            };
+
+            // Combine all the parts
+            format!("{position_part}{source_line_part}{msg_part}",)
+        } else {
+            self.to_string()
         }
     }
 }
@@ -218,18 +219,16 @@ map_error!(deno_core::futures::channel::oneshot::Canceled, |e| {
 
 #[cfg(test)]
 mod test {
-    use crate::{error::ErrorFormattingOptions, Module, Runtime, Undefined};
+    use crate::{error::ErrorFormattingOptions, Module, Runtime, RuntimeOptions, Undefined};
 
     #[test]
     #[rustfmt::skip]
     fn test_highlights() {
-        let mut runtime = Runtime::new(Default::default()).unwrap();
+        let mut runtime = Runtime::new(RuntimeOptions::default()).unwrap();
 
-        let e = runtime.eval::<Undefined>("1+1;\n1 + x").unwrap_err().as_highlighted(Default::default());
+        let e = runtime.eval::<Undefined>("1+1;\n1 + x").unwrap_err().as_highlighted(ErrorFormattingOptions::default());
         assert_eq!(e, concat!(
-            "At 2:1:\n",
-            "| 1 + x\n",
-            "| ^\n",
+            "At 2:4:\n",
             "= Uncaught ReferenceError: x is not defined"
         ));
 
@@ -239,9 +238,9 @@ mod test {
             ..Default::default()
         });
         assert_eq!(e, concat!(
-            "At 2:1:\n",
+            "At 2:4:\n",
             "| 1 + x\n",
-            "| ^\n",
+            "|     ^\n",
             "= Uncaught (in promise) ReferenceError: x is not defined"
         ));
     }

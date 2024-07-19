@@ -8,12 +8,12 @@ use serde::Deserialize;
 /// Allows read-only access properties of the object, and convert it to a hashmap
 /// (skipping any keys that are not valid UTF-8)
 ///
-/// [Map::get] returns a [crate::js_value::Value] which can be converted to any rust type, including promises or functions
+/// [`Map::get`] returns a [`crate::js_value::Value`] which can be converted to any rust type, including promises or functions
 #[derive(Eq, Hash, PartialEq, Debug, Clone)]
 pub struct Map(V8Value<ObjectTypeChecker>);
 impl_v8!(Map, ObjectTypeChecker);
 impl_checker!(ObjectTypeChecker, Object, is_object, |e| {
-    crate::Error::JsonDecode(format!("Expected an object, found `{}`", e))
+    crate::Error::JsonDecode(format!("Expected an object, found `{e}`"))
 });
 
 impl Map {
@@ -75,7 +75,7 @@ impl Map {
         let value = local.get(scope, key.into())?;
 
         let value = v8::Global::new(scope, value);
-        crate::js_value::Value::from_v8(value).ok()
+        Some(crate::js_value::Value::from_v8(value))
     }
 
     pub(crate) fn get_string_keys(&self, scope: &mut HandleScope) -> Vec<String> {
@@ -91,15 +91,13 @@ impl Map {
                 key_conversion: v8::KeyConversionMode::ConvertToString,
             },
         );
-        let v8_keys = match v8_keys {
-            Some(keys) => keys,
-            None => return keys,
-        };
 
-        for i in 0..v8_keys.length() {
-            let key = v8_keys.get_index(scope, i).unwrap();
-            let key = key.to_rust_string_lossy(scope);
-            keys.push(key);
+        if let Some(v8_keys) = v8_keys {
+            for i in 0..v8_keys.length() {
+                let key = v8_keys.get_index(scope, i).unwrap();
+                let key = key.to_rust_string_lossy(scope);
+                keys.push(key);
+            }
         }
 
         keys
@@ -109,7 +107,7 @@ impl Map {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::{Module, Runtime};
+    use crate::{Module, Runtime, RuntimeOptions};
 
     #[test]
     fn test_map() {
@@ -120,7 +118,7 @@ mod test {
         ",
         );
 
-        let mut runtime = Runtime::new(Default::default()).unwrap();
+        let mut runtime = Runtime::new(RuntimeOptions::default()).unwrap();
         let handle = runtime.load_module(&module).unwrap();
 
         let m: Map = runtime.get_value(Some(&handle), "m").expect("oops");
