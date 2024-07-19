@@ -11,11 +11,11 @@ pub trait ToModuleSpecifier {
 
 impl ToModuleSpecifier for str {
     fn to_module_specifier(&self, base: Option<&Path>) -> Result<ModuleSpecifier, Error> {
-        let base = match base {
-            Some(base) => base,
-            None => &current_dir()?,
-        };
-        resolve_path(self, base).map_err(Error::from)
+        let path = match base {
+            Some(base) => resolve_path(self, base),
+            None => resolve_path(self, &current_dir()?),
+        }?;
+        Ok(path)
     }
 }
 
