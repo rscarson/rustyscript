@@ -57,6 +57,7 @@ impl SnapshotBuilder {
     pub fn new(options: InnerRuntimeOptions) -> Result<Self, Error> {
         let loader = Rc::new(RustyLoader::new(
             options.module_cache,
+            #[cfg(feature = "import_provider")]
             options.import_provider,
         ));
 
