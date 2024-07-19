@@ -45,6 +45,7 @@ type SourceMapCache = HashMap<String, (String, Option<Vec<u8>>)>;
 #[derive(Clone)]
 struct InnerRustyLoader {
     cache_provider: Rc<Option<Box<dyn ModuleCacheProvider>>>,
+    #[cfg(feature = "import_provider")]
     import_provider: Rc<Option<RefCell<Box<dyn ImportProvider>>>>,
     fs_whlist: Rc<RefCell<HashSet<String>>>,
     source_map_cache: Rc<RefCell<SourceMapCache>>,
@@ -59,6 +60,7 @@ impl InnerRustyLoader {
     ) -> Self {
         Self {
             cache_provider: Rc::new(cache_provider),
+            #[cfg(feature = "import_provider")]
             import_provider: Rc::new(import_provider.map(RefCell::new)),
             fs_whlist: Rc::new(RefCell::new(HashSet::new())),
             source_map_cache: Rc::new(RefCell::new(SourceMapCache::new())),
@@ -354,8 +356,6 @@ impl SourceMapGetter for RustyLoader {
 
 #[cfg(test)]
 mod test {
-    use deno_core::ResolutionKind;
-
     use super::*;
     use crate::{
         cache_provider::{ClonableSource, MemoryModuleCacheProvider},
@@ -404,6 +404,9 @@ mod test {
             _ => panic!("Unexpected response"),
         }
     }
+
+    #[cfg(feature = "import_provider")]
+    use deno_core::ResolutionKind;
 
     #[cfg(feature = "import_provider")]
     struct TestImportProvider {
