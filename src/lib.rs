@@ -287,7 +287,7 @@ pub use tokio;
 pub use deno_tls;
 
 #[cfg(feature = "web")]
-pub use ext::web::WebOptions;
+pub use ext::web::{AllowlistWebPermissions, DefaultWebPermissions, WebOptions, WebPermissions};
 pub use ext::ExtensionOptions;
 
 // Expose some important stuff from us
