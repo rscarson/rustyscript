@@ -1368,6 +1368,6 @@ mod test_runtime {
     #[test]
     fn confirm_op_whitelist() {
         let unsafe_ops = get_unrecognized_ops().expect("Could not get unsafe ops");
-        assert_eq!(0, unsafe_ops.len(), "Found unsafe ops: {unsafe_ops:?}");
+        assert_eq!(0, unsafe_ops.len(), "Found unsafe ops: {unsafe_ops:?}.\nOnce confirmed safe, add them to `src/ext/op_whitelist.js`");
     }
 }
