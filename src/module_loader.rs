@@ -15,6 +15,7 @@ use std::{
 };
 
 #[allow(unused_variables)]
+#[cfg(feature = "import_provider")]
 /// A trait that can be implemented to provide custom import resolution. Passed to the runtime via `RuntimeOptions::import_provider`
 pub trait ImportProvider {
     /// Resolve an import statement's specifier to a URL to later be imported
@@ -56,7 +57,7 @@ impl InnerRustyLoader {
     /// An optional cache provider can be provided to manage module code caching, as well as an import provider to manage module resolution.
     fn new(
         cache_provider: Option<Box<dyn ModuleCacheProvider>>,
-        import_provider: Option<Box<dyn ImportProvider>>,
+        #[cfg(feature = "import_provider")] import_provider: Option<Box<dyn ImportProvider>>,
     ) -> Self {
         Self {
             cache_provider: Rc::new(cache_provider),
@@ -299,10 +300,14 @@ impl RustyLoader {
     /// An optional cache provider can be provided to manage module code caching, as well as an import provider to manage module resolution.
     pub fn new(
         cache_provider: Option<Box<dyn ModuleCacheProvider>>,
-        import_provider: Option<Box<dyn ImportProvider>>,
+        #[cfg(feature = "import_provider")] import_provider: Option<Box<dyn ImportProvider>>,
     ) -> Self {
         Self {
-            inner: Rc::new(InnerRustyLoader::new(cache_provider, import_provider)),
+            inner: Rc::new(InnerRustyLoader::new(
+                cache_provider,
+                #[cfg(feature = "import_provider")]
+                import_provider,
+            )),
         }
     }
 
@@ -378,7 +383,11 @@ mod test {
             .get(&specifier)
             .expect("Expected to get cached source");
 
-        let loader = RustyLoader::new(Some(Box::new(cache_provider)), None);
+        let loader = RustyLoader::new(
+            Some(Box::new(cache_provider)),
+            #[cfg(feature = "import_provider")]
+            None,
+        );
         let response = loader.load(
             &specifier,
             None,
