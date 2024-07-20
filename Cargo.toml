@@ -64,11 +64,14 @@ web_stub = ["webidl"]
     websocket = ["deno_websocket", "web"]
 
 # Features for the module loader
-# Both will break sandboxing
 # - fs_import allows arbitrary file imports
 # - url_import allows importing from the web
+# - import_provider allows custom handling of imports
+#
+# Both fs_import and url_import will break sandboxing
 fs_import = []
 url_import = ["reqwest"]
+# import_provider may break sandboxing depending on your implementation
 import_provider = []
 
 # Enables the use of the SnapshotBuilder runtime
