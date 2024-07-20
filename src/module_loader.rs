@@ -3,7 +3,7 @@ use crate::{
     transpiler,
 };
 use deno_core::{
-    anyhow::{self, anyhow, Ok},
+    anyhow::{self, anyhow},
     futures::FutureExt,
     ModuleLoadResponse, ModuleLoader, ModuleSource, ModuleSourceCode, ModuleSpecifier, ModuleType,
     SourceMapGetter,
