@@ -1,4 +1,4 @@
-use rustyscript::Runtime;
+use rustyscript::{Runtime, RuntimeOptions};
 
 fn main() {
     interactive_prompt()
@@ -13,7 +13,10 @@ fn interactive_prompt() {
         stack.insert(0, "exit".to_string());
     }
 
-    let mut runtime = Runtime::new(Default::default()).expect("Failed to create runtime");
+    let mut runtime = Runtime::new(RuntimeOptions {
+        ..Default::default()
+    })
+    .expect("Failed to create runtime");
 
     loop {
         // Make sure we have a command ready

@@ -137,7 +137,7 @@ pub struct InnerRuntime {
 }
 impl InnerRuntime {
     pub fn new(options: RuntimeOptions) -> Result<Self, Error> {
-        let loader = Rc::new(RustyLoader::new(
+        let module_loader = Rc::new(RustyLoader::new(
             options.module_cache,
             #[cfg(feature = "import_provider")]
             options.import_provider,
@@ -150,26 +150,31 @@ impl InnerRuntime {
             ext::all_extensions(options.extensions, options.extension_options)
         };
 
+        let mut deno_runtime = JsRuntime::try_new(deno_core::RuntimeOptions {
+            module_loader: Some(module_loader.clone()),
+
+            extension_transpiler: Some(Rc::new(|specifier, code| {
+                transpile_extension(&specifier, &code)
+            })),
+
+            source_map_getter: Some(module_loader.clone()),
+            create_params: options.isolate_params,
+            shared_array_buffer_store: options.shared_array_buffer_store,
+
+            startup_snapshot: options.startup_snapshot,
+            extensions,
+
+            ..Default::default()
+        })?;
+
+        // Stub out bad and naughty functions
+        deno_runtime
+            .execute_script("", "Deno.core.ops.op_panic = Deno.core.ops.op_panic2;")
+            .map_err(|e| Error::Runtime(format!("Could not initialize sandbox: {e}")))?;
+
         Ok(Self {
-            deno_runtime: JsRuntime::try_new(deno_core::RuntimeOptions {
-                module_loader: Some(loader.clone()),
-
-                extension_transpiler: Some(Rc::new(|specifier, code| {
-                    transpile_extension(&specifier, &code)
-                })),
-
-                source_map_getter: Some(loader.clone()),
-                create_params: options.isolate_params,
-                shared_array_buffer_store: options.shared_array_buffer_store,
-
-                startup_snapshot: options.startup_snapshot,
-                extensions,
-
-                ..Default::default()
-            })?,
-
-            module_loader: loader,
-
+            deno_runtime,
+            module_loader,
             options: RuntimeOptions {
                 timeout: options.timeout,
                 default_entrypoint: options.default_entrypoint,

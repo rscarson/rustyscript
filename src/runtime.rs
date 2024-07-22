@@ -1344,4 +1344,30 @@ mod test_runtime {
             .call_function::<Undefined>(Some(&module), "fne", json_args!())
             .expect("Did not allow undefined return");
     }
+
+    ///
+    /// This function exists to check the safety of builtin core-ops
+    /// This is to confirm that updates to `deno_core` have not introduced any sandbox-breaking changes
+    /// in the form of a new op.
+    fn get_unrecognized_ops() -> Result<Vec<String>, Error> {
+        let mut runtime = Runtime::new(RuntimeOptions::default())?;
+        runtime.load_module(&Module::load("src/ext/op_whitelist.js")?)?;
+        let hnd = runtime.load_module(&Module::new(
+            "test_whitelist.js",
+            "
+            import { whitelist } from './src/ext/op_whitelist.js';
+            let ops = Deno.core.ops.op_op_names();
+            export const unsafe_ops = ops.filter(op => !whitelist.hasOwnProperty(op));
+        ",
+        ))?;
+
+        let unsafe_ops: Vec<String> = runtime.get_value(Some(&hnd), "unsafe_ops")?;
+        Ok(unsafe_ops)
+    }
+
+    #[test]
+    fn confirm_op_whitelist() {
+        let unsafe_ops = get_unrecognized_ops().expect("Could not get unsafe ops");
+        assert_eq!(0, unsafe_ops.len(), "Found unsafe ops: {unsafe_ops:?}.\nOnce confirmed safe, add them to `src/ext/op_whitelist.js`");
+    }
 }
