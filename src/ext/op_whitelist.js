@@ -80,6 +80,7 @@ export const whitelist = {
     "op_register_entrypoint": "Rustyscript builtin",
     "call_registered_function": "Rustyscript builtin",
     "call_registered_function_async": "Rustyscript builtin",
+    "op_panic2": "Panic stub to replace op_panic",
 
     //
     // v8 ops

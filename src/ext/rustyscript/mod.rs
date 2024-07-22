@@ -1,5 +1,5 @@
 use crate::{error::Error, RsAsyncFunction, RsFunction};
-use deno_core::{extension, op2, serde_json, v8, Extension, OpState};
+use deno_core::{anyhow::anyhow, extension, op2, serde_json, v8, Extension, OpState};
 use std::collections::HashMap;
 
 type FnCache = HashMap<String, Box<dyn RsFunction>>;
@@ -52,9 +52,14 @@ fn call_registered_function_async(
     Box::pin(std::future::ready(Err(Error::ValueNotCallable(name))))
 }
 
+#[op2(fast)]
+fn op_panic2(#[string] msg: &str) -> Result<(), deno_core::anyhow::Error> {
+    Err(anyhow!(msg.to_string()))
+}
+
 extension!(
     rustyscript,
-    ops = [op_register_entrypoint, call_registered_function, call_registered_function_async],
+    ops = [op_register_entrypoint, call_registered_function, call_registered_function_async, op_panic2],
     esm_entry_point = "ext:rustyscript/rustyscript.js",
     esm = [ dir "src/ext/rustyscript", "rustyscript.js" ],
 );
