@@ -2,7 +2,6 @@
 use deno_core::{
     ModuleCodeBytes, ModuleSource, ModuleSourceCode, ModuleSpecifier, SourceCodeCacheInfo,
 };
-use std::{cell::RefCell, collections::HashMap};
 
 /// A helper trait to clone a `ModuleSource`
 /// `deno_core::ModuleSource` does not implement Clone, so we need to implement it ourselves
@@ -33,28 +32,16 @@ impl ClonableSource for ModuleSource {
 }
 
 /// Module cache provider trait
-/// Implement this trait to provide a custom module cache
-/// You will need to use interior due to the deno's loader trait
-/// Default cache for the loader is in-memory
+/// Implement this trait to provide a custom module cache for the loader
+/// The cache is used to store module data for later use, potentially saving time on re-fetching modules
+#[deprecated(
+    since = "0.7.0",
+    note = "This trait is being replaced by the `ImportProvider` trait, which provides more control over module resolution. See the `module_loader_cache` example for more information."
+)]
 pub trait ModuleCacheProvider {
     /// Apply a module to the cache
-    fn set(&self, specifier: &ModuleSpecifier, source: ModuleSource);
+    fn set(&mut self, specifier: &ModuleSpecifier, source: ModuleSource);
 
     /// Get a module from the cache
     fn get(&self, specifier: &ModuleSpecifier) -> Option<ModuleSource>;
-}
-
-/// Default in-memory module cache provider
-#[derive(Default)]
-pub struct MemoryModuleCacheProvider(RefCell<HashMap<ModuleSpecifier, ModuleSource>>);
-impl ModuleCacheProvider for MemoryModuleCacheProvider {
-    fn set(&self, specifier: &ModuleSpecifier, source: ModuleSource) {
-        self.0.borrow_mut().insert(specifier.clone(), source);
-    }
-
-    fn get(&self, specifier: &ModuleSpecifier) -> Option<ModuleSource> {
-        let cache = self.0.borrow();
-        let source = cache.get(specifier)?;
-        Some(source.clone(specifier))
-    }
 }

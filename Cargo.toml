@@ -3,7 +3,7 @@ name = "rustyscript"
 description = "Effortless JS Integration for Rust"
 edition = "2021"
 license = "MIT OR Apache-2.0"
-version = "0.6.4"
+version = "0.7.0"
 repository = "https://github.com/rscarson/rustyscript"
 
 keywords = ["rust", "javascript", "deno", "runtime", "embedding"]
@@ -66,13 +66,10 @@ web_stub = ["webidl"]
 # Features for the module loader
 # - fs_import allows arbitrary file imports
 # - url_import allows importing from the web
-# - import_provider allows custom handling of imports
 #
 # Both fs_import and url_import will break sandboxing
 fs_import = []
 url_import = ["reqwest"]
-# import_provider may break sandboxing depending on your implementation
-import_provider = []
 
 # Enables the use of the SnapshotBuilder runtime
 # It is used to create a snapshot of a runtime for faster startup times
@@ -151,12 +148,8 @@ name = "url_import"
 required-features = ["fs_import", "url_import"]
 
 [[example]]
-name = "custom_import_resolution"
-required-features = ["import_provider", "url_import"]
-
-[[example]]
-name = "custom_import_schemes"
-required-features = ["import_provider", "url_import"]
+name = "custom_import_logic"
+required-features = ["url_import"]
 
 [[example]]
 name = "async_javascript"

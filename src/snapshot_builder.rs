@@ -1,7 +1,7 @@
 use crate::{
     ext,
     inner_runtime::RuntimeOptions,
-    module_loader::RustyLoader,
+    module_loader::{LoaderOptions, RustyLoader},
     traits::ToModuleSpecifier,
     transpiler::{self, transpile_extension},
     Error, Module,
@@ -55,11 +55,12 @@ pub struct SnapshotBuilder {
 impl SnapshotBuilder {
     /// Creates a new snapshot builder with the given options
     pub fn new(options: RuntimeOptions) -> Result<Self, Error> {
-        let loader = Rc::new(RustyLoader::new(
-            options.module_cache,
-            #[cfg(feature = "import_provider")]
-            options.import_provider,
-        ));
+        let loader = Rc::new(RustyLoader::new(LoaderOptions {
+            cache_provider: options.module_cache,
+            import_provider: options.import_provider,
+
+            ..Default::default()
+        }));
 
         // If a snapshot is provided, do not reload ops
         let extensions = if options.startup_snapshot.is_some() {
@@ -68,21 +69,25 @@ impl SnapshotBuilder {
             ext::all_extensions(options.extensions, options.extension_options)
         };
 
+        let deno_runtime = JsRuntime::try_new(deno_core::RuntimeOptions {
+            module_loader: Some(module_loader.clone()),
+
+            extension_transpiler: Some(Rc::new(|specifier, code| {
+                transpile_extension(&specifier, &code)
+            })),
+
+            source_map_getter: Some(module_loader.clone()),
+            create_params: options.isolate_params,
+            shared_array_buffer_store: options.shared_array_buffer_store,
+
+            startup_snapshot: options.startup_snapshot,
+            extensions,
+
+            ..Default::default()
+        })?;
+
         Ok(Self {
-            deno_runtime: JsRuntimeForSnapshot::try_new(deno_core::RuntimeOptions {
-                module_loader: Some(loader.clone()),
-
-                extension_transpiler: Some(Rc::new(|specifier, code| {
-                    transpile_extension(&specifier, &code)
-                })),
-
-                source_map_getter: Some(loader),
-
-                startup_snapshot: options.startup_snapshot,
-                extensions,
-
-                ..Default::default()
-            })?,
+            deno_runtime,
 
             tokio_runtime: Rc::new(
                 tokio::runtime::Builder::new_current_thread()

@@ -1,9 +1,8 @@
 use crate::{
-    cache_provider::ModuleCacheProvider,
     ext,
-    module_loader::RustyLoader,
+    module_loader::{LoaderOptions, RustyLoader},
     traits::{ToDefinedValue, ToModuleSpecifier, ToV8String},
-    transpiler::{self, transpile_extension},
+    transpiler::{transpile, transpile_extension},
     Error, ExtensionOptions, Module, ModuleHandle,
 };
 use deno_core::{serde_json, serde_v8::from_v8, v8, JsRuntime, PollEventLoopOptions};
@@ -84,11 +83,11 @@ pub struct RuntimeOptions {
     pub timeout: Duration,
 
     /// Optional cache provider for the module loader
-    pub module_cache: Option<Box<dyn ModuleCacheProvider>>,
+    #[allow(deprecated)]
+    pub module_cache: Option<Box<dyn crate::module_loader::ModuleCacheProvider>>,
 
     /// Optional import provider for the module loader
-    #[cfg(feature = "import_provider")]
-    pub import_provider: Option<Box<dyn crate::ImportProvider>>,
+    pub import_provider: Option<Box<dyn crate::module_loader::ImportProvider>>,
 
     /// Optional snapshot to load into the runtime
     /// This will reduce load times, but requires the same extensions to be loaded
@@ -113,7 +112,6 @@ impl Default for RuntimeOptions {
             default_entrypoint: None,
             timeout: Duration::MAX,
             module_cache: None,
-            #[cfg(feature = "import_provider")]
             import_provider: None,
             startup_snapshot: None,
             isolate_params: None,
@@ -137,11 +135,12 @@ pub struct InnerRuntime {
 }
 impl InnerRuntime {
     pub fn new(options: RuntimeOptions) -> Result<Self, Error> {
-        let module_loader = Rc::new(RustyLoader::new(
-            options.module_cache,
-            #[cfg(feature = "import_provider")]
-            options.import_provider,
-        ));
+        let module_loader = Rc::new(RustyLoader::new(LoaderOptions {
+            cache_provider: options.module_cache,
+            import_provider: options.import_provider,
+
+            ..Default::default()
+        }));
 
         // If a snapshot is provided, do not reload ops
         let extensions = if options.startup_snapshot.is_some() {
@@ -528,8 +527,7 @@ impl InnerRuntime {
         // Get additional modules first
         for side_module in side_modules {
             let module_specifier = side_module.filename().to_module_specifier(None)?;
-            let (code, sourcemap) =
-                transpiler::transpile(&module_specifier, side_module.contents())?;
+            let (code, sourcemap) = transpile(&module_specifier, side_module.contents())?;
             let fast_code = deno_core::FastString::from(code.clone());
 
             let s_modid = self
@@ -555,7 +553,7 @@ impl InnerRuntime {
         // Load main module
         if let Some(module) = main_module {
             let module_specifier = module.filename().to_module_specifier(None)?;
-            let (code, sourcemap) = transpiler::transpile(&module_specifier, module.contents())?;
+            let (code, sourcemap) = transpile(&module_specifier, module.contents())?;
             let fast_code = deno_core::FastString::from(code.clone());
 
             let module_id = self
