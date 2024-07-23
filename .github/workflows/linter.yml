@@ -35,3 +35,13 @@ jobs:
     # Test documentation generation
     - name: Test documentation
       run: cargo doc --features snapshot_builder
+
+    # Confirm sandbox integrity from features
+    - name: Confirm sandbox integrity
+      run: |
+        forbidden=("cache", "io", "web", "webstorage", "websocket", "all",  "fs_import", "url_import")
+        output=$(cargo rustc -- --print cfg)
+        for feature in "${forbidden[@]}"; do
+          flagtext="feature=\"$feature\""
+          echo "$output" | grep -q "$flagtext" && echo "Error: $flagtext in default features" && exit 1
+        done
