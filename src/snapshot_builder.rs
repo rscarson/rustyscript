@@ -55,7 +55,7 @@ pub struct SnapshotBuilder {
 impl SnapshotBuilder {
     /// Creates a new snapshot builder with the given options
     pub fn new(options: RuntimeOptions) -> Result<Self, Error> {
-        let loader = Rc::new(RustyLoader::new(LoaderOptions {
+        let module_loader = Rc::new(RustyLoader::new(LoaderOptions {
             cache_provider: options.module_cache,
             import_provider: options.import_provider,
 
@@ -69,7 +69,7 @@ impl SnapshotBuilder {
             ext::all_extensions(options.extensions, options.extension_options)
         };
 
-        let deno_runtime = JsRuntime::try_new(deno_core::RuntimeOptions {
+        let deno_runtime = JsRuntimeForSnapshot::try_new(deno_core::RuntimeOptions {
             module_loader: Some(module_loader.clone()),
 
             extension_transpiler: Some(Rc::new(|specifier, code| {
