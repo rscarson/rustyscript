@@ -15,6 +15,31 @@ use std::{
     rc::Rc,
 };
 
+#[allow(unused_variables)]
+#[cfg(feature = "import_provider")]
+/// A trait that can be implemented to provide custom import resolution. Passed to the runtime via `RuntimeOptions::import_provider`
+pub trait ImportProvider {
+    /// Resolve an import statement's specifier to a URL to later be imported
+    fn resolve(
+        &mut self,
+        specifier: &ModuleSpecifier,
+        referrer: &str,
+        kind: deno_core::ResolutionKind,
+    ) -> Option<Result<ModuleSpecifier, anyhow::Error>> {
+        None
+    }
+    /// Retrieve a JavaScript/TypeScript module from a given URL and return it as a string.
+    fn import(
+        &mut self,
+        specifier: &ModuleSpecifier,
+        referrer: &Option<ModuleSpecifier>,
+        is_dyn_import: bool,
+        requested_module_type: deno_core::RequestedModuleType,
+    ) -> Option<Result<String, anyhow::Error>> {
+        None
+    }
+}
+
 /// Stores the source code and source map for loaded modules
 type SourceMapCache = HashMap<String, (String, Option<Vec<u8>>)>;
 
@@ -22,16 +47,23 @@ type SourceMapCache = HashMap<String, (String, Option<Vec<u8>>)>;
 #[derive(Clone)]
 struct InnerRustyLoader {
     cache_provider: Rc<Option<Box<dyn ModuleCacheProvider>>>,
+    #[cfg(feature = "import_provider")]
+    import_provider: Rc<Option<RefCell<Box<dyn ImportProvider>>>>,
     fs_whlist: Rc<RefCell<HashSet<String>>>,
     source_map_cache: Rc<RefCell<SourceMapCache>>,
 }
 
 impl InnerRustyLoader {
     /// Creates a new instance of `InnerRustyLoader`
-    /// An optional cache provider can be provided to manage module code caching
-    fn new(cache_provider: Option<Box<dyn ModuleCacheProvider>>) -> Self {
+    /// An optional cache provider can be provided to manage module code caching, as well as an import provider to manage module resolution.
+    fn new(
+        cache_provider: Option<Box<dyn ModuleCacheProvider>>,
+        #[cfg(feature = "import_provider")] import_provider: Option<Box<dyn ImportProvider>>,
+    ) -> Self {
         Self {
             cache_provider: Rc::new(cache_provider),
+            #[cfg(feature = "import_provider")]
+            import_provider: Rc::new(import_provider.map(RefCell::new)),
             fs_whlist: Rc::new(RefCell::new(HashSet::new())),
             source_map_cache: Rc::new(RefCell::new(SourceMapCache::new())),
         }
@@ -126,10 +158,21 @@ impl ModuleLoader for RustyLoader {
         &self,
         specifier: &str,
         referrer: &str,
-        _kind: deno_core::ResolutionKind,
+        kind: deno_core::ResolutionKind,
     ) -> Result<ModuleSpecifier, anyhow::Error> {
         // Resolve the module specifier to an absolute URL
         let url = deno_core::resolve_import(specifier, referrer)?;
+
+        #[cfg(feature = "import_provider")]
+        if let Some(import_provider) = self.inner.import_provider.as_ref().as_ref() {
+            let resolve_result = import_provider.borrow_mut().resolve(&url, referrer, kind);
+
+            // ImportProvider's resolve method should return None if default resolution is preferred, and Some(Err) if a url is not allowed
+            if let Some(result) = resolve_result {
+                return result;
+            }
+        }
+
         if referrer == "." {
             // Added from rust, add to the whitelist
             // so we can load it from the filesystem
@@ -163,7 +206,6 @@ impl ModuleLoader for RustyLoader {
                 ));
             }
         }
-
         Ok(url)
     }
 
@@ -171,9 +213,9 @@ impl ModuleLoader for RustyLoader {
     fn load(
         &self,
         module_specifier: &ModuleSpecifier,
-        _maybe_referrer: Option<&ModuleSpecifier>,
-        _is_dyn_import: bool,
-        _requested_module_type: deno_core::RequestedModuleType,
+        maybe_referrer: Option<&ModuleSpecifier>,
+        is_dyn_import: bool,
+        requested_module_type: deno_core::RequestedModuleType,
     ) -> deno_core::ModuleLoadResponse {
         let inner = self.inner.clone();
         let module_specifier = module_specifier.clone();
@@ -208,12 +250,49 @@ impl ModuleLoader for RustyLoader {
                 .boxed_local(),
             ),
 
-            // Unknown scheme - deny
-            _ => ModuleLoadResponse::Sync(Err(anyhow!(
-                "{} imports are not allowed here: {}",
-                module_specifier.scheme(),
-                module_specifier.as_str()
-            ))),
+            _ => {
+                #[cfg(feature = "import_provider")]
+                if inner.import_provider.is_some() {
+                    let maybe_referrer = Rc::new(maybe_referrer.cloned());
+                    return ModuleLoadResponse::Async(
+                        async move {
+                            inner
+                                .load(module_specifier, |specifier| {
+                                    let import_provider =
+                                        inner.import_provider.as_ref().as_ref().unwrap();
+                                    let maybe_referrer = maybe_referrer.as_ref();
+                                    let requested_module_type = requested_module_type.clone();
+                                    async move {
+                                        let import = import_provider.borrow_mut().import(
+                                            &specifier,
+                                            maybe_referrer,
+                                            is_dyn_import,
+                                            requested_module_type,
+                                        );
+                                        if let Some(import) = import {
+                                            import
+                                        } else {
+                                            Err(anyhow!(
+                                                "{} imports are not allowed here: {}",
+                                                specifier.scheme(),
+                                                specifier.as_str()
+                                            ))
+                                        }
+                                    }
+                                })
+                                .await
+                        }
+                        .boxed_local(),
+                    );
+                }
+
+                // Unknown scheme - deny
+                return ModuleLoadResponse::Sync(Err(anyhow!(
+                    "{} imports are not allowed here: {}",
+                    module_specifier.scheme(),
+                    module_specifier.as_str()
+                )));
+            }
         }
     }
 }
@@ -221,10 +300,17 @@ impl ModuleLoader for RustyLoader {
 #[allow(dead_code)]
 impl RustyLoader {
     /// Creates a new instance of `RustyLoader`
-    /// An optional cache provider can be provided to manage module code caching
-    pub fn new(cache_provider: Option<Box<dyn ModuleCacheProvider>>) -> Self {
+    /// An optional cache provider can be provided to manage module code caching, as well as an import provider to manage module resolution.
+    pub fn new(
+        cache_provider: Option<Box<dyn ModuleCacheProvider>>,
+        #[cfg(feature = "import_provider")] import_provider: Option<Box<dyn ImportProvider>>,
+    ) -> Self {
         Self {
-            inner: Rc::new(InnerRustyLoader::new(cache_provider)),
+            inner: Rc::new(InnerRustyLoader::new(
+                cache_provider,
+                #[cfg(feature = "import_provider")]
+                import_provider,
+            )),
         }
     }
 
@@ -300,7 +386,11 @@ mod test {
             .get(&specifier)
             .expect("Expected to get cached source");
 
-        let loader = RustyLoader::new(Some(Box::new(cache_provider)));
+        let loader = RustyLoader::new(
+            Some(Box::new(cache_provider)),
+            #[cfg(feature = "import_provider")]
+            None,
+        );
         let response = loader.load(
             &specifier,
             None,
@@ -322,6 +412,87 @@ mod test {
                 assert_eq!(source, cached_source);
             }
             ModuleLoadResponse::Sync(_) => panic!("Unexpected response"),
+        }
+    }
+
+    #[cfg(feature = "import_provider")]
+    use deno_core::ResolutionKind;
+
+    #[cfg(feature = "import_provider")]
+    struct TestImportProvider {
+        i: usize,
+    }
+    #[cfg(feature = "import_provider")]
+    impl TestImportProvider {
+        fn new() -> Self {
+            Self { i: 0 }
+        }
+    }
+    #[cfg(feature = "import_provider")]
+    impl ImportProvider for TestImportProvider {
+        fn resolve(
+            &mut self,
+            specifier: &ModuleSpecifier,
+            _referrer: &str,
+            _kind: deno_core::ResolutionKind,
+        ) -> Option<Result<ModuleSpecifier, deno_core::anyhow::Error>> {
+            match specifier.scheme() {
+                "test" => {
+                    self.i += 1;
+                    Some(Ok(
+                        ModuleSpecifier::parse(&format!("test://{}", self.i)).unwrap()
+                    ))
+                }
+                _ => None,
+            }
+        }
+        fn import(
+            &mut self,
+            specifier: &ModuleSpecifier,
+            _referrer: &Option<ModuleSpecifier>,
+            _is_dyn_import: bool,
+            _requested_module_type: deno_core::RequestedModuleType,
+        ) -> Option<Result<String, deno_core::anyhow::Error>> {
+            match specifier.as_str() {
+                "test://1" => Some(Ok("console.log('Rock')".to_string())),
+                "test://2" => Some(Ok("console.log('Paper')".to_string())),
+                "test://3" => Some(Ok("console.log('Scissors')".to_string())),
+                _ => None,
+            }
+        }
+    }
+
+    #[tokio::test]
+    #[cfg(feature = "import_provider")]
+    async fn test_import_provider() {
+        let loader = RustyLoader::new(None, Some(Box::new(TestImportProvider::new())));
+        let expected_responses = vec![
+            "console.log('Rock')".to_string(),
+            "console.log('Paper')".to_string(),
+            "console.log('Scissors')".to_string(),
+        ];
+        for i in 0..3 {
+            let specifier = loader
+                .resolve("test://anything", "", ResolutionKind::Import)
+                .unwrap();
+            let response = loader.load(
+                &specifier,
+                None,
+                false,
+                deno_core::RequestedModuleType::None,
+            );
+            match response {
+                ModuleLoadResponse::Async(future) => {
+                    let source = future.await.expect("Expected to get source");
+                    let source = if let ModuleSourceCode::String(s) = source.code {
+                        s
+                    } else {
+                        panic!("Unexpected source code type");
+                    };
+                    assert_eq!(source, expected_responses[i].clone().into());
+                }
+                _ => panic!("Unexpected response"),
+            }
         }
     }
 }

@@ -240,10 +240,13 @@
 //! |                  |                                                                                                           |                  |                                                                                               |
 //! |`fs_import`       |Enables importing arbitrary code from the filesystem through JS                                            |**NO**            |None                                                                                           |
 //! |`url_import`      |Enables importing arbitrary code from network locations through JS                                         |**NO**            |`reqwest`                                                                                      |
+//! |`import_provider` |Enables importing arbitrary code from anywhere by implementing a trait                                     |**NO**<sup>†</sup>|None                                                                                           |
 //! |                  |                                                                                                           |                  |                                                                                               |
 //! |`worker`          |Enables access to the threaded worker API [`worker`]                                                       |yes               |None                                                                                           |
 //! |`snapshot_builder`|Enables access to [`SnapshotBuilder`], a runtime for creating snapshots that can improve start-times       |yes               |None                                                                                           |
 //! |`web_stub`        |Enables a subset of `web` features that do not break sandboxing                                            |yes               |`deno_webidl`                                                                                  |
+//!
+//! <sup>†</sup> Your implementation may still preserve sandboxing if you only allow importing JS/TS code that you trust. Exercise caution.
 //!
 //! ----
 //!
@@ -295,6 +298,8 @@ pub use error::Error;
 pub use inner_runtime::{RsAsyncFunction, RsFunction};
 pub use module::{Module, StaticModule};
 pub use module_handle::ModuleHandle;
+#[cfg(feature = "import_provider")]
+pub use module_loader::ImportProvider;
 pub use module_wrapper::ModuleWrapper;
 pub use runtime::{Runtime, RuntimeOptions, Undefined};
 pub use utilities::{evaluate, import, init_platform, resolve_path, validate};

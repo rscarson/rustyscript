@@ -55,7 +55,11 @@ pub struct SnapshotBuilder {
 impl SnapshotBuilder {
     /// Creates a new snapshot builder with the given options
     pub fn new(options: RuntimeOptions) -> Result<Self, Error> {
-        let loader = Rc::new(RustyLoader::new(options.module_cache));
+        let loader = Rc::new(RustyLoader::new(
+            options.module_cache,
+            #[cfg(feature = "import_provider")]
+            options.import_provider,
+        ));
 
         // If a snapshot is provided, do not reload ops
         let extensions = if options.startup_snapshot.is_some() {
