@@ -140,7 +140,7 @@ impl InnerRuntime {
             ext::all_extensions(options.extensions, options.extension_options)
         };
 
-        let mut deno_runtime = JsRuntime::try_new(deno_core::RuntimeOptions {
+        let deno_runtime = JsRuntime::try_new(deno_core::RuntimeOptions {
             module_loader: Some(module_loader.clone()),
 
             extension_transpiler: Some(Rc::new(|specifier, code| {
@@ -156,11 +156,6 @@ impl InnerRuntime {
 
             ..Default::default()
         })?;
-
-        // Stub out bad and naughty functions
-        deno_runtime
-            .execute_script("", "Deno.core.ops.op_panic = Deno.core.ops.op_panic2;")
-            .map_err(|e| Error::Runtime(format!("Could not initialize sandbox: {e}")))?;
 
         Ok(Self {
             deno_runtime,

@@ -59,9 +59,13 @@ fn op_panic2(#[string] msg: &str) -> Result<(), deno_core::anyhow::Error> {
 
 extension!(
     rustyscript,
-    ops = [op_register_entrypoint, call_registered_function, call_registered_function_async, op_panic2],
+    ops = [op_register_entrypoint, call_registered_function, call_registered_function_async],
     esm_entry_point = "ext:rustyscript/rustyscript.js",
     esm = [ dir "src/ext/rustyscript", "rustyscript.js" ],
+    middleware = |op| match op.name {
+        "op_panic" => op.with_implementation_from(&op_panic2()),
+        _ => op,
+    }
 );
 
 pub fn extensions() -> Vec<Extension> {
