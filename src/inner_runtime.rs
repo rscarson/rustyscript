@@ -86,6 +86,10 @@ pub struct RuntimeOptions {
     /// Optional cache provider for the module loader
     pub module_cache: Option<Box<dyn ModuleCacheProvider>>,
 
+    /// Optional import provider for the module loader
+    #[cfg(feature = "import_provider")]
+    pub import_provider: Option<Box<dyn crate::ImportProvider>>,
+
     /// Optional snapshot to load into the runtime
     /// This will reduce load times, but requires the same extensions to be loaded
     /// as when the snapshot was created
@@ -109,6 +113,8 @@ impl Default for RuntimeOptions {
             default_entrypoint: None,
             timeout: Duration::MAX,
             module_cache: None,
+            #[cfg(feature = "import_provider")]
+            import_provider: None,
             startup_snapshot: None,
             isolate_params: None,
             shared_array_buffer_store: None,
@@ -131,7 +137,11 @@ pub struct InnerRuntime {
 }
 impl InnerRuntime {
     pub fn new(options: RuntimeOptions) -> Result<Self, Error> {
-        let module_loader = Rc::new(RustyLoader::new(options.module_cache));
+        let module_loader = Rc::new(RustyLoader::new(
+            options.module_cache,
+            #[cfg(feature = "import_provider")]
+            options.import_provider,
+        ));
 
         // If a snapshot is provided, do not reload ops
         let extensions = if options.startup_snapshot.is_some() {
