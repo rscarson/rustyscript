@@ -45,6 +45,9 @@ jobs:
     - name: multiple_modules
       run: cargo run --example multiple_modules
 
+    - name: module_loader_cache
+      run: cargo run --example module_loader_cache
+
     - name: module_import
       run: cargo run --example module_import
 
@@ -68,6 +71,9 @@ jobs:
 
     - name: custom_runtimes
       run: cargo run --example custom_runtimes
+
+    - name: custom_import_logic
+      run: cargo run --example custom_import_logic --features "url_import"
 
     - name: create_snapshot
       run: cargo run --example create_snapshot --features "snapshot_builder"
