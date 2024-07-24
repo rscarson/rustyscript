@@ -39,9 +39,23 @@ jobs:
     # Confirm sandbox integrity from features
     - name: Confirm sandbox integrity
       run: |
-        forbidden=("cache", "io", "web", "webstorage", "websocket", "all",  "fs_import", "url_import")
+        # Set up variables
+        forbidden=("cache", "io", "web", "webstorage", "websocket", "all", "fs_import", "url_import")
         output=$(cargo rustc -- --print cfg)
+        found_forbidden=0
+        
+        # Check for forbidden features in the default set
         for feature in "${forbidden[@]}"; do
           flagtext="feature=\"$feature\""
-          echo "$output" | grep -q "$flagtext" && echo "Error: $flagtext in default features" && exit 1
+          if echo "$output" | grep -q "$flagtext"; then
+            echo "Error: $flagtext in default features"
+            found_forbidden=1
+          fi
         done
+        
+        # Finish up
+        if [ $found_forbidden -eq 0 ]; then
+          exit 1
+        else
+          exit 0
+        fi
