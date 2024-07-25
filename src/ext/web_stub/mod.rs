@@ -16,7 +16,7 @@ extension!(
     esm = [ dir "src/ext/web_stub", "init_stub.js", "01_dom_exception.js", "02_timers.js" ],
 );
 impl ExtensionTrait<()> for deno_web {
-    fn init(_: ()) -> Extension {
+    fn init((): ()) -> Extension {
         deno_web::init_ops_and_esm()
     }
 }
