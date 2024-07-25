@@ -131,7 +131,8 @@ impl Default for RuntimeOptions {
 pub struct InnerRuntime {
     pub module_loader: Rc<RustyLoader>,
     pub deno_runtime: JsRuntime,
-    pub options: RuntimeOptions,
+
+    pub default_entrypoint: Option<String>,
 }
 impl InnerRuntime {
     pub fn new(options: RuntimeOptions) -> Result<Self, Error> {
@@ -156,7 +157,7 @@ impl InnerRuntime {
 
             source_map_getter: Some(module_loader.clone()),
             create_params: options.isolate_params,
-            shared_array_buffer_store: options.shared_array_buffer_store,
+            shared_array_buffer_store: options.shared_array_buffer_store.clone(),
 
             startup_snapshot: options.startup_snapshot,
             extensions,
@@ -167,11 +168,8 @@ impl InnerRuntime {
         Ok(Self {
             deno_runtime,
             module_loader,
-            options: RuntimeOptions {
-                timeout: options.timeout,
-                default_entrypoint: options.default_entrypoint,
-                ..Default::default()
-            },
+
+            default_entrypoint: options.default_entrypoint,
         })
     }
 
@@ -470,8 +468,9 @@ impl InnerRuntime {
     pub fn get_module_entrypoint(
         &mut self,
         module_context: &mut ModuleHandle,
-        default: Option<&str>,
     ) -> Result<Option<v8::Global<v8::Function>>, Error> {
+        let default = self.default_entrypoint.clone();
+
         // Try to get an entrypoint from a call to `rustyscript.register_entrypoint` first
         let state = self.deno_runtime.op_state();
         let mut deep_state = state.try_borrow_mut()?;
@@ -492,7 +491,7 @@ impl InnerRuntime {
         }
 
         // Try to get an entrypoint from the default entrypoint
-        if let Some(default) = default {
+        if let Some(default) = default.as_deref() {
             if let Ok(f) = self.get_function_by_name(Some(module_context), default) {
                 return Ok(Some(f));
             }
@@ -512,8 +511,6 @@ impl InnerRuntime {
         main_module: Option<&Module>,
         side_modules: Vec<&Module>,
     ) -> Result<ModuleHandle, Error> {
-        let default_entrypoint = self.options.default_entrypoint.clone();
-
         if main_module.is_none() && side_modules.is_empty() {
             return Err(Error::Runtime(
                 "Internal error: attempt to load no modules".to_string(),
@@ -579,8 +576,7 @@ impl InnerRuntime {
         }
 
         // Try to get the default entrypoint
-        let entrypoint =
-            self.get_module_entrypoint(&mut module_handle_stub, default_entrypoint.as_deref())?;
+        let entrypoint = self.get_module_entrypoint(&mut module_handle_stub)?;
 
         Ok(ModuleHandle::new(
             module_handle_stub.module(),

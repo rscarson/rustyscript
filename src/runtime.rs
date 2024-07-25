@@ -29,6 +29,7 @@ pub type Undefined = crate::js_value::Value;
 pub struct Runtime {
     inner: InnerRuntime,
     tokio: Rc<tokio::runtime::Runtime>,
+    timeout: std::time::Duration,
 }
 
 impl Runtime {
@@ -92,6 +93,7 @@ impl Runtime {
         tokio: Rc<tokio::runtime::Runtime>,
     ) -> Result<Self, Error> {
         Ok(Self {
+            timeout: options.timeout,
             inner: InnerRuntime::new(options)?,
             tokio,
         })
@@ -108,13 +110,10 @@ impl Runtime {
         self.tokio.clone()
     }
 
-    /// Access the options used to create this runtime
-    ///
-    /// Warning: Not all options can be accessed in this way
-    /// Extensions, for example, are consumed during runtime creation
+    /// Returns the timeout for the runtime
     #[must_use]
-    pub fn options(&self) -> &RuntimeOptions {
-        &self.inner.options
+    pub fn timeout(&self) -> std::time::Duration {
+        self.timeout
     }
 
     /// Destroy the v8 runtime, releasing all resources
@@ -1053,7 +1052,7 @@ impl Runtime {
         U: std::future::Future<Output = Result<T, Error>>,
         F: FnOnce(&'a mut Runtime) -> U,
     {
-        let timeout = self.options().timeout;
+        let timeout = self.timeout();
         let rt = self.tokio_runtime();
         rt.block_on(async move { tokio::time::timeout(timeout, f(self)).await })?
     }
