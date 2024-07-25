@@ -23,14 +23,15 @@ The process of adding an extension involves the following steps:
 4. Add a new directory in `src/ext/extension_name`. It will contain `mod.rs` and `init_extension_name.js`
 5. Navigate to [deno/runtime/js](https://github.com/denoland/deno/tree/main/runtime/js) and find all the places in global the extension is added
 6. In `init_extension_name.js`, include -all- JS sources provided by the new extension, and add the relevant portions to global (see other exts for examples)
-7. In `mod.rs`, create your `init_extension_name` extensions and provide the `extensions` and `snapshot_extensions` functions
-8. If the extension requires configuration, add a feature-gated section to `ExtensionOptions`
+7. In `mod.rs`, create your `init_extension_name` extensions and provide the `extensions` function
+8. Implement `ExtensionTrait` for the deno_extension and your initializer
+9. If the extension requires configuration, add a feature-gated section to `ExtensionOptions`
 
    - If only one field, add it directly to ExtensionOptions
    - Otherwise add an options structure in `mod.rs` and reference that
    - 
-9- in `src/ext/mod.rs` add feature-gated imports, and add your extension to the extensions functions -BELOW- any of its dependencies
-10- Add a section to the table in `lib.rs` for the new extension, and use `cargo rdme` to regenerate the readme
+10- in `src/ext/mod.rs` add feature-gated imports, and add your extension to the extensions functions -BELOW- any of its dependencies
+11- Add a section to the table in `lib.rs` for the new extension, and use `cargo rdme` to regenerate the readme
 
 ## Project Structure
 
