@@ -1,4 +1,5 @@
 #![allow(deprecated)]
+#![allow(dead_code)]
 use crate::module_loader::{ClonableSource, ModuleCacheProvider};
 use crate::transpiler::transpile;
 use deno_core::anyhow::{anyhow, Error};

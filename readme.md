@@ -240,6 +240,8 @@ Please note that the `web` feature will also enable `fs_import` and `url_import`
 
 ----
 
+For an example of this crate in use, see [Lavendeux](https://github.com/rscarson/lavendeux)
+
 Please also check out [@Bromeon/js_sandbox](https://github.com/Bromeon/js-sandbox), another great crate in this niche
 
 <!-- cargo-rdme end -->

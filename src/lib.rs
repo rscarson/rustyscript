@@ -247,13 +247,15 @@
 //!
 //! ----
 //!
+//! For an example of this crate in use, see [Lavendeux](https://github.com/rscarson/lavendeux)
+//!
 //! Please also check out [@Bromeon/js_sandbox](https://github.com/Bromeon/js-sandbox), another great crate in this niche
 //!
 #![warn(missing_docs)]
 #![warn(clippy::pedantic)]
 #![allow(clippy::module_name_repetitions)] //    Does not account for crate-level re-exports
 #![allow(clippy::inline_always)] //              Does not account for deno_core's use of inline(always) on op2
-#![allow(clippy::needless_pass_by_value)] //      Disabling some features can trigger this
+#![allow(clippy::needless_pass_by_value)] //     Disabling some features can trigger this
 
 #[cfg(feature = "snapshot_builder")]
 mod snapshot_builder;
