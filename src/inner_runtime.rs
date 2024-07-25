@@ -142,12 +142,10 @@ impl InnerRuntime {
             ..Default::default()
         }));
 
-        // If a snapshot is provided, do not reload ops
-        let extensions = if options.startup_snapshot.is_some() {
-            ext::all_snapshot_extensions(options.extensions, options.extension_options)
-        } else {
-            ext::all_extensions(options.extensions, options.extension_options)
-        };
+        // If a snapshot is provided, do not reload ESM for extensions
+        let is_snapshot = options.startup_snapshot.is_some();
+        let extensions =
+            ext::all_extensions(options.extensions, options.extension_options, is_snapshot);
 
         let deno_runtime = JsRuntime::try_new(deno_core::RuntimeOptions {
             module_loader: Some(module_loader.clone()),

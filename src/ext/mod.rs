@@ -4,6 +4,26 @@ use deno_core::Extension;
 
 pub mod rustyscript;
 
+trait ExtensionTrait<A> {
+    fn init(options: A) -> Extension;
+
+    /// Makes a call to `init_ops_and_esm` equivalent to `init_ops`
+    fn set_esm(mut ext: Extension, is_snapshot: bool) -> Extension {
+        if is_snapshot {
+            ext.js_files = ::std::borrow::Cow::Borrowed(&[]);
+            ext.esm_files = ::std::borrow::Cow::Borrowed(&[]);
+            ext.esm_entry_point = ::std::option::Option::None;
+        }
+        ext
+    }
+
+    /// Builds an extension
+    fn build(options: A, is_snapshot: bool) -> Extension {
+        let ext = Self::init(options);
+        Self::set_esm(ext, is_snapshot)
+    }
+}
+
 #[cfg(feature = "webidl")]
 pub mod webidl;
 
@@ -78,89 +98,45 @@ impl Default for ExtensionOptions {
     }
 }
 
-///
-/// Add up all required extensions
 pub(crate) fn all_extensions(
     user_extensions: Vec<Extension>,
     options: ExtensionOptions,
+    is_snapshot: bool,
 ) -> Vec<Extension> {
-    let mut extensions = rustyscript::extensions();
+    let mut extensions = rustyscript::extensions(is_snapshot);
 
     #[cfg(feature = "webidl")]
-    extensions.extend(webidl::extensions());
+    extensions.extend(webidl::extensions(is_snapshot));
 
     #[cfg(feature = "console")]
-    extensions.extend(console::extensions());
+    extensions.extend(console::extensions(is_snapshot));
 
     #[cfg(feature = "url")]
-    extensions.extend(url::extensions());
+    extensions.extend(url::extensions(is_snapshot));
 
     #[cfg(feature = "web")]
-    extensions.extend(web::extensions(options.web.clone()));
+    extensions.extend(web::extensions(options.web.clone(), is_snapshot));
 
     #[cfg(feature = "cache")]
-    extensions.extend(cache::extensions(options.cache));
+    extensions.extend(cache::extensions(options.cache, is_snapshot));
 
     #[cfg(all(not(feature = "web"), feature = "web_stub"))]
-    extensions.extend(web_stub::extensions());
+    extensions.extend(web_stub::extensions(is_snapshot));
 
     #[cfg(feature = "crypto")]
-    extensions.extend(crypto::extensions(options.crypto_seed));
+    extensions.extend(crypto::extensions(options.crypto_seed, is_snapshot));
 
     #[cfg(feature = "io")]
-    extensions.extend(io::extensions(options.io_pipes));
+    extensions.extend(io::extensions(options.io_pipes, is_snapshot));
 
     #[cfg(feature = "webstorage")]
     extensions.extend(webstorage::extensions(
         options.webstorage_origin_storage_dir,
+        is_snapshot,
     ));
 
     #[cfg(feature = "websocket")]
-    extensions.extend(websocket::extensions(options.web.clone()));
-
-    extensions.extend(user_extensions);
-    extensions
-}
-
-///
-/// Add up all required extensions, in snapshot mode
-pub(crate) fn all_snapshot_extensions(
-    user_extensions: Vec<Extension>,
-    options: ExtensionOptions,
-) -> Vec<Extension> {
-    let mut extensions = rustyscript::snapshot_extensions();
-
-    #[cfg(feature = "webidl")]
-    extensions.extend(webidl::snapshot_extensions());
-
-    #[cfg(feature = "console")]
-    extensions.extend(console::snapshot_extensions());
-
-    #[cfg(feature = "url")]
-    extensions.extend(url::snapshot_extensions());
-
-    #[cfg(feature = "web")]
-    extensions.extend(web::snapshot_extensions(options.web.clone()));
-
-    #[cfg(feature = "cache")]
-    extensions.extend(cache::snapshot_extensions(options.cache));
-
-    #[cfg(all(not(feature = "web"), feature = "web_stub"))]
-    extensions.extend(web_stub::snapshot_extensions());
-
-    #[cfg(feature = "crypto")]
-    extensions.extend(crypto::snapshot_extensions(options.crypto_seed));
-
-    #[cfg(feature = "io")]
-    extensions.extend(io::snapshot_extensions(options.io_pipes));
-
-    #[cfg(feature = "webstorage")]
-    extensions.extend(webstorage::snapshot_extensions(
-        options.webstorage_origin_storage_dir,
-    ));
-
-    #[cfg(feature = "websocket")]
-    extensions.extend(websocket::snapshot_extensions(options.web.clone()));
+    extensions.extend(websocket::extensions(options.web.clone(), is_snapshot));
 
     extensions.extend(user_extensions);
     extensions

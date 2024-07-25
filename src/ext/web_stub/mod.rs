@@ -2,6 +2,7 @@
 //! It is used when the `web` feature is disabled.
 //!
 //! It provides a minimal set of APIs that are required for a few other extensions.
+use super::ExtensionTrait;
 use deno_core::{extension, Extension};
 
 mod timers;
@@ -14,11 +15,12 @@ extension!(
     esm_entry_point = "ext:deno_web/init_stub.js",
     esm = [ dir "src/ext/web_stub", "init_stub.js", "01_dom_exception.js", "02_timers.js" ],
 );
-
-pub fn extensions() -> Vec<Extension> {
-    vec![deno_web::init_ops_and_esm()]
+impl ExtensionTrait<()> for deno_web {
+    fn init(_: ()) -> Extension {
+        deno_web::init_ops_and_esm()
+    }
 }
 
-pub fn snapshot_extensions() -> Vec<Extension> {
-    vec![deno_web::init_ops()]
+pub fn extensions(is_snapshot: bool) -> Vec<Extension> {
+    vec![deno_web::build((), is_snapshot)]
 }

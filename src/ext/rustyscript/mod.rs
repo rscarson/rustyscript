@@ -1,3 +1,4 @@
+use super::ExtensionTrait;
 use crate::{error::Error, RsAsyncFunction, RsFunction};
 use deno_core::{anyhow::anyhow, extension, op2, serde_json, v8, Extension, OpState};
 use std::collections::HashMap;
@@ -67,11 +68,12 @@ extension!(
         _ => op,
     }
 );
-
-pub fn extensions() -> Vec<Extension> {
-    vec![rustyscript::init_ops_and_esm()]
+impl ExtensionTrait<()> for rustyscript {
+    fn init(options: ()) -> Extension {
+        rustyscript::init_ops_and_esm()
+    }
 }
 
-pub fn snapshot_extensions() -> Vec<Extension> {
-    vec![rustyscript::init_ops()]
+pub fn extensions(is_snapshot: bool) -> Vec<Extension> {
+    vec![rustyscript::build((), is_snapshot)]
 }

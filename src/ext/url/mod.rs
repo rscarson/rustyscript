@@ -1,3 +1,4 @@
+use super::ExtensionTrait;
 use deno_core::{extension, Extension};
 
 extension!(
@@ -6,14 +7,20 @@ extension!(
     esm_entry_point = "ext:init_url/init_url.js",
     esm = [ dir "src/ext/url", "init_url.js" ],
 );
-
-pub fn extensions() -> Vec<Extension> {
-    vec![
-        deno_url::deno_url::init_ops_and_esm(),
-        init_url::init_ops_and_esm(),
-    ]
+impl ExtensionTrait<()> for init_url {
+    fn init((): ()) -> Extension {
+        init_url::init_ops_and_esm()
+    }
+}
+impl ExtensionTrait<()> for deno_url::deno_url {
+    fn init((): ()) -> Extension {
+        deno_url::deno_url::init_ops_and_esm()
+    }
 }
 
-pub fn snapshot_extensions() -> Vec<Extension> {
-    vec![deno_url::deno_url::init_ops(), init_url::init_ops()]
+pub fn extensions(is_snapshot: bool) -> Vec<Extension> {
+    vec![
+        deno_url::deno_url::build((), is_snapshot),
+        init_url::build((), is_snapshot),
+    ]
 }

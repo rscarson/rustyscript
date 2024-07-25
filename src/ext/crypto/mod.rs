@@ -1,21 +1,26 @@
+use super::ExtensionTrait;
 use deno_core::{extension, Extension};
+
 extension!(
     init_crypto,
     deps = [rustyscript],
     esm_entry_point = "ext:init_crypto/init_crypto.js",
     esm = [ dir "src/ext/crypto", "init_crypto.js" ],
 );
-
-pub fn extensions(seed: Option<u64>) -> Vec<Extension> {
-    vec![
-        deno_crypto::deno_crypto::init_ops_and_esm(seed),
-        init_crypto::init_ops_and_esm(),
-    ]
+impl ExtensionTrait<()> for init_crypto {
+    fn init((): ()) -> Extension {
+        init_crypto::init_ops_and_esm()
+    }
+}
+impl ExtensionTrait<Option<u64>> for deno_crypto::deno_crypto {
+    fn init(seed: Option<u64>) -> Extension {
+        deno_crypto::deno_crypto::init_ops_and_esm(seed)
+    }
 }
 
-pub fn snapshot_extensions(seed: Option<u64>) -> Vec<Extension> {
+pub fn extensions(seed: Option<u64>, is_snapshot: bool) -> Vec<Extension> {
     vec![
-        deno_crypto::deno_crypto::init_ops(seed),
-        init_crypto::init_ops(),
+        deno_crypto::deno_crypto::build(seed, is_snapshot),
+        init_crypto::build((), is_snapshot),
     ]
 }

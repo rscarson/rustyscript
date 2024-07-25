@@ -1,3 +1,4 @@
+use super::ExtensionTrait;
 use deno_core::{extension, Extension};
 use std::path::PathBuf;
 
@@ -7,17 +8,20 @@ extension!(
     esm_entry_point = "ext:init_webstorage/init_webstorage.js",
     esm = [ dir "src/ext/webstorage", "init_webstorage.js" ],
 );
-
-pub fn extensions(origin_storage_dir: Option<PathBuf>) -> Vec<Extension> {
-    vec![
-        deno_webstorage::deno_webstorage::init_ops_and_esm(origin_storage_dir),
-        init_webstorage::init_ops_and_esm(),
-    ]
+impl ExtensionTrait<()> for init_webstorage {
+    fn init(_: ()) -> Extension {
+        init_webstorage::init_ops_and_esm()
+    }
+}
+impl ExtensionTrait<Option<PathBuf>> for deno_webstorage::deno_webstorage {
+    fn init(origin_storage_dir: Option<PathBuf>) -> Extension {
+        deno_webstorage::deno_webstorage::init_ops_and_esm(origin_storage_dir)
+    }
 }
 
-pub fn snapshot_extensions(origin_storage_dir: Option<PathBuf>) -> Vec<Extension> {
+pub fn extensions(origin_storage_dir: Option<PathBuf>, is_snapshot: bool) -> Vec<Extension> {
     vec![
-        deno_webstorage::deno_webstorage::init_ops(origin_storage_dir),
-        init_webstorage::init_ops(),
+        deno_webstorage::deno_webstorage::build(origin_storage_dir, is_snapshot),
+        init_webstorage::build((), is_snapshot),
     ]
 }

@@ -1,21 +1,26 @@
+use super::ExtensionTrait;
 use deno_core::{extension, Extension};
+
 extension!(
     init_webidl,
     deps = [rustyscript],
     esm_entry_point = "ext:init_webidl/init_webidl.js",
     esm = [ dir "src/ext/webidl", "init_webidl.js" ],
 );
-
-pub fn extensions() -> Vec<Extension> {
-    vec![
-        deno_webidl::deno_webidl::init_ops_and_esm(),
-        init_webidl::init_ops_and_esm(),
-    ]
+impl ExtensionTrait<()> for init_webidl {
+    fn init((): ()) -> Extension {
+        init_webidl::init_ops_and_esm()
+    }
+}
+impl ExtensionTrait<()> for deno_webidl::deno_webidl {
+    fn init((): ()) -> Extension {
+        deno_webidl::deno_webidl::init_ops_and_esm()
+    }
 }
 
-pub fn snapshot_extensions() -> Vec<Extension> {
+pub fn extensions(is_snapshot: bool) -> Vec<Extension> {
     vec![
-        deno_webidl::deno_webidl::init_ops(),
-        init_webidl::init_ops(),
+        deno_webidl::deno_webidl::build((), is_snapshot),
+        init_webidl::build((), is_snapshot),
     ]
 }

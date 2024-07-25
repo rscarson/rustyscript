@@ -1,3 +1,4 @@
+use super::ExtensionTrait;
 use deno_core::{extension, Extension};
 
 #[cfg(windows)]
@@ -16,19 +17,26 @@ extension!(
     esm_entry_point = "ext:init_io/init_io.js",
     esm = [ dir "src/ext/io", "init_io.js" ],
 );
-
-pub fn extensions(pipes: Option<deno_io::Stdio>) -> Vec<Extension> {
-    vec![
-        tty::deno_tty::init_ops_and_esm(),
-        init_io::init_ops_and_esm(),
-        deno_io::deno_io::init_ops_and_esm(pipes),
-    ]
+impl ExtensionTrait<()> for init_io {
+    fn init(_: ()) -> Extension {
+        init_io::init_ops_and_esm()
+    }
+}
+impl ExtensionTrait<Option<deno_io::Stdio>> for deno_io::deno_io {
+    fn init(pipes: Option<deno_io::Stdio>) -> Extension {
+        deno_io::deno_io::init_ops_and_esm(pipes)
+    }
+}
+impl ExtensionTrait<()> for tty::deno_tty {
+    fn init(_: ()) -> Extension {
+        tty::deno_tty::init_ops_and_esm()
+    }
 }
 
-pub fn snapshot_extensions(pipes: Option<deno_io::Stdio>) -> Vec<Extension> {
+pub fn extensions(pipes: Option<deno_io::Stdio>, is_snapshot: bool) -> Vec<Extension> {
     vec![
-        tty::deno_tty::init_ops(),
-        init_io::init_ops(),
-        deno_io::deno_io::init_ops(pipes),
+        deno_io::deno_io::build(pipes, is_snapshot),
+        tty::deno_tty::build((), is_snapshot),
+        init_io::build((), is_snapshot),
     ]
 }
