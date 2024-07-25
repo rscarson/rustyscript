@@ -109,9 +109,19 @@ impl Runtime {
     }
 
     /// Access the options used to create this runtime
+    ///
+    /// Warning: Not all options can be accessed in this way
+    /// Extensions, for example, are consumed during runtime creation
     #[must_use]
     pub fn options(&self) -> &RuntimeOptions {
         &self.inner.options
+    }
+
+    /// Destroy the v8 runtime, releasing all resources
+    /// Then the internal tokio runtime will be returned
+    #[must_use]
+    pub fn into_tokio_runtime(self) -> Rc<tokio::runtime::Runtime> {
+        self.tokio
     }
 
     /// Run the JS event loop to completion
