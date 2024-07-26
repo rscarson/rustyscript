@@ -104,7 +104,7 @@ reqwest = { version = "=0.12.5", optional = true, default-features = false, feat
 http = { version = "1.1.0", optional = true }
 
 # Dependencies for the various extension features
-deno_cache = {version = "0.94.0", optional = true}
+deno_cache = {version = "0.95.0", optional = true}
 deno_console = {version = "0.162.0", optional = true}
 deno_crypto = {version = "0.176.0", optional = true}
 deno_fetch = {version = "0.186.0", optional = true}
