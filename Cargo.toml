@@ -107,7 +107,7 @@ http = { version = "1.1.0", optional = true }
 deno_cache = {version = "0.94.0", optional = true}
 deno_console = {version = "0.162.0", optional = true}
 deno_crypto = {version = "0.176.0", optional = true}
-deno_fetch = {version = "0.186.0", optional = true}
+deno_fetch = {version = "0.187.0", optional = true}
 deno_net = {version = "0.154.0", optional = true}
 deno_tls = {version = "0.149.0", optional = true} # Options for the web feature
 deno_url = {version = "0.162.0", optional = true}
