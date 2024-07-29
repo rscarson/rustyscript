@@ -74,7 +74,6 @@ impl SnapshotBuilder {
                 transpile_extension(&specifier, &code)
             })),
 
-            source_map_getter: Some(module_loader.clone()),
             create_params: options.isolate_params,
             shared_array_buffer_store: options.shared_array_buffer_store,
 
