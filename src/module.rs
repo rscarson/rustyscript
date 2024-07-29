@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 use std::ffi::OsStr;
 use std::fmt::Display;
 use std::fs::{read_dir, read_to_string};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 /// A static representation of a module
 /// use `.to_module()` to get a module instance to use with a runtime
@@ -18,7 +18,7 @@ impl StaticModule {
     /// Get an instance of this `StaticModule` that can be used with a runtime
     #[must_use]
     pub fn to_module(&self) -> Module {
-        Module::new(self.0, self.1)
+        Module::new(Path::new(self.0), self.1)
     }
 }
 
@@ -50,13 +50,13 @@ macro_rules! module {
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize, Default)]
 /// Represents a pice of javascript for execution.
 pub struct Module {
-    filename: String,
+    filename: PathBuf,
     contents: String,
 }
 
 impl Display for Module {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.filename())
+        write!(f, "{}", self.filename().display())
     }
 }
 
@@ -79,9 +79,9 @@ impl Module {
     /// let module = Module::new("module.js", "console.log('Hello, World!');");
     /// ```
     #[must_use]
-    pub fn new(filename: &str, contents: &str) -> Self {
+    pub fn new(filename: impl AsRef<Path>, contents: &str) -> Self {
         Self {
-            filename: filename.to_string(),
+            filename: filename.as_ref().to_path_buf(),
             contents: contents.to_string(),
         }
     }
@@ -108,8 +108,8 @@ impl Module {
     /// # Ok(())
     /// # }
     /// ```
-    pub fn load(filename: &str) -> Result<Self, std::io::Error> {
-        let contents = read_to_string(filename)?;
+    pub fn load(filename: impl AsRef<Path>) -> Result<Self, std::io::Error> {
+        let contents = read_to_string(filename.as_ref())?;
         Ok(Self::new(filename, &contents))
     }
 
@@ -136,7 +136,7 @@ impl Module {
     /// # Ok(())
     /// # }
     /// ```
-    pub fn load_dir(directory: &str) -> Result<Vec<Self>, std::io::Error> {
+    pub fn load_dir(directory: impl AsRef<Path>) -> Result<Vec<Self>, std::io::Error> {
         let mut files: Vec<Self> = Vec::new();
         for file in read_dir(directory)? {
             let file = file?;
@@ -168,10 +168,10 @@ impl Module {
     /// use rustyscript::Module;
     ///
     /// let module = Module::new("module.js", "console.log('Hello, World!');");
-    /// println!("Filename: {}", module.filename());
+    /// println!("Filename: {:?}", module.filename());
     /// ```
     #[must_use]
-    pub fn filename(&self) -> &str {
+    pub fn filename(&self) -> &Path {
         &self.filename
     }
 
@@ -201,7 +201,7 @@ mod test_module {
     #[test]
     fn test_new_module() {
         let module = Module::new("module.js", "console.log('Hello, World!');");
-        assert_eq!(module.filename(), "module.js");
+        assert_eq!(module.filename().to_str().unwrap(), "module.js");
         assert_eq!(module.contents(), "console.log('Hello, World!');");
     }
 
@@ -209,7 +209,10 @@ mod test_module {
     fn test_load_module() {
         let module =
             Module::load("src/ext/rustyscript/rustyscript.js").expect("Failed to load module");
-        assert_eq!(module.filename(), "src/ext/rustyscript/rustyscript.js");
+        assert_eq!(
+            module.filename().to_str().unwrap(),
+            "src/ext/rustyscript/rustyscript.js"
+        );
     }
 
     #[test]

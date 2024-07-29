@@ -155,7 +155,6 @@ impl InnerRuntime {
                 transpile_extension(&specifier, &code)
             })),
 
-            source_map_getter: Some(module_loader.clone()),
             create_params: options.isolate_params,
             shared_array_buffer_store: options.shared_array_buffer_store.clone(),
 
@@ -447,7 +446,7 @@ impl InnerRuntime {
                     let filename = v.to_rust_string_lossy(&mut scope);
                     format!("{filename}:{linenumber}: ")
                 } else if let Some(module_context) = module_context {
-                    let filename = module_context.module().filename().to_string();
+                    let filename = module_context.module().filename().to_string_lossy();
                     format!("{filename}:{linenumber}: ")
                 } else {
                     String::new()

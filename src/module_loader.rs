@@ -1,7 +1,7 @@
 //! Module loader implementation for rustyscript
 //! This module provides tools for caching module data, resolving module specifiers, and loading modules
 #![allow(deprecated)]
-use deno_core::{anyhow::Error, ModuleLoader, ModuleSpecifier, SourceMapGetter};
+use deno_core::{anyhow::Error, ModuleLoader, ModuleSpecifier};
 use std::{cell::RefCell, rc::Rc};
 
 mod cache_provider;
@@ -73,17 +73,12 @@ impl ModuleLoader for RustyLoader {
             requested_module_type,
         )
     }
-}
 
-impl SourceMapGetter for RustyLoader {
-    /// Gets the source map for a loaded module by name
-    /// Used for error generation for modules that were transpiled
     fn get_source_map(&self, file_name: &str) -> Option<Vec<u8>> {
         self.inner.borrow().get_source_map(file_name)?.1.clone()
     }
 
-    /// Get a specific line from a source file in the cache
-    fn get_source_line(&self, file_name: &str, line_number: usize) -> Option<String> {
+    fn get_source_mapped_source_line(&self, file_name: &str, line_number: usize) -> Option<String> {
         let inner = self.inner.borrow();
         let lines: Vec<_> = inner.get_source_map(file_name)?.0.split('\n').collect();
         if line_number >= lines.len() {

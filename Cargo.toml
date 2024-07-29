@@ -3,7 +3,7 @@ name = "rustyscript"
 description = "Effortless JS Integration for Rust"
 edition = "2021"
 license = "MIT OR Apache-2.0"
-version = "0.7.0"
+version = "0.8.0"
 repository = "https://github.com/rscarson/rustyscript"
 
 keywords = ["rust", "javascript", "deno", "runtime", "embedding"]
@@ -90,7 +90,7 @@ serde = "1.0.204"
 paste = "1.0.15"
 
 # The deno runtime itself, and the webidl extension for the web APIs
-deno_core = "0.294.0"
+deno_core = "0.299.0"
 
 # For transpiling typescript
 deno_ast = { version = "0.40.0", features = ["transpiling"]}
@@ -103,21 +103,26 @@ tokio = "1.38.1"
 reqwest = { version = "=0.12.5", optional = true, default-features = false, features = ["blocking", "rustls-tls"] }
 http = { version = "1.1.0", optional = true }
 
+#
 # Dependencies for the various extension features
-deno_cache = {version = "0.94.0", optional = true}
-deno_console = {version = "0.162.0", optional = true}
-deno_crypto = {version = "0.176.0", optional = true}
-deno_fetch = {version = "0.186.0", optional = true}
-deno_net = {version = "0.154.0", optional = true}
-deno_tls = {version = "0.149.0", optional = true} # Options for the web feature
-deno_url = {version = "0.162.0", optional = true}
-deno_web = {version = "0.193.0", optional = true}
-deno_webidl = {version = "0.162.0", optional = true}
-deno_webstorage = {version = "0.157.0", optional = true}
-deno_websocket = {version = "0.167.0", optional = true }
+#
+
+deno_cache      = {version = "0.95.0", optional = true}
+deno_console    = {version = "0.163.0", optional = true}
+deno_crypto     = {version = "0.177.0", optional = true}
+deno_fetch      = {version = "0.187.0", optional = true}
+deno_net        = {version = "0.155.0", optional = true}
+deno_tls        = {version = "0.150.0", optional = true} # Options for the web feature
+deno_url        = {version = "0.163.0", optional = true}
+
+deno_web        = {version = "0.194.0", optional = true}
+deno_webidl     = {version = "0.163.0", optional = true}
+deno_webstorage = {version = "0.158.0", optional = true}
+deno_websocket  = {version = "0.168.0", optional = true }
+
+deno_io         = {version = "0.73.0", optional = true}
 
 # Dependencies for the IO feature
-deno_io = {version = "0.72.0", optional = true}
 rustyline = {version = "=14.0.0", optional = true}
 winapi = {version = "=0.3.9", optional = true, features = ["commapi", "knownfolders", "mswsock", "objbase", "psapi", "shlobj", "tlhelp32", "winbase", "winerror", "winuser", "winsock2", "processenv", "wincon", "wincontypes", "consoleapi"]}
 nix = {version = "=0.29.0", optional = true, features = ["term"]}

@@ -1,15 +1,29 @@
 use crate::Error;
-use deno_core::resolve_path;
 use deno_core::v8::{self, HandleScope};
 use deno_core::ModuleSpecifier;
 use std::env::current_dir;
 use std::path::Path;
 
+/// Converts a string representing a relative or absolute path into a
+/// `ModuleSpecifier`. A relative path is considered relative to the passed
+/// `current_dir`.
+///
+/// This is a patch for the str only `deno_core` provided version
+fn resolve_path(
+    path_str: impl AsRef<Path>,
+    current_dir: &Path,
+) -> Result<ModuleSpecifier, deno_core::ModuleResolutionError> {
+    let path = current_dir.join(path_str);
+    let path = deno_core::normalize_path(path);
+    deno_core::url::Url::from_file_path(&path)
+        .map_err(|()| deno_core::ModuleResolutionError::InvalidPath(path))
+}
+
 pub trait ToModuleSpecifier {
     fn to_module_specifier(&self, base: Option<&Path>) -> Result<ModuleSpecifier, Error>;
 }
 
-impl ToModuleSpecifier for str {
+impl<T: AsRef<Path>> ToModuleSpecifier for T {
     fn to_module_specifier(&self, base: Option<&Path>) -> Result<ModuleSpecifier, Error> {
         let path = match base {
             Some(base) => resolve_path(self, base),

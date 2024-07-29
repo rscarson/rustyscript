@@ -10,7 +10,7 @@ fn criterion_benchmark(c: &mut Criterion) {
     let mut m_id = 0;
     c.bench_function("load_module", |b| {
         b.iter(|| {
-            let module = Module::new(&format!("{m_id}.js"), "export const v = 1;");
+            let module = Module::new(format!("{m_id}.js"), "export const v = 1;");
             m_id += 1;
             runtime.load_module(&module).expect("Could not load mod");
         })
