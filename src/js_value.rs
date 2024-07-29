@@ -12,11 +12,47 @@ macro_rules! impl_v8 {
     ($name:ident$(<$generic:ident>)?, $checker:ident $(,)?) => {
         impl $(<$generic>)? $name $(<$generic>)? where
         $( $generic: serde::de::DeserializeOwned, )? {
+            /// Consume this struct and return the underlying `V8Value`
+            #[allow(dead_code)]
+            pub(crate) fn into_inner(self) -> V8Value<$checker> {
+                self.0
+            }
+
             /// Returns the underlying [`crate::deno_core::v8::Global`]
             /// This is useful if you want to pass the value to a [`crate::deno_core::JsRuntime`] function directly
             #[must_use]
             pub fn into_v8(self) -> v8::Global<v8::Value> {
                 self.0 .0
+            }
+
+            /// Creates a new instance of this struct from a global value
+            ///
+            /// # Errors
+            /// Will return an error if the value is the wrong type
+            /// For `Value`, this check cannot fail
+            pub fn try_from_v8<'a, H>(
+                scope: &mut v8::HandleScope<'a>,
+                value: v8::Global<H>,
+            ) -> Result<Self, crate::Error>
+            where
+                v8::Local<'a, v8::Value>: From<v8::Local<'a, H>>,
+            {
+                let local: v8::Local<v8::Value> = v8::Local::new(scope, value).into();
+                v8::Global::new(scope, local).try_into()
+            }
+
+            /// Creates a new instance of this struct from a global value
+            /// Makes no attempt to check the type of the value
+            /// This can result in a panic if the value is not of the correct type
+            ///
+            /// # Safety
+            /// This function is unsafe because it does not check the type of the value
+            /// If the value is not of the correct type, a panic will occur
+            /// It is recommended to use [`Self::try_from_v8`] instead
+            #[must_use]
+            pub unsafe fn from_v8_unchecked(value: v8::Global<v8::Value>) -> Self {
+                let inner = V8Value::<$checker>(value, std::marker::PhantomData);
+                Self(inner $(, std::marker::PhantomData::<$generic>)?)
             }
         }
         impl<'de$(, $generic)?> serde::Deserialize<'de> for $name $(<$generic>)?
@@ -37,6 +73,15 @@ macro_rules! impl_v8 {
                 self.0 .0
             }
         }
+
+        impl $(<$generic>)? TryFrom<v8::Global<v8::Value>> for $name $(<$generic>)? $(where $generic: serde::de::DeserializeOwned)? {
+            type Error = crate::Error;
+            fn try_from(value: v8::Global<v8::Value>) -> Result<Self, Self::Error> {
+                <$checker as $crate::js_value::V8TypeChecker>::validate(value.clone())?;
+                let inner = V8Value::<$checker>(value, std::marker::PhantomData);
+                Ok(Self(inner $(, std::marker::PhantomData::<$generic>)?))
+            }
+        }
     };
 }
 
@@ -46,7 +91,7 @@ macro_rules! impl_checker {
         #[doc = "Implementations of `V8TypeChecker`"]
         #[doc = concat!("Guards for `v8::", stringify!($v8_name), "` values")]
         #[derive(Eq, Hash, PartialEq, Debug, Clone, Deserialize)]
-        struct $name;
+        pub(crate) struct $name;
         impl $crate::js_value::V8TypeChecker for $name {
             type Output = v8::$v8_name;
             fn validate(value: v8::Global<v8::Value>) -> Result<(), crate::Error> {
@@ -65,7 +110,7 @@ macro_rules! impl_checker {
         #[doc = "Implementation of `V8TypeChecker`"]
         #[doc = concat!("Guards for `v8::", stringify!($v8_name), "` values")]
         #[derive(Eq, Hash, PartialEq, Debug, Clone, Deserialize)]
-        struct $name;
+        pub(crate) struct $name;
         impl V8TypeChecker for $name {
             type Output = v8::$v8_name;
             fn validate(_: v8::Global<v8::Value>) -> Result<(), crate::Error> {
@@ -100,7 +145,7 @@ impl_checker!(DefaultTypeChecker, Value);
 /// A Deserializable javascript object, that can be stored and used later
 /// Must live as long as the runtime it was birthed from
 #[derive(Eq, Hash, PartialEq, Debug, Clone)]
-struct V8Value<V8TypeChecker>(
+pub(crate) struct V8Value<V8TypeChecker>(
     v8::Global<v8::Value>,
     std::marker::PhantomData<V8TypeChecker>,
 );
@@ -192,6 +237,7 @@ mod test {
             "test.js",
             "
             export const f = 42;
+            export const g = () => 42;
         ",
         );
 
@@ -201,5 +247,14 @@ mod test {
         let f: Value = runtime.get_value(Some(&handle), "f").unwrap();
         let value: usize = f.try_into(&mut runtime).unwrap();
         assert_eq!(value, 42);
+
+        let g: Value = runtime.get_value(Some(&handle), "g").unwrap();
+        let global = g.into_v8();
+        let _f = Function::try_from_v8(&mut runtime.deno_runtime().handle_scope(), global.clone())
+            .unwrap();
+        let f = unsafe { Function::from_v8_unchecked(global) };
+        let _f = f
+            .into_inner()
+            .as_local(&mut runtime.deno_runtime().handle_scope());
     }
 }
