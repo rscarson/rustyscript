@@ -7,11 +7,13 @@ import * as eventSource from "ext:deno_fetch/27_eventsource.js";
 
 Deno.core.setWasmStreamingCallback(fetch.handleWasmStreaming);
 
-import { applyToGlobal, writeable, nonEnumerable } from 'ext:rustyscript/rustyscript.js';
+import {applyToGlobal, writeable, nonEnumerable} from 'ext:rustyscript/rustyscript.js';
+
 applyToGlobal({
     fetch: writeable(fetch.fetch),
     Request: nonEnumerable(request.Request),
     Response: nonEnumerable(response.Response),
     Headers: nonEnumerable(headers.Headers),
     FormData: nonEnumerable(formData.FormData),
+    EventSource: nonEnumerable(eventSource.EventSource)
 });
