@@ -33,6 +33,18 @@ fn main() -> Result<(), Error> {
                   .catch(e => reject(e));
             });
         }
+
+        export async function event_source_example() {
+            return new Promise((accept, reject) => {
+                var source = new EventSource('https://www.w3schools.com/html/demo_sse.php');
+                source.addEventListener('message', (e) => {
+                    accept(e.data);
+                });
+                source.addEventListener('error', (e) => {
+                  reject(e)
+                });
+            });
+        }
         ",
     );
 
@@ -52,5 +64,11 @@ fn main() -> Result<(), Error> {
     let data: rustyscript::serde_json::Value =
         runtime.call_function(Some(&module_handle), "fetch_example", json_args!())?;
     println!("Got {:?} bytes", data.to_string().len());
+
+    // EventSource example
+    let data: rustyscript::serde_json::Value =
+        runtime.call_function(Some(&module_handle), "event_source_example", json_args!())?;
+    println!("Got event: {}", data);
+
     Ok(())
 }
