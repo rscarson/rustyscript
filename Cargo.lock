@@ -860,16 +860,16 @@ dependencies = [
 
 [[package]]
 name = "deno_fetch"
-version = "0.187.0"
+version = "0.188.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7f11f1ca946366c42e7daaab0d747720710dbb11511d9bfce1b328dd71b58f87"
+checksum = "ada9ec217a7dda376f420aee39f0d9526460bd5eded03daba6aa2a4aeb6152bb"
 dependencies = [
  "base64 0.21.7",
  "bytes",
  "data-url",
  "deno_core",
- "deno_permissions",
- "deno_tls",
+ "deno_permissions 0.24.0",
+ "deno_tls 0.151.0",
  "dyn-clone",
  "http",
  "http-body-util",
@@ -940,8 +940,8 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "db3f337ffe00186bc67f989f5ba2759418bb43e1352b045aa9e715e216c632dc"
 dependencies = [
  "deno_core",
- "deno_permissions",
- "deno_tls",
+ "deno_permissions 0.23.0",
+ "deno_tls 0.150.0",
  "pin-project",
  "rustls-tokio-stream",
  "serde",
@@ -971,6 +971,23 @@ name = "deno_permissions"
 version = "0.23.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "15e67d40735d56445409349cec3eafe25668814c7f3794158c62dfd1b147b13c"
+dependencies = [
+ "deno_core",
+ "deno_terminal 0.2.0",
+ "fqdn",
+ "libc",
+ "log",
+ "once_cell",
+ "serde",
+ "which 4.4.2",
+ "winapi",
+]
+
+[[package]]
+name = "deno_permissions"
+version = "0.24.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4e2171078873c19da034f09130c3118a50d036ef2a0256b0b5ea99159b53b76b"
 dependencies = [
  "deno_core",
  "deno_terminal 0.2.0",
@@ -1021,6 +1038,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "deno_tls"
+version = "0.151.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "58bb9e6d5ce5db611fc2a128a5c97e87745b85817c2e1e9df78d37726c3f158e"
+dependencies = [
+ "deno_core",
+ "deno_native_certs",
+ "rustls",
+ "rustls-pemfile",
+ "rustls-tokio-stream",
+ "rustls-webpki",
+ "serde",
+ "tokio",
+ "webpki-roots",
+]
+
+[[package]]
 name = "deno_unsync"
 version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1050,7 +1084,7 @@ dependencies = [
  "base64-simd 0.8.0",
  "bytes",
  "deno_core",
- "deno_permissions",
+ "deno_permissions 0.23.0",
  "encoding_rs",
  "flate2",
  "futures",
@@ -1077,8 +1111,8 @@ dependencies = [
  "bytes",
  "deno_core",
  "deno_net",
- "deno_permissions",
- "deno_tls",
+ "deno_permissions 0.23.0",
+ "deno_tls 0.150.0",
  "fastwebsockets",
  "h2",
  "http",
@@ -2976,7 +3010,7 @@ dependencies = [
  "deno_fetch",
  "deno_io",
  "deno_net",
- "deno_tls",
+ "deno_tls 0.150.0",
  "deno_url",
  "deno_web",
  "deno_webidl",
