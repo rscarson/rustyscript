@@ -200,6 +200,7 @@ export const whitelist = {
     "op_base64_encode": "deno_web: exempt",
     "op_base64_atob": "deno_web: exempt",
     "op_base64_btoa": "deno_web: exempt",
+    "op_base64_write": "deno_web: exempt",
     "op_encoding_normalize_label": "deno_web: exempt",
     "op_encoding_decode_single": "deno_web: exempt",
     "op_encoding_decode_utf8": "deno_web: exempt",
