@@ -25,6 +25,13 @@ macro_rules! impl_v8 {
                 self.0 .0
             }
 
+            /// Returns a reference to the underlying [`crate::deno_core::v8::Global`]
+            /// This is useful if you want to pass the value to a [`crate::deno_core::JsRuntime`] function directly
+            #[must_use]
+            pub fn as_v8(&self) -> &v8::Global<v8::Value> {
+                &self.0 .0
+            }
+
             /// Creates a new instance of this struct from a global value
             ///
             /// # Errors
