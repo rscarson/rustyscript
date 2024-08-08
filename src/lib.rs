@@ -262,6 +262,9 @@ mod snapshot_builder;
 #[cfg(feature = "snapshot_builder")]
 pub use snapshot_builder::SnapshotBuilder;
 
+mod runtime_builder;
+pub use runtime_builder::RuntimeBuilder;
+
 pub mod error;
 pub mod js_value;
 pub mod module_loader;

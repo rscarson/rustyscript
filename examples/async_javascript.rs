@@ -62,9 +62,19 @@ fn main() -> Result<(), Error> {
     // Causing the future to borrow the runtime mutably
     // So in order to store all the promises at once, we need to call `call_function_immediate`
     // Which will not resolve the event loop
-    let p1: Promise<String> = runtime.call_function_immediate(Some(&handle), "f1", json_args!())?;
-    let p2: Promise<String> = runtime.call_function_immediate(Some(&handle), "f2", json_args!())?;
-    let p3: Promise<String> = runtime.call_function_immediate(Some(&handle), "f3", json_args!())?;
+    //
+    // We use a future here because the function uses setTimeout, which must be
+    // run from inside a tokio runtime
+    let future = async {
+        let p1: Promise<String> =
+            runtime.call_function_immediate(Some(&handle), "f1", json_args!())?;
+        let p2: Promise<String> =
+            runtime.call_function_immediate(Some(&handle), "f2", json_args!())?;
+        let p3: Promise<String> =
+            runtime.call_function_immediate(Some(&handle), "f3", json_args!())?;
+        Ok::<_, Error>((p1, p2, p3))
+    };
+    let (p1, p2, p3) = tokio_runtime.block_on(future)?;
 
     // Now we can convert the promises back into futures
     // And await them in sequence
