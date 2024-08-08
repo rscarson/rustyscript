@@ -106,7 +106,7 @@ impl RuntimeBuilder {
     /// Set the options for the web extension
     #[cfg(feature = "web")]
     #[must_use]
-    pub fn with_web_options(mut self, options: deno_web::WebOptions) -> Self {
+    pub fn with_web_options(mut self, options: crate::ext::web::WebOptions) -> Self {
         self.0.extension_options.web = options;
         self
     }
