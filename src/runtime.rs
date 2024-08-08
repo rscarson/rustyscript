@@ -622,11 +622,9 @@ impl Runtime {
         T: deno_core::serde::de::DeserializeOwned,
     {
         let function = self.inner.get_function_by_name(module_context, name)?;
-        let result = self.run_async_task(|runtime| async move {
-            runtime
-                .inner
-                .call_function_by_ref(module_context, &function, args)
-        })?;
+        let result = self
+            .inner
+            .call_function_by_ref(module_context, &function, args)?;
         self.inner.decode_value(result)
     }
 
