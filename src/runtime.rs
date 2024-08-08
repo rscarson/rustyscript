@@ -485,11 +485,9 @@ impl Runtime {
         T: deno_core::serde::de::DeserializeOwned,
     {
         let function = function.as_global(&mut self.deno_runtime().handle_scope());
-        let result = self.run_async_task(|runtime| async move {
-            runtime
-                .inner
-                .call_function_by_ref(module_context, &function, args)
-        })?;
+        let result = self
+            .inner
+            .call_function_by_ref(module_context, &function, args)?;
         self.inner.decode_value(result)
     }
 
