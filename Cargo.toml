@@ -84,7 +84,7 @@ worker = []
 
 [dependencies]
 thiserror = "1.0.63"
-serde = "1.0.204"
+serde = "1.0.205"
 
 # Used to generate identifiers for callbacks
 paste = "1.0.15"
