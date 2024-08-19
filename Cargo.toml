@@ -96,7 +96,7 @@ deno_core = "0.299.0"
 deno_ast = { version = "0.41.2", features = ["transpiling"]}
 
 # Runtime for async tasks
-tokio = "1.39.2"
+tokio = "1.39.3"
 
 # For URL imports
 # Pinned for now due to upstream issues
