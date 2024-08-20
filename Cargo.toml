@@ -100,7 +100,7 @@ tokio = "1.39.2"
 
 # For URL imports
 # Pinned for now due to upstream issues
-reqwest = { version = "=0.12.5", optional = true, default-features = false, features = ["blocking", "rustls-tls"] }
+reqwest = { version = "=0.12.7", optional = true, default-features = false, features = ["blocking", "rustls-tls"] }
 http = { version = "1.1.0", optional = true }
 
 #
