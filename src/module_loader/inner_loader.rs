@@ -33,6 +33,9 @@ pub struct LoaderOptions {
 
     /// An optional import provider to manage module resolution
     pub import_provider: Option<Box<dyn ImportProvider>>,
+
+    /// A whitelist of custom schema prefixes that are allowed to be loaded
+    pub schema_whlist: HashSet<String>,
 }
 
 /// Internal implementation of the module loader
@@ -45,6 +48,7 @@ pub struct InnerRustyLoader {
     fs_whlist: HashSet<String>,
     source_map_cache: SourceMapCache,
     import_provider: Option<Box<dyn ImportProvider>>,
+    schema_whlist: HashSet<String>,
 }
 
 impl InnerRustyLoader {
@@ -56,6 +60,7 @@ impl InnerRustyLoader {
             fs_whlist: options.fs_whitelist,
             source_map_cache: options.source_map_cache,
             import_provider: options.import_provider,
+            schema_whlist: options.schema_whlist,
         }
     }
 
@@ -124,6 +129,10 @@ impl InnerRustyLoader {
 
             _ if specifier.starts_with("ext:") => {
                 // Extension import - allow
+            }
+
+            _ if self.schema_whlist.iter().any(|s| specifier.starts_with(s)) => {
+                // Custom schema whitelist import - allow
             }
 
             _ => {
