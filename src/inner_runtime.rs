@@ -7,7 +7,12 @@ use crate::{
 };
 use deno_core::{serde_json, serde_v8::from_v8, v8, JsRuntime, PollEventLoopOptions};
 use serde::de::DeserializeOwned;
-use std::{collections::HashMap, pin::Pin, rc::Rc, time::Duration};
+use std::{
+    collections::{HashMap, HashSet},
+    pin::Pin,
+    rc::Rc,
+    time::Duration,
+};
 
 /// Represents a function that can be registered with the runtime
 pub trait RsFunction:
@@ -105,6 +110,9 @@ pub struct RuntimeOptions {
     /// Optional shared array buffer store to use for the runtime
     /// Allows data-sharing between runtimes across threads
     pub shared_array_buffer_store: Option<deno_core::SharedArrayBufferStore>,
+
+    /// A whitelist of custom schema prefixes that are allowed to be loaded
+    pub schema_whlist: HashSet<String>,
 }
 
 impl Default for RuntimeOptions {
@@ -118,6 +126,7 @@ impl Default for RuntimeOptions {
             startup_snapshot: None,
             isolate_params: None,
             shared_array_buffer_store: None,
+            schema_whlist: HashSet::default(),
 
             extension_options: ExtensionOptions::default(),
         }
@@ -141,6 +150,7 @@ impl InnerRuntime {
         let module_loader = Rc::new(RustyLoader::new(LoaderOptions {
             cache_provider: options.module_cache,
             import_provider: options.import_provider,
+            schema_whlist: options.schema_whlist,
 
             ..Default::default()
         }));

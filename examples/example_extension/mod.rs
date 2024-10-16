@@ -20,6 +20,6 @@ fn op_add_example(#[bigint] a: i64, #[bigint] b: i64) -> i64 {
 extension!(
     example_extension,
     ops = [op_add_example],
-    esm_entry_point = "ext:example_extension/example_extension.js",
-    esm = [ dir "examples/example_extension", "example_extension.js" ],
+    esm_entry_point = "example:calculator",
+    esm = [ dir "examples/example_extension", "example:calculator" = "example_extension.js" ],
 );
