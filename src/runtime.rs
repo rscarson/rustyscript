@@ -1395,7 +1395,7 @@ mod test_runtime {
     #[test]
     fn test_heap_exhaustion_handled() {
         let mut runtime = Runtime::new(RuntimeOptions {
-            max_heap_size: Some(4 * 1024 * 1024),
+            max_heap_size: Some(10 * 1024 * 1024),
             ..Default::default()
         })
         .expect("Could not create the runtime");
