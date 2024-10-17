@@ -5,6 +5,7 @@ use crate::{
 };
 use deno_core::serde_json;
 use std::rc::Rc;
+use tokio_util::sync::CancellationToken;
 
 /// Represents the set of options accepted by the runtime constructor
 pub use crate::inner_runtime::RuntimeOptions;
@@ -30,6 +31,7 @@ pub struct Runtime {
     inner: InnerRuntime,
     tokio: Rc<tokio::runtime::Runtime>,
     timeout: std::time::Duration,
+    heap_exhausted_token: CancellationToken,
 }
 
 impl Runtime {
@@ -92,10 +94,12 @@ impl Runtime {
         options: RuntimeOptions,
         tokio: Rc<tokio::runtime::Runtime>,
     ) -> Result<Self, Error> {
+        let heap_exhausted_token = CancellationToken::new();
         Ok(Self {
             timeout: options.timeout,
-            inner: InnerRuntime::new(options)?,
+            inner: InnerRuntime::new(options, heap_exhausted_token.clone())?,
             tokio,
+            heap_exhausted_token,
         })
     }
 
@@ -114,6 +118,12 @@ impl Runtime {
     #[must_use]
     pub fn timeout(&self) -> std::time::Duration {
         self.timeout
+    }
+
+    /// Returns the heap exhausted token for the runtime
+    #[must_use]
+    pub fn heap_exhausted_token(&self) -> CancellationToken {
+        self.heap_exhausted_token.clone()
     }
 
     /// Destroy the v8 runtime, releasing all resources
@@ -1050,7 +1060,13 @@ impl Runtime {
     {
         let timeout = self.timeout();
         let rt = self.tokio_runtime();
-        rt.block_on(async move { tokio::time::timeout(timeout, f(self)).await })?
+        let heap_exhausted_token = self.heap_exhausted_token();
+        rt.block_on(async move {
+            tokio::select! {
+                result = tokio::time::timeout(timeout, f(self)) => result?,
+                () = heap_exhausted_token.cancelled() => Err(Error::HeapExhausted),
+            }
+        })
     }
 }
 
@@ -1374,5 +1390,21 @@ mod test_runtime {
     fn confirm_op_whitelist() {
         let unsafe_ops = get_unrecognized_ops().expect("Could not get unsafe ops");
         assert_eq!(0, unsafe_ops.len(), "Found unsafe ops: {unsafe_ops:?}.\nOnce confirmed safe, add them to `src/ext/op_whitelist.js`");
+    }
+
+    #[test]
+    fn test_heap_exhaustion_handled() {
+        let mut runtime = Runtime::new(RuntimeOptions {
+            max_heap_size: Some(4 * 1024 * 1024),
+            ..Default::default()
+        })
+        .expect("Could not create the runtime");
+        let module = Module::new(
+            "test.js",
+            "const largeArray = new Array(40 * 1024 * 1024).fill('a');",
+        );
+        runtime
+            .load_modules(&module, vec![])
+            .expect_err("Did not detect heap exhaustion");
     }
 }
