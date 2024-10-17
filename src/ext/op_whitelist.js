@@ -11,6 +11,9 @@ export const whitelist = {
     //
 
     "op_panic": "BREAKING - Stubbed out in rustyscript",
+
+    "op_import_sync": "Harmless",
+    "op_get_extras_binding_object": "Harmless",
     
     "op_leak_tracing_get": "Harmless",
     "op_leak_tracing_get_all": "Harmless",
@@ -171,6 +174,12 @@ export const whitelist = {
     "op_crypto_jwk_x_ed25519": "deno_crypto",
     "op_crypto_export_spki_x25519": "deno_crypto",
     "op_crypto_export_pkcs8_x25519": "deno_crypto",
+    "op_crypto_generate_x448_keypair": "deno_crypto",
+    "op_crypto_derive_bits_x448": "deno_crypto",
+    "op_crypto_import_spki_x448": "deno_crypto",
+    "op_crypto_import_pkcs8_x448": "deno_crypto",
+    "op_crypto_export_spki_x448": "deno_crypto",
+    "op_crypto_export_pkcs8_x448": "deno_crypto",
 
     //
     // IO + TTY
