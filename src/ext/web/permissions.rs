@@ -122,9 +122,13 @@ impl WebPermissions for AllowlistWebPermissions {
         }
     }
 
-    fn check_write(&self, p: &Path, api_name: &str) -> Result<(), deno_core::error::AnyError> {
+    fn check_write<'a>(
+        &self,
+        p: &'a Path,
+        api_name: &str,
+    ) -> Result<Cow<'a, Path>, deno_core::error::AnyError> {
         if self.0.borrow().write_paths.contains(p.to_str().unwrap()) {
-            Ok(())
+            Ok(Cow::Borrowed(p))
         } else {
             Err(anyhow!(
                 "Path '{}' is not allowed to be written to",
