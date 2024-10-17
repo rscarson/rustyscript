@@ -114,7 +114,7 @@ where
     where
         T: serde::de::DeserializeOwned + Send + 'static,
     {
-        deno_core::JsRuntime::init_platform(None);
+        deno_core::JsRuntime::init_platform(None, true);
         std::thread::spawn(move || {
             let mut runtime = crate::Runtime::new(RuntimeOptions::default())?;
             runtime.eval(&code)

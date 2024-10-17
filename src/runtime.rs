@@ -376,9 +376,9 @@ impl Runtime {
     /// # Ok(())
     /// # }
     /// ```
-    pub fn eval<T>(&mut self, expr: &str) -> Result<T, Error>
+    pub fn eval<'de, T>(&mut self, expr: &str) -> Result<T, Error>
     where
-        T: serde::de::DeserializeOwned,
+        T: serde::Deserialize<'de>,
     {
         self.inner.eval(expr)
     }

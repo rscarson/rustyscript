@@ -109,7 +109,7 @@ pub fn resolve_path(path: &str, base_dir: Option<&Path>) -> Result<String, Error
 /// but for multi-threaded applications, it may be necessary to call this function manually
 pub fn init_platform(thread_pool_size: u32, idle_task_support: bool) {
     let platform = deno_core::v8::Platform::new(thread_pool_size, idle_task_support);
-    deno_core::JsRuntime::init_platform(Some(platform.into()));
+    deno_core::JsRuntime::init_platform(Some(platform.into()), true);
 }
 
 #[macro_use]

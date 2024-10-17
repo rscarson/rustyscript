@@ -1,4 +1,4 @@
-#![allow(clippy::thread_local_initializer_can_be_made_const)]
+//#![allow(clippy::missing_const_for_thread_local)]
 ///
 /// rustyscript is not thread-safe
 /// This is due to a limitation of the underlying engine, deno_core
@@ -19,7 +19,7 @@ use std::cell::{OnceCell, RefCell};
 // - OnceCell: Runtime is only initialized once
 // - RefCell: Runtime is never accessed concurrently
 thread_local! {
-    static RUNTIME_CELL: OnceCell<RefCell<Runtime>> = OnceCell::new();
+    static RUNTIME_CELL: OnceCell<RefCell<Runtime>> = const { OnceCell::new() };
 }
 
 /// Perform an operation on the runtime instance
