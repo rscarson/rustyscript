@@ -10,8 +10,11 @@ fn main() -> Result<(), Error> {
     let tokio_runtime = runtime.tokio_runtime();
 
     // A little setup for later
-    runtime
-        .eval("globalThis.sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));")?;
+    // The `::<()>` is a type hint to the compiler that we don't need a return value
+    // Previously it could be left out, but now it will cause a warning, and in the future an error
+    runtime.eval::<()>(
+        "globalThis.sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));",
+    )?;
 
     let future = async {
         let result: Promise<u32> = runtime.eval("sleep(1000).then(() => 2)")?;
