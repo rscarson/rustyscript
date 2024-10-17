@@ -11,6 +11,9 @@ export const whitelist = {
     //
 
     "op_panic": "BREAKING - Stubbed out in rustyscript",
+
+    "op_import_sync": "Harmless",
+    "op_get_extras_binding_object": "Harmless",
     
     "op_leak_tracing_get": "Harmless",
     "op_leak_tracing_get_all": "Harmless",

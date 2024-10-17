@@ -1,5 +1,11 @@
 use deno_core::anyhow::anyhow;
-use std::{cell::RefCell, collections::HashSet, rc::Rc};
+use std::{
+    borrow::Cow,
+    cell::RefCell,
+    collections::HashSet,
+    path::{Path, PathBuf},
+    rc::Rc,
+};
 
 /// The default permissions manager for the web related extensions
 /// Allows all operations
@@ -104,23 +110,19 @@ impl WebPermissions for AllowlistWebPermissions {
         }
     }
 
-    fn check_read(
+    fn check_read<'a>(
         &self,
-        p: &std::path::Path,
+        p: &'a Path,
         api_name: &str,
-    ) -> Result<(), deno_core::error::AnyError> {
+    ) -> Result<Cow<'a, Path>, deno_core::error::AnyError> {
         if self.0.borrow().read_paths.contains(p.to_str().unwrap()) {
-            Ok(())
+            Ok(Cow::Borrowed(p))
         } else {
             Err(anyhow!("Path '{}' is not allowed to be read", p.display()))
         }
     }
 
-    fn check_write(
-        &self,
-        p: &std::path::Path,
-        api_name: &str,
-    ) -> Result<(), deno_core::error::AnyError> {
+    fn check_write(&self, p: &Path, api_name: &str) -> Result<(), deno_core::error::AnyError> {
         if self.0.borrow().write_paths.contains(p.to_str().unwrap()) {
             Ok(())
         } else {
@@ -157,24 +159,24 @@ pub trait WebPermissions {
     ///
     /// # Errors
     /// If an error is returned, the operation will be denied with the error message as the reason
-    fn check_read(
+    fn check_read<'a>(
         &self,
-        p: &std::path::Path,
+        p: &'a Path,
         api_name: &str,
-    ) -> Result<(), deno_core::error::AnyError> {
-        Ok(())
+    ) -> Result<Cow<'a, Path>, deno_core::error::AnyError> {
+        Ok(Cow::Borrowed(p))
     }
 
     /// Check if a path is allowed to be written to by net
     ///
     /// # Errors
     /// If an error is returned, the operation will be denied with the error message as the reason
-    fn check_write(
+    fn check_write<'a>(
         &self,
-        p: &std::path::Path,
+        p: &'a Path,
         api_name: &str,
-    ) -> Result<(), deno_core::error::AnyError> {
-        Ok(())
+    ) -> Result<Cow<'a, Path>, deno_core::error::AnyError> {
+        Ok(Cow::Borrowed(p))
     }
 
     /// Check if a host is allowed to be connected to by net
@@ -207,11 +209,11 @@ impl deno_fetch::FetchPermissions for PermissionsContainer {
         self.0.check_url(url, api_name)
     }
 
-    fn check_read(
+    fn check_read<'a>(
         &mut self,
-        p: &std::path::Path,
+        p: &'a Path,
         api_name: &str,
-    ) -> Result<(), deno_core::error::AnyError> {
+    ) -> Result<Cow<'a, Path>, deno_core::error::AnyError> {
         self.0.check_read(p, api_name)
     }
 }
@@ -224,19 +226,31 @@ impl deno_net::NetPermissions for PermissionsContainer {
         self.0.check_host(host.0.as_ref(), host.1, api_name)
     }
 
-    fn check_read(
+    fn check_read<'a>(
         &mut self,
-        p: &std::path::Path,
+        p: &'a str,
         api_name: &str,
-    ) -> Result<(), deno_core::error::AnyError> {
-        self.0.check_read(p, api_name)
+    ) -> Result<PathBuf, deno_core::error::AnyError> {
+        self.0
+            .check_read(Path::new(p), api_name)
+            .map(|p| p.into_owned())
     }
 
     fn check_write(
         &mut self,
-        p: &std::path::Path,
+        p: &str,
         api_name: &str,
-    ) -> Result<(), deno_core::error::AnyError> {
+    ) -> Result<PathBuf, deno_core::error::AnyError> {
+        self.0
+            .check_write(Path::new(p), api_name)
+            .map(|p| p.into_owned())
+    }
+
+    fn check_write_path<'a>(
+        &mut self,
+        p: &'a Path,
+        api_name: &str,
+    ) -> Result<Cow<'a, Path>, deno_core::error::AnyError> {
         self.0.check_write(p, api_name)
     }
 }
