@@ -13,6 +13,7 @@ use std::{
     rc::Rc,
     time::Duration,
 };
+use tokio_util::sync::CancellationToken;
 
 /// Represents a function that can be registered with the runtime
 pub trait RsFunction:
@@ -87,6 +88,9 @@ pub struct RuntimeOptions {
     /// Amount of time to run for before killing the thread
     pub timeout: Duration,
 
+    /// Optional maximum heap size for the runtime
+    pub max_heap_size: Option<usize>,
+
     /// Optional cache provider for the module loader
     #[allow(deprecated)]
     pub module_cache: Option<Box<dyn crate::module_loader::ModuleCacheProvider>>,
@@ -121,6 +125,7 @@ impl Default for RuntimeOptions {
             extensions: Vec::default(),
             default_entrypoint: None,
             timeout: Duration::MAX,
+            max_heap_size: None,
             module_cache: None,
             import_provider: None,
             startup_snapshot: None,
@@ -146,7 +151,10 @@ pub struct InnerRuntime {
     pub default_entrypoint: Option<String>,
 }
 impl InnerRuntime {
-    pub fn new(options: RuntimeOptions) -> Result<Self, Error> {
+    pub fn new(
+        options: RuntimeOptions,
+        heap_exhausted_token: CancellationToken,
+    ) -> Result<Self, Error> {
         let module_loader = Rc::new(RustyLoader::new(LoaderOptions {
             cache_provider: options.module_cache,
             import_provider: options.import_provider,
@@ -160,14 +168,33 @@ impl InnerRuntime {
         let extensions =
             ext::all_extensions(options.extensions, options.extension_options, is_snapshot);
 
-        let deno_runtime = JsRuntime::try_new(deno_core::RuntimeOptions {
+        // If a heap size is provided, set the isolate params (preserving any user-provided params otherwise)
+        let isolate_params = match options.isolate_params {
+            Some(params) => {
+                if let Some(max_heap_size) = options.max_heap_size {
+                    Some(params.heap_limits(0, max_heap_size))
+                } else {
+                    Some(params)
+                }
+            }
+            None => {
+                if let Some(max_heap_size) = options.max_heap_size {
+                    let params = v8::Isolate::create_params().heap_limits(0, max_heap_size);
+                    Some(params)
+                } else {
+                    None
+                }
+            }
+        };
+
+        let mut deno_runtime = JsRuntime::try_new(deno_core::RuntimeOptions {
             module_loader: Some(module_loader.clone()),
 
             extension_transpiler: Some(Rc::new(|specifier, code| {
                 transpile_extension(&specifier, &code)
             })),
 
-            create_params: options.isolate_params,
+            create_params: isolate_params,
             shared_array_buffer_store: options.shared_array_buffer_store.clone(),
 
             startup_snapshot: options.startup_snapshot,
@@ -175,6 +202,22 @@ impl InnerRuntime {
 
             ..Default::default()
         })?;
+
+        // Add a callback to terminate the runtime if the max_heap_size limit is approached
+        if options.max_heap_size.is_some() {
+            let isolate_handle = deno_runtime.v8_isolate().thread_safe_handle();
+
+            deno_runtime.add_near_heap_limit_callback(move |current_value, _| {
+                isolate_handle.terminate_execution();
+
+                // Signal the outer runtime to cancel block_on future (avoid hanging) and return friendly error
+                heap_exhausted_token.cancel();
+
+                // Spike the heap limit while terminating to avoid segfaulting
+                // Callback may fire multiple times if memory usage increases quicker then termination finalizes
+                5 * current_value
+            });
+        }
 
         Ok(Self {
             deno_runtime,
@@ -637,8 +680,8 @@ mod test_inner_runtime {
 
     #[test]
     fn test_decode_args() {
-        let mut runtime =
-            InnerRuntime::new(RuntimeOptions::default()).expect("Could not load runtime");
+        let mut runtime = InnerRuntime::new(RuntimeOptions::default(), CancellationToken::new())
+            .expect("Could not load runtime");
         let mut scope = runtime.deno_runtime.handle_scope();
 
         // empty
@@ -683,8 +726,8 @@ mod test_inner_runtime {
 
     #[test]
     fn test_put_take() {
-        let mut runtime =
-            InnerRuntime::new(RuntimeOptions::default()).expect("Could not load runtime");
+        let mut runtime = InnerRuntime::new(RuntimeOptions::default(), CancellationToken::new())
+            .expect("Could not load runtime");
 
         runtime.put(2usize).expect("Could not put value");
         let v = runtime.take::<usize>().expect("Could not take value");
@@ -693,8 +736,8 @@ mod test_inner_runtime {
 
     #[test]
     fn test_register_async_function() {
-        let mut runtime =
-            InnerRuntime::new(RuntimeOptions::default()).expect("Could not load runtime");
+        let mut runtime = InnerRuntime::new(RuntimeOptions::default(), CancellationToken::new())
+            .expect("Could not load runtime");
         runtime
             .register_async_function(
                 "test",
@@ -720,8 +763,8 @@ mod test_inner_runtime {
 
     #[test]
     fn test_register_function() {
-        let mut runtime =
-            InnerRuntime::new(RuntimeOptions::default()).expect("Could not load runtime");
+        let mut runtime = InnerRuntime::new(RuntimeOptions::default(), CancellationToken::new())
+            .expect("Could not load runtime");
         runtime
             .register_function(
                 "test",
@@ -738,8 +781,8 @@ mod test_inner_runtime {
     #[cfg(any(feature = "web", feature = "web_stub"))]
     #[test]
     fn test_eval() {
-        let mut runtime =
-            InnerRuntime::new(RuntimeOptions::default()).expect("Could not load runtime");
+        let mut runtime = InnerRuntime::new(RuntimeOptions::default(), CancellationToken::new())
+            .expect("Could not load runtime");
 
         let result: usize = runtime.eval("2 + 2").expect("Could not eval");
         assert_eq!(result, 4);
@@ -772,8 +815,8 @@ mod test_inner_runtime {
         ",
         );
 
-        let mut runtime =
-            InnerRuntime::new(RuntimeOptions::default()).expect("Could not load runtime");
+        let mut runtime = InnerRuntime::new(RuntimeOptions::default(), CancellationToken::new())
+            .expect("Could not load runtime");
 
         let rt = &mut runtime;
         let module = run_async_task(|| async move { rt.load_modules(Some(&module), vec![]).await });
@@ -813,8 +856,8 @@ mod test_inner_runtime {
         ",
         );
 
-        let mut runtime =
-            InnerRuntime::new(RuntimeOptions::default()).expect("Could not load runtime");
+        let mut runtime = InnerRuntime::new(RuntimeOptions::default(), CancellationToken::new())
+            .expect("Could not load runtime");
 
         let rt = &mut runtime;
         let module = run_async_task(|| async move { rt.load_modules(Some(&module), vec![]).await });
@@ -853,7 +896,8 @@ mod test_inner_runtime {
 
         run_async_task(|| async move {
             let mut runtime =
-                InnerRuntime::new(RuntimeOptions::default()).expect("Could not load runtime");
+                InnerRuntime::new(RuntimeOptions::default(), CancellationToken::new())
+                    .expect("Could not load runtime");
             let handle = runtime.load_modules(Some(&module), vec![]).await?;
 
             let f = runtime.get_function_by_name(None, "fna").unwrap();
@@ -895,8 +939,8 @@ mod test_inner_runtime {
         ",
         );
 
-        let mut runtime =
-            InnerRuntime::new(RuntimeOptions::default()).expect("Could not load runtime");
+        let mut runtime = InnerRuntime::new(RuntimeOptions::default(), CancellationToken::new())
+            .expect("Could not load runtime");
 
         let rt = &mut runtime;
         let module = run_async_task(|| async move { rt.load_modules(Some(&module), vec![]).await });
@@ -923,8 +967,8 @@ mod test_inner_runtime {
         ",
         );
 
-        let mut runtime =
-            InnerRuntime::new(RuntimeOptions::default()).expect("Could not load runtime");
+        let mut runtime = InnerRuntime::new(RuntimeOptions::default(), CancellationToken::new())
+            .expect("Could not load runtime");
 
         let rt = &mut runtime;
         let module = run_async_task(|| async move { rt.load_modules(Some(&module), vec![]).await });
@@ -954,8 +998,8 @@ mod test_inner_runtime {
         ",
         );
 
-        let mut runtime =
-            InnerRuntime::new(RuntimeOptions::default()).expect("Could not load runtime");
+        let mut runtime = InnerRuntime::new(RuntimeOptions::default(), CancellationToken::new())
+            .expect("Could not load runtime");
 
         let rt = &mut runtime;
         run_async_task(|| async move {
@@ -985,8 +1029,8 @@ mod test_inner_runtime {
         ",
         );
 
-        let mut runtime =
-            InnerRuntime::new(RuntimeOptions::default()).expect("Could not load runtime");
+        let mut runtime = InnerRuntime::new(RuntimeOptions::default(), CancellationToken::new())
+            .expect("Could not load runtime");
 
         let rt = &mut runtime;
         run_async_task(|| async move {
@@ -1015,8 +1059,8 @@ mod test_inner_runtime {
         ",
         );
 
-        let mut runtime =
-            InnerRuntime::new(RuntimeOptions::default()).expect("Could not load runtime");
+        let mut runtime = InnerRuntime::new(RuntimeOptions::default(), CancellationToken::new())
+            .expect("Could not load runtime");
 
         let rt = &mut runtime;
         let module = run_async_task(|| async move { rt.load_modules(Some(&module), vec![]).await });
@@ -1062,8 +1106,8 @@ mod test_inner_runtime {
         ",
         );
 
-        let mut runtime =
-            InnerRuntime::new(RuntimeOptions::default()).expect("Could not load runtime");
+        let mut runtime = InnerRuntime::new(RuntimeOptions::default(), CancellationToken::new())
+            .expect("Could not load runtime");
 
         let rt = &mut runtime;
         let module = run_async_task(|| async move { rt.load_modules(Some(&module), vec![]).await });

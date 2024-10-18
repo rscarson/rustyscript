@@ -70,6 +70,10 @@ pub enum Error {
     /// Triggers when a module times out before finishing
     #[error("Module timed out: {0}")]
     Timeout(String),
+
+    /// Triggers when the heap (via `max_heap_size`) is exhausted during execution
+    #[error("Heap exhausted")]
+    HeapExhausted,
 }
 
 impl Error {
