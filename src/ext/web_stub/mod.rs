@@ -5,15 +5,17 @@
 use super::ExtensionTrait;
 use deno_core::{extension, Extension};
 
+mod encoding;
 mod timers;
 
 extension!(
     deno_web,
     ops = [
         timers::op_now, timers::op_defer,
+        encoding::op_base64_decode, encoding::op_base64_atob, encoding::op_base64_encode, encoding::op_base64_btoa,
     ],
     esm_entry_point = "ext:deno_web/init_stub.js",
-    esm = [ dir "src/ext/web_stub", "init_stub.js", "01_dom_exception.js", "02_timers.js" ],
+    esm = [ dir "src/ext/web_stub", "init_stub.js", "01_dom_exception.js", "02_timers.js", "05_base64.js" ],
 );
 impl ExtensionTrait<()> for deno_web {
     fn init((): ()) -> Extension {

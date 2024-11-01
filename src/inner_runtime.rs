@@ -797,6 +797,19 @@ mod test_inner_runtime {
         });
     }
 
+    #[cfg(feature = "web_stub")]
+    #[test]
+    fn test_base64() {
+        let mut runtime = InnerRuntime::new(RuntimeOptions::default(), CancellationToken::new())
+            .expect("Could not load runtime");
+
+        let result: String = runtime.eval("btoa('foo')").expect("Could not eval");
+        assert_eq!(result, "Zm9v");
+
+        let result: String = runtime.eval("atob(btoa('foo'))").expect("Could not eval");
+        assert_eq!(result, "foo");
+    }
+
     #[test]
     fn test_get_value_ref() {
         let module = Module::new(

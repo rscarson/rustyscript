@@ -1,5 +1,6 @@
 import * as DOMException from 'ext:deno_web/01_dom_exception.js';
 import * as timers from 'ext:deno_web/02_timers.js';
+import * as base64 from 'ext:deno_web/05_base64.js';
 
 import { applyToGlobal, nonEnumerable, writeable } from 'ext:rustyscript/rustyscript.js';
 applyToGlobal({
@@ -10,4 +11,8 @@ applyToGlobal({
     clearTimeout: writeable(timers.clearTimeout),
     setInterval: writeable(timers.setInterval),
     setTimeout: writeable(timers.setTimeout),
+
+    atob: writeable(base64.atob),
+    btoa: writeable(base64.btoa),
 });
+
