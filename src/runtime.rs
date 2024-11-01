@@ -793,8 +793,8 @@ impl Runtime {
     /// And call functions
     ///
     /// Returns a future that resolves to the handle for the loaded module
-    /// Makes no attempt to resolve the event loop - call [`Runtime::await_event_loop`] to
-    /// resolve background tasks and async listeners
+    /// Makes no attempt to fully resolve the event loop - call [`Runtime::await_event_loop`]
+    /// to resolve background tasks and async listeners
     ///
     /// # Arguments
     /// * `module` - A `Module` object containing the module's filename and contents.

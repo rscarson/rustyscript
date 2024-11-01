@@ -614,7 +614,11 @@ impl InnerRuntime {
             );
 
             // Finish execution
-            self.deno_runtime.mod_evaluate(module_id).await?;
+            let mod_load = self.deno_runtime.mod_evaluate(module_id);
+            tokio::select! {
+                r = mod_load => r,
+                r = self.await_event_loop(PollEventLoopOptions::default()) => r.map_err(Into::into),
+            }?;
             module_handle_stub = ModuleHandle::new(module, module_id, None);
         }
 
@@ -960,9 +964,11 @@ mod test_inner_runtime {
             .expect("Could not load runtime");
 
         let rt = &mut runtime;
-        let module = run_async_task(|| async move { rt.load_modules(Some(&module), vec![]).await });
-
-        run_async_task(|| runtime.await_event_loop(PollEventLoopOptions::default()));
+        let module = run_async_task(|| async move {
+            let h = rt.load_modules(Some(&module), vec![]).await;
+            rt.await_event_loop(PollEventLoopOptions::default()).await?;
+            h
+        });
 
         let f = runtime.get_function_by_name(Some(&module), "test").unwrap();
         let rt = &mut runtime;

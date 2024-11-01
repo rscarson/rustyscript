@@ -1,5 +1,4 @@
 // Copyright 2018-2024 the Deno authors. All rights reserved. MIT license.
-
 //! This module helps deno implement timers and performance APIs.
 
 use deno_core::op2;
@@ -13,26 +12,21 @@ pub type StartTime = Instant;
 // If the High precision flag is not set, the
 // nanoseconds are rounded on 2ms.
 #[op2(fast)]
-#[allow(clippy::cast_possible_truncation)]
 pub fn op_now(state: &mut OpState, #[buffer] buf: &mut [u8]) {
     let start_time = state.borrow::<StartTime>();
     let elapsed = start_time.elapsed();
     let seconds = elapsed.as_secs();
     let mut subsec_nanos = elapsed.subsec_nanos();
 
-    // Never allow hrtime in the stub
-    // Round the nano result on 2 milliseconds
-    // see: https://developer.mozilla.org/en-US/docs/Web/API/DOMHighResTimeStamp#Reduced_time_precision
     let reduced_time_precision = 2_000_000; // 2ms in nanoseconds
     subsec_nanos -= subsec_nanos % reduced_time_precision;
-
     if buf.len() < 8 {
         return;
     }
     let buf: &mut [u32] =
     // SAFETY: buffer is at least 8 bytes long.
     unsafe { std::slice::from_raw_parts_mut(buf.as_mut_ptr().cast(), 2) };
-    buf[0] = seconds as u32;
+    buf[0] = u32::try_from(seconds).unwrap_or_default();
     buf[1] = subsec_nanos;
 }
 

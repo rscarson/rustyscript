@@ -2,22 +2,24 @@
 
 import { primordials } from "ext:core/mod.js";
 const {
-  ArrayPrototypeSlice,
-  Error,
   ErrorPrototype,
+  ErrorCaptureStackTrace,
   ObjectDefineProperty,
   ObjectCreate,
   ObjectEntries,
+  ObjectHasOwn,
+  ObjectPrototypeIsPrototypeOf,
   ObjectSetPrototypeOf,
   Symbol,
+  SymbolFor,
 } = primordials;
 
 import * as webidl from "ext:deno_webidl/00_webidl.js";
+import { createFilteredInspectProxy } from "ext:deno_console/01_console.js";
 
 const _name = Symbol("name");
 const _message = Symbol("message");
 const _code = Symbol("code");
-const _error = Symbol("error");
 
 // Defined in WebIDL 4.3.
 // https://webidl.spec.whatwg.org/#idl-DOMException
@@ -103,8 +105,7 @@ class DOMException {
     this[_code] = code;
     this[webidl.brand] = webidl.brand;
 
-    this[_error] = new Error(message);
-    this[_error].name = "DOMException";
+    ErrorCaptureStackTrace(this, DOMException);
   }
 
   get message() {
@@ -121,27 +122,28 @@ class DOMException {
     webidl.assertBranded(this, DOMExceptionPrototype);
     return this[_code];
   }
+
+  [SymbolFor("Deno.privateCustomInspect")](inspect, inspectOptions) {
+    if (ObjectHasOwn(this, "stack")) {
+      const stack = this.stack;
+      if (typeof stack === "string") {
+        return stack;
+      }
+    }
+    return inspect(
+      createFilteredInspectProxy({
+        object: this,
+        evaluate: ObjectPrototypeIsPrototypeOf(DOMExceptionPrototype, this),
+        keys: [
+          "message",
+          "name",
+          "code",
+        ],
+      }),
+      inspectOptions,
+    );
+  }
 }
-
-ObjectDefineProperty(DOMException.prototype, "stack", {
-  get() {
-    return this[_error].stack;
-  },
-  set(value) {
-    this[_error].stack = value;
-  },
-  configurable: true,
-});
-
-// `DOMException` isn't a native error, so `Error.prepareStackTrace()` is
-// not called when accessing `.stack`, meaning our structured stack trace
-// hack doesn't apply. This patches it in.
-ObjectDefineProperty(DOMException.prototype, "__callSiteEvals", {
-  get() {
-    return ArrayPrototypeSlice(this[_error].__callSiteEvals, 1);
-  },
-  configurable: true,
-});
 
 ObjectSetPrototypeOf(DOMException.prototype, ErrorPrototype);
 
@@ -177,7 +179,7 @@ const entries = ObjectEntries({
 });
 for (let i = 0; i < entries.length; ++i) {
   const { 0: key, 1: value } = entries[i];
-  const desc = { value, enumerable: true };
+  const desc = { __proto__: null, value, enumerable: true };
   ObjectDefineProperty(DOMException, key, desc);
   ObjectDefineProperty(DOMException.prototype, key, desc);
 }
