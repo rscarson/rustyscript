@@ -548,11 +548,7 @@ impl InnerRuntime {
                 sourcemap.map(|s| s.to_vec()),
             );
 
-            let result = self.deno_runtime.mod_evaluate(s_modid);
-            self.deno_runtime
-                .run_event_loop(PollEventLoopOptions::default())
-                .await?;
-            result.await?;
+            self.deno_runtime.mod_evaluate(s_modid).await?;
             module_handle_stub = ModuleHandle::new(side_module, s_modid, None);
         }
 
@@ -575,14 +571,7 @@ impl InnerRuntime {
             );
 
             // Finish execution
-            let result = self.deno_runtime.mod_evaluate(module_id);
-            self.deno_runtime
-                .run_event_loop(PollEventLoopOptions {
-                    wait_for_inspector: false,
-                    ..Default::default()
-                })
-                .await?;
-            result.await?;
+            self.deno_runtime.mod_evaluate(module_id).await?;
             module_handle_stub = ModuleHandle::new(module, module_id, None);
         }
 
@@ -928,6 +917,8 @@ mod test_inner_runtime {
 
         let rt = &mut runtime;
         let module = run_async_task(|| async move { rt.load_modules(Some(&module), vec![]).await });
+
+        run_async_task(|| runtime.await_event_loop(PollEventLoopOptions::default()));
 
         let f = runtime.get_function_by_name(Some(&module), "test").unwrap();
         let rt = &mut runtime;

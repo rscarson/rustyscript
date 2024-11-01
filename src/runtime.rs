@@ -3,7 +3,7 @@ use crate::{
     js_value::Function,
     Error, Module, ModuleHandle,
 };
-use deno_core::serde_json;
+use deno_core::{serde_json, PollEventLoopOptions};
 use std::rc::Rc;
 
 /// Represents the set of options accepted by the runtime constructor
@@ -742,7 +742,9 @@ impl Runtime {
     /// Executes the given module, and returns a handle allowing you to extract values
     /// And call functions
     ///
-    /// Blocks until the module has been executed
+    /// Blocks until the module has been executed AND the event loop has fully resolved
+    /// See [`Runtime::load_module_async`] for a non-blocking variant, or use with async
+    /// background tasks
     ///
     /// # Arguments
     /// * `module` - A `Module` object containing the module's filename and contents.
@@ -768,13 +770,21 @@ impl Runtime {
     /// # }
     /// ```
     pub fn load_module(&mut self, module: &Module) -> Result<ModuleHandle, Error> {
-        self.run_async_task(|runtime| async move { runtime.load_module_async(module).await })
+        self.run_async_task(|runtime| async move {
+            let handle = runtime.load_module_async(module).await;
+            runtime
+                .await_event_loop(PollEventLoopOptions::default())
+                .await?;
+            handle
+        })
     }
 
     /// Executes the given module, and returns a handle allowing you to extract values
     /// And call functions
     ///
     /// Returns a future that resolves to the handle for the loaded module
+    /// Makes no attempt to resolve the event loop - call [`Runtime::await_event_loop`] to
+    /// resolve background tasks and async listeners
     ///
     /// # Arguments
     /// * `module` - A `Module` object containing the module's filename and contents.
@@ -794,7 +804,9 @@ impl Runtime {
     /// Executes the given module, and returns a handle allowing you to extract values
     /// And call functions.
     ///
-    /// Blocks until the module has been executed
+    /// Blocks until all modules have been executed AND the event loop has fully resolved
+    /// See [`Runtime::load_module_async`] for a non-blocking variant, or use with async
+    /// background tasks
     ///
     /// This will load 'module' as the main module, and the others as side-modules.
     /// Only one main module can be loaded per runtime
@@ -829,7 +841,11 @@ impl Runtime {
         side_modules: Vec<&Module>,
     ) -> Result<ModuleHandle, Error> {
         self.run_async_task(move |runtime| async move {
-            runtime.load_modules_async(module, side_modules).await
+            let handle = runtime.load_modules_async(module, side_modules).await;
+            runtime
+                .await_event_loop(PollEventLoopOptions::default())
+                .await?;
+            handle
         })
     }
 
@@ -837,6 +853,8 @@ impl Runtime {
     /// And call functions.
     ///
     /// Returns a future that resolves to the handle for the loaded module
+    /// Makes no attempt to resolve the event loop - call [`Runtime::await_event_loop`] to
+    /// resolve background tasks and async listeners
     ///
     /// This will load 'module' as the main module, and the others as side-modules.
     /// Only one main module can be loaded per runtime
