@@ -2,9 +2,8 @@ use std::time::Duration;
 
 use deno_core::PollEventLoopOptions;
 ///
-/// This example demonstrates a use for the websockets extension.
-/// It will open a connection to the echo server at wss://echo.websocket.org
-/// Send a message 'ping', wait for a response, and then close the connection.
+/// This example the use of async module loading, and the handing of ongoing
+/// background tasks.
 ///
 use rustyscript::{Error, Module, ModuleHandle, Runtime, RuntimeOptions};
 
@@ -12,6 +11,7 @@ fn main() -> Result<(), Error> {
     let module = Module::new(
         "test.js",
         "
+        // A basic messaging queue
         const messages = [];
         export function nextMessage() {
             if (messages.length === 0) {
@@ -20,11 +20,10 @@ fn main() -> Result<(), Error> {
             return messages.shift();
         }
 
+        const socket = new WebSocket('wss://echo.websocket.org');
         export function sendMessage(text) {
             socket.send(text);
         }
-
-        const socket = new WebSocket('wss://echo.websocket.org');
 
         socket.addEventListener('error', (e) => {
             clearInterval(t);
@@ -50,6 +49,7 @@ fn main() -> Result<(), Error> {
                 socket.close();
 
                 // Clear the interval, ending the event loop
+                console.log('Closing socket');
                 clearInterval(t);
             }, 15000);
         });
@@ -65,17 +65,28 @@ fn main() -> Result<(), Error> {
     ",
     );
 
-    let mut runtime = Runtime::new(RuntimeOptions::default())?;
+    // Whitelist the echo server for certificate errors
+    let mut options = RuntimeOptions::default();
+    options
+        .extension_options
+        .web
+        .whitelist_certificate_for("echo.websocket.org");
+
+    let mut runtime = Runtime::new(options)?;
     let tokio_runtime = runtime.tokio_runtime();
 
+    // Load the module
+    // This will run the event loop until the module is fully loaded, or an error occurs
     let module_handle = tokio_runtime.block_on(runtime.load_module_async(&module))?;
 
+    // Run the event loop until it reports that it has finished
     while runtime.advance_event_loop(PollEventLoopOptions::default())? {
-        // Check for messages every 50ms
+        // Check for messages from the module
         if let Some(msg) = check_for_messages(&mut runtime, &module_handle)? {
             println!("Received message: {}", msg);
         }
 
+        // Run the event loop for 50ms
         runtime.block_on_event_loop(
             PollEventLoopOptions::default(),
             Some(Duration::from_millis(50)),

@@ -133,22 +133,6 @@ impl Runtime {
         self.tokio
     }
 
-    /// Run the JS event loop to completion
-    /// Required when using the `_immediate` variants of functions
-    ///
-    /// # Arguments
-    /// * `options` - Options for the event loop polling, see [`deno_core::PollEventLoopOptions`]
-    ///
-    /// # Errors
-    /// Can fail if a runtime error occurs during the event loop's execution
-    pub async fn await_event_loop(
-        &mut self,
-        options: PollEventLoopOptions,
-        timeout: Option<Duration>,
-    ) -> Result<(), Error> {
-        self.inner.await_event_loop(options, timeout).await
-    }
-
     /// Advance the JS event loop by a single tick
     /// See [`Runtime::await_event_loop`] for fully running the event loop
     ///
@@ -165,13 +149,31 @@ impl Runtime {
         )
     }
 
-    /// Run the JS event loop to completion
+    /// Run the JS event loop to completion, or until a timeout is reached
+    /// Required when using the `_immediate` variants of functions
+    ///
+    /// # Arguments
+    /// * `options` - Options for the event loop polling, see [`deno_core::PollEventLoopOptions`]
+    /// * `timeout` - Optional timeout for the event loop
+    ///
+    /// # Errors
+    /// Can fail if a runtime error occurs during the event loop's execution
+    pub async fn await_event_loop(
+        &mut self,
+        options: PollEventLoopOptions,
+        timeout: Option<Duration>,
+    ) -> Result<(), Error> {
+        self.inner.await_event_loop(options, timeout).await
+    }
+
+    /// Run the JS event loop to completion, or until a timeout is reached
     /// Required when using the `_immediate` variants of functions
     ///
     /// This is the blocking variant of [`Runtime::await_event_loop`]
     ///
     /// # Arguments
     /// * `options` - Options for the event loop polling, see [`deno_core::PollEventLoopOptions`]
+    /// * `timeout` - Optional timeout for the event loop
     ///
     /// # Errors
     /// Can fail if a runtime error occurs during the event loop's execution

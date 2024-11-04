@@ -2,175 +2,317 @@
 
 import * as event from 'ext:deno_web/02_event.js';
 import { DOMException } from "ext:deno_web/01_dom_exception.js";
+import { DedicatedWorkerGlobalScope } from 'ext:deno_web/04_global_interfaces.js';
 import { core, primordials, internals } from "ext:core/mod.js";
-const { BadResource, Interrupted, NotCapable } = core;
-const {
-    Error,
-    ErrorPrototype,
-    ObjectPrototypeIsPrototypeOf,
-  } = primordials;
-
-  import {
-    getDefaultInspectOptions,
-    getStderrNoColor,
-    inspectArgs,
-    quoteString,
-  } from "ext:deno_console/01_console.js";
-
 import { op_set_format_exception_callback } from "ext:core/ops";
 
+const { BadResource, Interrupted, NotCapable } = core;
+
+const {
+	Error,
+	ErrorPrototype,
+	ObjectPrototypeIsPrototypeOf,
+} = primordials;
+
+import {
+	getDefaultInspectOptions,
+	getStderrNoColor,
+	inspectArgs,
+	quoteString,
+} from "ext:deno_console/01_console.js";
+
+
 class NotFound extends Error {
-  constructor(msg) {
-    super(msg);
-    this.name = "NotFound";
-  }
+	constructor(msg) {
+		super(msg);
+		this.name = "NotFound";
+	}
 }
+core.registerErrorClass("NotFound", NotFound);
 
 class ConnectionRefused extends Error {
-  constructor(msg) {
-    super(msg);
-    this.name = "ConnectionRefused";
-  }
+	constructor(msg) {
+		super(msg);
+		this.name = "ConnectionRefused";
+	}
 }
+core.registerErrorClass("ConnectionRefused", ConnectionRefused);
 
 class ConnectionReset extends Error {
-  constructor(msg) {
-    super(msg);
-    this.name = "ConnectionReset";
-  }
+	constructor(msg) {
+		super(msg);
+		this.name = "ConnectionReset";
+	}
 }
+core.registerErrorClass("ConnectionReset", ConnectionReset);
 
 class ConnectionAborted extends Error {
-  constructor(msg) {
-    super(msg);
-    this.name = "ConnectionAborted";
-  }
+	constructor(msg) {
+		super(msg);
+		this.name = "ConnectionAborted";
+	}
 }
+core.registerErrorClass("ConnectionAborted", ConnectionAborted);
 
 class NotConnected extends Error {
-  constructor(msg) {
-    super(msg);
-    this.name = "NotConnected";
-  }
+	constructor(msg) {
+		super(msg);
+		this.name = "NotConnected";
+	}
 }
+core.registerErrorClass("NotConnected", NotConnected);
 
 class AddrInUse extends Error {
-  constructor(msg) {
-    super(msg);
-    this.name = "AddrInUse";
-  }
+	constructor(msg) {
+		super(msg);
+		this.name = "AddrInUse";
+	}
 }
+core.registerErrorClass("AddrInUse", AddrInUse);
 
 class AddrNotAvailable extends Error {
-  constructor(msg) {
-    super(msg);
-    this.name = "AddrNotAvailable";
-  }
+	constructor(msg) {
+		super(msg);
+		this.name = "AddrNotAvailable";
+	}
 }
+core.registerErrorClass("AddrNotAvailable", AddrNotAvailable);
 
 class BrokenPipe extends Error {
-  constructor(msg) {
-    super(msg);
-    this.name = "BrokenPipe";
-  }
+	constructor(msg) {
+		super(msg);
+		this.name = "BrokenPipe";
+	}
 }
+core.registerErrorClass("BrokenPipe", BrokenPipe);
 
 class AlreadyExists extends Error {
-  constructor(msg) {
-    super(msg);
-    this.name = "AlreadyExists";
-  }
+	constructor(msg) {
+		super(msg);
+		this.name = "AlreadyExists";
+	}
 }
+core.registerErrorClass("AlreadyExists", AlreadyExists);
 
 class InvalidData extends Error {
-  constructor(msg) {
-    super(msg);
-    this.name = "InvalidData";
-  }
+	constructor(msg) {
+		super(msg);
+		this.name = "InvalidData";
+	}
 }
+core.registerErrorClass("InvalidData", InvalidData);
 
 class TimedOut extends Error {
-  constructor(msg) {
-    super(msg);
-    this.name = "TimedOut";
-  }
+	constructor(msg) {
+		super(msg);
+		this.name = "TimedOut";
+	}
 }
+core.registerErrorClass("TimedOut", TimedOut);
 
 class WriteZero extends Error {
-  constructor(msg) {
-    super(msg);
-    this.name = "WriteZero";
-  }
+	constructor(msg) {
+		super(msg);
+		this.name = "WriteZero";
+	}
 }
+core.registerErrorClass("WriteZero", WriteZero);
 
 class WouldBlock extends Error {
-  constructor(msg) {
-    super(msg);
-    this.name = "WouldBlock";
-  }
+	constructor(msg) {
+		super(msg);
+		this.name = "WouldBlock";
+	}
 }
+core.registerErrorClass("WouldBlock", WouldBlock);
 
 class UnexpectedEof extends Error {
-  constructor(msg) {
-    super(msg);
-    this.name = "UnexpectedEof";
-  }
+	constructor(msg) {
+		super(msg);
+		this.name = "UnexpectedEof";
+	}
 }
+core.registerErrorClass("UnexpectedEof", UnexpectedEof);
 
 class Http extends Error {
-  constructor(msg) {
-    super(msg);
-    this.name = "Http";
-  }
+	constructor(msg) {
+		super(msg);
+		this.name = "Http";
+	}
 }
+core.registerErrorClass("Http", Http);
 
 class Busy extends Error {
-  constructor(msg) {
-    super(msg);
-    this.name = "Busy";
-  }
+	constructor(msg) {
+		super(msg);
+		this.name = "Busy";
+	}
 }
+core.registerErrorClass("Busy", Busy);
 
 class PermissionDenied extends Error {
-  constructor(msg) {
-    super(msg);
-    this.name = "PermissionDenied";
-  }
+	constructor(msg) {
+		super(msg);
+		this.name = "PermissionDenied";
+	}
 }
+core.registerErrorClass("PermissionDenied", PermissionDenied);
 
 class NotSupported extends Error {
-  constructor(msg) {
-    super(msg);
-    this.name = "NotSupported";
-  }
+	constructor(msg) {
+		super(msg);
+		this.name = "NotSupported";
+	}
 }
+core.registerErrorClass("NotSupported", NotSupported);
 
 class FilesystemLoop extends Error {
-  constructor(msg) {
-    super(msg);
-    this.name = "FilesystemLoop";
-  }
+	constructor(msg) {
+		super(msg);
+		this.name = "FilesystemLoop";
+	}
 }
+core.registerErrorClass("FilesystemLoop", FilesystemLoop);
 
 class IsADirectory extends Error {
-  constructor(msg) {
-    super(msg);
-    this.name = "IsADirectory";
-  }
+	constructor(msg) {
+		super(msg);
+		this.name = "IsADirectory";
+	}
 }
+core.registerErrorClass("IsADirectory", IsADirectory);
 
 class NetworkUnreachable extends Error {
-  constructor(msg) {
-    super(msg);
-    this.name = "NetworkUnreachable";
-  }
+	constructor(msg) {
+		super(msg);
+		this.name = "NetworkUnreachable";
+	}
 }
+core.registerErrorClass("NetworkUnreachable", NetworkUnreachable);
 
 class NotADirectory extends Error {
-  constructor(msg) {
-    super(msg);
-    this.name = "NotADirectory";
-  }
+	constructor(msg) {
+		super(msg);
+		this.name = "NotADirectory";
+	}
+}
+core.registerErrorClass("NotADirectory", NotADirectory);
+
+core.registerErrorBuilder(
+	"DOMExceptionOperationError",
+	function DOMExceptionOperationError(msg) {
+		return new DOMException(msg, "OperationError");
+	},
+);
+
+core.registerErrorBuilder(
+	"DOMExceptionQuotaExceededError",
+	function DOMExceptionQuotaExceededError(msg) {
+		return new DOMException(msg, "QuotaExceededError");
+	},
+);
+
+core.registerErrorBuilder(
+	"DOMExceptionNotSupportedError",
+	function DOMExceptionNotSupportedError(msg) {
+		return new DOMException(msg, "NotSupported");
+	},
+);
+
+core.registerErrorBuilder(
+	"DOMExceptionNetworkError",
+	function DOMExceptionNetworkError(msg) {
+		return new DOMException(msg, "NetworkError");
+	},
+);
+
+core.registerErrorBuilder(
+	"DOMExceptionAbortError",
+	function DOMExceptionAbortError(msg) {
+		return new DOMException(msg, "AbortError");
+	},
+);
+
+core.registerErrorBuilder(
+	"DOMExceptionInvalidCharacterError",
+	function DOMExceptionInvalidCharacterError(msg) {
+		return new DOMException(msg, "InvalidCharacterError");
+	},
+);
+
+core.registerErrorBuilder(
+	"DOMExceptionDataError",
+	function DOMExceptionDataError(msg) {
+		return new DOMException(msg, "DataError");
+	},
+);
+
+// Notification that the core received an unhandled promise rejection that is about to
+// terminate the runtime. If we can handle it, attempt to do so.
+core.setUnhandledPromiseRejectionHandler(processUnhandledPromiseRejection);
+function processUnhandledPromiseRejection(promise, reason) {
+	const rejectionEvent = new event.PromiseRejectionEvent(
+		"unhandledrejection",
+		{ cancelable: true, promise, reason },
+	);
+
+	// Note that the handler may throw, causing a recursive "error" event
+	globalThis_.dispatchEvent(rejectionEvent);
+
+	// If event was not yet prevented, try handing it off to Node compat layer
+	// (if it was initialized)
+	if (
+		!rejectionEvent.defaultPrevented &&
+		typeof internals.nodeProcessUnhandledRejectionCallback !== "undefined"
+	) {
+		internals.nodeProcessUnhandledRejectionCallback(rejectionEvent);
+	}
+
+	// If event was not prevented (or "unhandledrejection" listeners didn't
+	// throw) we will let Rust side handle it.
+	if (rejectionEvent.defaultPrevented) {
+		return true;
+	}
+
+	return false;
+}
+
+core.setHandledPromiseRejectionHandler(processRejectionHandled);
+function processRejectionHandled(promise, reason) {
+	const rejectionHandledEvent = new event.PromiseRejectionEvent(
+		"rejectionhandled",
+		{ promise, reason },
+	);
+
+	// Note that the handler may throw, causing a recursive "error" event
+	globalThis_.dispatchEvent(rejectionHandledEvent);
+
+	if (typeof internals.nodeProcessRejectionHandledCallback !== "undefined") {
+		internals.nodeProcessRejectionHandledCallback(rejectionHandledEvent);
+	}
+}
+
+core.setReportExceptionCallback(event.reportException);
+op_set_format_exception_callback(formatException);
+function formatException(error) {
+	if (core.isNativeError(error) || ObjectPrototypeIsPrototypeOf(ErrorPrototype, error)) {
+		return null;
+	} else if (typeof error == "string") {
+		let e = inspectArgs([quoteString(error, getDefaultInspectOptions())], { colors: !getStderrNoColor() });
+		return `Uncaught ${e}`;
+	} else if (ObjectPrototypeIsPrototypeOf(ErrorEvent.prototype, error)) {
+		/*
+		Need to process ErrorEvent here into an exception string
+		*/
+		const msg = error.message;
+		if (error.filename.length) {
+			return `${msg} at ${error.filename}:${error.lineno}:${error.colno}`;
+		} else {
+			return msg;
+		}
+	} else {
+		return `Uncaught ${inspectArgs([error], { colors: !getStderrNoColor() })}`;
+	}
 }
 
 const errors = {
@@ -201,153 +343,9 @@ const errors = {
   NotCapable,
 };
 
-import { DedicatedWorkerGlobalScope } from 'ext:deno_web/04_global_interfaces.js';
-primordials.ObjectSetPrototypeOf(globalThis, DedicatedWorkerGlobalScope.prototype);
-event.saveGlobalThisReference(globalThis);
-event.setEventTargetData(globalThis);
-
 let globalThis_;
 globalThis_ = globalThis;
 
-core.registerErrorClass("NotFound", errors.NotFound);
-core.registerErrorClass("ConnectionRefused", errors.ConnectionRefused);
-core.registerErrorClass("ConnectionReset", errors.ConnectionReset);
-core.registerErrorClass("ConnectionAborted", errors.ConnectionAborted);
-core.registerErrorClass("NotConnected", errors.NotConnected);
-core.registerErrorClass("AddrInUse", errors.AddrInUse);
-core.registerErrorClass("AddrNotAvailable", errors.AddrNotAvailable);
-core.registerErrorClass("BrokenPipe", errors.BrokenPipe);
-core.registerErrorClass("PermissionDenied", errors.PermissionDenied);
-core.registerErrorClass("AlreadyExists", errors.AlreadyExists);
-core.registerErrorClass("InvalidData", errors.InvalidData);
-core.registerErrorClass("TimedOut", errors.TimedOut);
-core.registerErrorClass("WouldBlock", errors.WouldBlock);
-core.registerErrorClass("WriteZero", errors.WriteZero);
-core.registerErrorClass("UnexpectedEof", errors.UnexpectedEof);
-core.registerErrorClass("Http", errors.Http);
-core.registerErrorClass("Busy", errors.Busy);
-core.registerErrorClass("NotSupported", errors.NotSupported);
-core.registerErrorClass("FilesystemLoop", errors.FilesystemLoop);
-core.registerErrorClass("IsADirectory", errors.IsADirectory);
-core.registerErrorClass("NetworkUnreachable", errors.NetworkUnreachable);
-core.registerErrorClass("NotADirectory", errors.NotADirectory);
-core.registerErrorBuilder(
-  "DOMExceptionOperationError",
-  function DOMExceptionOperationError(msg) {
-    return new DOMException(msg, "OperationError");
-  },
-);
-core.registerErrorBuilder(
-  "DOMExceptionQuotaExceededError",
-  function DOMExceptionQuotaExceededError(msg) {
-    return new DOMException(msg, "QuotaExceededError");
-  },
-);
-core.registerErrorBuilder(
-  "DOMExceptionNotSupportedError",
-  function DOMExceptionNotSupportedError(msg) {
-    return new DOMException(msg, "NotSupported");
-  },
-);
-core.registerErrorBuilder(
-  "DOMExceptionNetworkError",
-  function DOMExceptionNetworkError(msg) {
-    return new DOMException(msg, "NetworkError");
-  },
-);
-core.registerErrorBuilder(
-  "DOMExceptionAbortError",
-  function DOMExceptionAbortError(msg) {
-    return new DOMException(msg, "AbortError");
-  },
-);
-core.registerErrorBuilder(
-  "DOMExceptionInvalidCharacterError",
-  function DOMExceptionInvalidCharacterError(msg) {
-    return new DOMException(msg, "InvalidCharacterError");
-  },
-);
-core.registerErrorBuilder(
-  "DOMExceptionDataError",
-  function DOMExceptionDataError(msg) {
-    return new DOMException(msg, "DataError");
-  },
-);
-
-core.setUnhandledPromiseRejectionHandler(processUnhandledPromiseRejection);
-core.setHandledPromiseRejectionHandler(processRejectionHandled);
-
-// Notification that the core received an unhandled promise rejection that is about to
-// terminate the runtime. If we can handle it, attempt to do so.
-function processUnhandledPromiseRejection(promise, reason) {
-  const rejectionEvent = new event.PromiseRejectionEvent(
-    "unhandledrejection",
-    {
-      cancelable: true,
-      promise,
-      reason,
-    },
-  );
-
-  // Note that the handler may throw, causing a recursive "error" event
-  globalThis_.dispatchEvent(rejectionEvent);
-
-  // If event was not yet prevented, try handing it off to Node compat layer
-  // (if it was initialized)
-  if (
-    !rejectionEvent.defaultPrevented &&
-    typeof internals.nodeProcessUnhandledRejectionCallback !== "undefined"
-  ) {
-    internals.nodeProcessUnhandledRejectionCallback(rejectionEvent);
-  }
-
-  // If event was not prevented (or "unhandledrejection" listeners didn't
-  // throw) we will let Rust side handle it.
-  if (rejectionEvent.defaultPrevented) {
-    return true;
-  }
-
-  return false;
-}
-
-function processRejectionHandled(promise, reason) {
-  const rejectionHandledEvent = new event.PromiseRejectionEvent(
-    "rejectionhandled",
-    { promise, reason },
-  );
-
-  // Note that the handler may throw, causing a recursive "error" event
-  globalThis_.dispatchEvent(rejectionHandledEvent);
-
-  if (typeof internals.nodeProcessRejectionHandledCallback !== "undefined") {
-    internals.nodeProcessRejectionHandledCallback(rejectionHandledEvent);
-  }
-}
-
-function formatException(error) {
-    if (
-      core.isNativeError(error) ||
-      ObjectPrototypeIsPrototypeOf(ErrorPrototype, error)
-    ) {
-      return null;
-    } else if (typeof error == "string") {
-      return `Uncaught ${
-        inspectArgs([quoteString(error, getDefaultInspectOptions())], {
-          colors: !getStderrNoColor(),
-        })
-      }`;
-    } else if (ObjectPrototypeIsPrototypeOf(ErrorEvent.prototype, error)) {
-        /*
-        Need to process ErrorEvent here into an exception string
-        */
-       console.log(JSON.stringify(error.error));
-       return formatException(error.error);
-
-    } else {
-      return `Uncaught ${inspectArgs([error], { colors: !getStderrNoColor() })}`;
-    }
-  }
-
-  
-  core.setReportExceptionCallback(event.reportException);
-  op_set_format_exception_callback(formatException);
+primordials.ObjectSetPrototypeOf(globalThis, DedicatedWorkerGlobalScope.prototype);
+event.saveGlobalThisReference(globalThis);
+event.setEventTargetData(globalThis);

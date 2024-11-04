@@ -55,6 +55,10 @@ pub fn transpile(module_specifier: &ModuleSpecifier, code: &str) -> Result<Modul
             ..Default::default()
         };
 
+        let transpile_mod_options = deno_ast::TranspileModuleOptions {
+            ..Default::default()
+        };
+
         let emit_options = deno_ast::EmitOptions {
             remove_comments: false,
             source_map: deno_ast::SourceMapOption::Separate,
@@ -62,14 +66,11 @@ pub fn transpile(module_specifier: &ModuleSpecifier, code: &str) -> Result<Modul
             ..Default::default()
         };
         let res = parsed
-            .transpile(&transpile_options, &emit_options)?
+            .transpile(&transpile_options, &transpile_mod_options, &emit_options)?
             .into_source();
 
-        let text = res.source;
-        // Convert utf8 bytes to a string
-        let text = String::from_utf8(text)?;
-
-        let source_map: Option<SourceMapData> = res.source_map.map(Into::into);
+        let text = res.text;
+        let source_map: Option<SourceMapData> = res.source_map.map(|sm| sm.into_bytes().into());
 
         (text, source_map)
     } else {

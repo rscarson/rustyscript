@@ -23,6 +23,8 @@ pub struct WebOptions {
     pub request_builder_hook: Option<RequestBuilderHook>,
 
     /// If true, fetches and network OPs will ignore SSL errors
+    /// This is useful for testing with self-signed certificates
+    /// Entries in this list should be domain names or IP addresses
     pub unsafely_ignore_certificate_errors: Option<Vec<String>>,
 
     /// Client certificate and key for fetch
@@ -47,6 +49,18 @@ impl Default for WebOptions {
             client_cert_chain_and_key: deno_tls::TlsKeys::Null,
             file_fetch_handler: std::rc::Rc::new(deno_fetch::DefaultFileFetchHandler),
             permissions: Rc::new(DefaultWebPermissions),
+        }
+    }
+}
+
+impl WebOptions {
+    /// Whitelist a domain or IP for ignoring certificate errors
+    /// This is useful for testing with self-signed certificates
+    pub fn whitelist_certificate_for(&mut self, domain_or_ip: impl ToString) {
+        if let Some(ref mut domains) = self.unsafely_ignore_certificate_errors {
+            domains.push(domain_or_ip.to_string());
+        } else {
+            self.unsafely_ignore_certificate_errors = Some(vec![domain_or_ip.to_string()]);
         }
     }
 }
