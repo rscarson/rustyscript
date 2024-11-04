@@ -83,7 +83,7 @@ worker = []
 #
 
 [dependencies]
-thiserror = "1.0.65"
+thiserror = "1.0.68"
 serde = "1.0.214"
 
 # Used to generate identifiers for callbacks
