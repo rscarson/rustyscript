@@ -17,7 +17,7 @@ import * as compression from 'ext:deno_web/14_compression.js';
 import * as performance from 'ext:deno_web/15_performance.js';
 import * as imageData from 'ext:deno_web/16_image_data.js';
 
-//Deno.core.setMacrotaskCallback(timers.handleTimerMacrotask);
+import * as errors from 'ext:init_web/init_errors.js';
 
 import { applyToGlobal, nonEnumerable, writeable } from 'ext:rustyscript/rustyscript.js';
 applyToGlobal({

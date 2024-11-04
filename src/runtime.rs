@@ -4,7 +4,7 @@ use crate::{
     Error, Module, ModuleHandle,
 };
 use deno_core::{serde_json, PollEventLoopOptions};
-use std::rc::Rc;
+use std::{rc::Rc, time::Duration};
 use tokio_util::sync::CancellationToken;
 
 /// Represents the set of options accepted by the runtime constructor
@@ -143,9 +143,26 @@ impl Runtime {
     /// Can fail if a runtime error occurs during the event loop's execution
     pub async fn await_event_loop(
         &mut self,
-        options: deno_core::PollEventLoopOptions,
+        options: PollEventLoopOptions,
+        timeout: Option<Duration>,
     ) -> Result<(), Error> {
-        self.inner.await_event_loop(options).await
+        self.inner.await_event_loop(options, timeout).await
+    }
+
+    /// Advance the JS event loop by a single tick
+    /// See [`Runtime::await_event_loop`] for fully running the event loop
+    ///
+    /// Returns true if the event loop has pending work, or false if it has completed
+    ///
+    /// # Arguments
+    /// * `options` - Options for the event loop polling, see [`deno_core::PollEventLoopOptions`]
+    ///
+    /// # Errors
+    /// Can fail if a runtime error occurs during the event loop's execution
+    pub fn advance_event_loop(&mut self, options: PollEventLoopOptions) -> Result<bool, Error> {
+        self.run_async_task(
+            |runtime| async move { runtime.inner.advance_event_loop(options).await },
+        )
     }
 
     /// Run the JS event loop to completion
@@ -161,8 +178,11 @@ impl Runtime {
     pub fn block_on_event_loop(
         &mut self,
         options: deno_core::PollEventLoopOptions,
+        timeout: Option<Duration>,
     ) -> Result<(), Error> {
-        self.run_async_task(|runtime| async move { runtime.await_event_loop(options).await })
+        self.run_async_task(
+            |runtime| async move { runtime.await_event_loop(options, timeout).await },
+        )
     }
 
     /// Encode an argument as a json value for use as a function argument
@@ -783,7 +803,7 @@ impl Runtime {
         self.run_async_task(|runtime| async move {
             let handle = runtime.load_module_async(module).await;
             runtime
-                .await_event_loop(PollEventLoopOptions::default())
+                .await_event_loop(PollEventLoopOptions::default(), None)
                 .await?;
             handle
         })
@@ -853,7 +873,7 @@ impl Runtime {
         self.run_async_task(move |runtime| async move {
             let handle = runtime.load_modules_async(module, side_modules).await;
             runtime
-                .await_event_loop(PollEventLoopOptions::default())
+                .await_event_loop(PollEventLoopOptions::default(), None)
                 .await?;
             handle
         })

@@ -11,6 +11,7 @@ use std::{
     collections::{HashMap, HashSet},
     pin::Pin,
     rc::Rc,
+    task::Poll,
     time::Duration,
 };
 use tokio_util::sync::CancellationToken;
@@ -305,8 +306,36 @@ impl InnerRuntime {
     }
 
     /// Runs the JS event loop to completion
-    pub async fn await_event_loop(&mut self, options: PollEventLoopOptions) -> Result<(), Error> {
-        Ok(self.deno_runtime.run_event_loop(options).await?)
+    pub async fn await_event_loop(
+        &mut self,
+        options: PollEventLoopOptions,
+        timeout: Option<Duration>,
+    ) -> Result<(), Error> {
+        if let Some(timeout) = timeout {
+            Ok(tokio::select! {
+                r = self.deno_runtime.run_event_loop(options) => r,
+                () = tokio::time::sleep(timeout) => Ok(()),
+            }?)
+        } else {
+            Ok(self.deno_runtime.run_event_loop(options).await?)
+        }
+    }
+
+    /// Advances the JS event loop by one tick
+    /// Return true if the event loop is pending
+    pub async fn advance_event_loop(
+        &mut self,
+        options: PollEventLoopOptions,
+    ) -> Result<bool, Error> {
+        let result = std::future::poll_fn(|cx| {
+            Poll::Ready(match self.deno_runtime.poll_event_loop(cx, options) {
+                Poll::Ready(t) => t.map(|()| false),
+                Poll::Pending => Ok(true),
+            })
+        })
+        .await?;
+
+        Ok(result)
     }
 
     /// Evaluate a piece of non-ECMAScript-module JavaScript code
@@ -591,7 +620,12 @@ impl InnerRuntime {
                 sourcemap.map(|s| s.to_vec()),
             );
 
-            self.deno_runtime.mod_evaluate(s_modid).await?;
+            let mod_load = self.deno_runtime.mod_evaluate(s_modid);
+            tokio::select! {
+                r = mod_load => r,
+                r = self.await_event_loop(PollEventLoopOptions::default(), None) => r.map_err(Into::into),
+            }?;
+
             module_handle_stub = ModuleHandle::new(side_module, s_modid, None);
         }
 
@@ -617,7 +651,7 @@ impl InnerRuntime {
             let mod_load = self.deno_runtime.mod_evaluate(module_id);
             tokio::select! {
                 r = mod_load => r,
-                r = self.await_event_loop(PollEventLoopOptions::default()) => r.map_err(Into::into),
+                r = self.await_event_loop(PollEventLoopOptions::default(), None) => r.map_err(Into::into),
             }?;
             module_handle_stub = ModuleHandle::new(module, module_id, None);
         }
@@ -979,7 +1013,8 @@ mod test_inner_runtime {
         let rt = &mut runtime;
         let module = run_async_task(|| async move {
             let h = rt.load_modules(Some(&module), vec![]).await;
-            rt.await_event_loop(PollEventLoopOptions::default()).await?;
+            rt.await_event_loop(PollEventLoopOptions::default(), None)
+                .await?;
             h
         });
 

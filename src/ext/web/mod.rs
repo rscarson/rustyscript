@@ -60,7 +60,7 @@ extension!(
     init_web,
     deps = [rustyscript],
     esm_entry_point = "ext:init_web/init_web.js",
-    esm = [ dir "src/ext/web", "init_web.js" ],
+    esm = [ dir "src/ext/web", "init_web.js", "init_errors.js" ],
     options = {
         permissions: Rc<dyn WebPermissions>
     },
