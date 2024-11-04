@@ -621,11 +621,9 @@ impl InnerRuntime {
             );
 
             let mod_load = self.deno_runtime.mod_evaluate(s_modid);
-            tokio::select! {
-                r = mod_load => r,
-                r = self.await_event_loop(PollEventLoopOptions::default(), None) => r.map_err(Into::into),
-            }?;
-
+            self.deno_runtime
+                .with_event_loop_future(mod_load, PollEventLoopOptions::default())
+                .await?;
             module_handle_stub = ModuleHandle::new(side_module, s_modid, None);
         }
 
@@ -649,10 +647,9 @@ impl InnerRuntime {
 
             // Finish execution
             let mod_load = self.deno_runtime.mod_evaluate(module_id);
-            tokio::select! {
-                r = mod_load => r,
-                r = self.await_event_loop(PollEventLoopOptions::default(), None) => r.map_err(Into::into),
-            }?;
+            self.deno_runtime
+                .with_event_loop_future(mod_load, PollEventLoopOptions::default())
+                .await?;
             module_handle_stub = ModuleHandle::new(module, module_id, None);
         }
 
