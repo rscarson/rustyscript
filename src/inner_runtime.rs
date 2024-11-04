@@ -5,7 +5,9 @@ use crate::{
     transpiler::{transpile, transpile_extension},
     Error, ExtensionOptions, Module, ModuleHandle,
 };
-use deno_core::{serde_json, serde_v8::from_v8, v8, JsRuntime, PollEventLoopOptions};
+use deno_core::{
+    futures::FutureExt, serde_json, serde_v8::from_v8, v8, JsRuntime, PollEventLoopOptions,
+};
 use serde::de::DeserializeOwned;
 use std::{
     collections::{HashMap, HashSet},
@@ -547,6 +549,54 @@ impl InnerRuntime {
         }
     }
 
+    /// A utility function that run provided future concurrently with the event loop.
+    ///
+    /// If the event loop resolves while polling the future, it will continue to be polled,
+    /// Unless it returned an error
+    ///
+    /// Useful for interacting with local inspector session.
+    pub async fn with_event_loop_future<'fut, T, E>(
+        &mut self,
+        mut fut: impl std::future::Future<Output = Result<T, E>> + Unpin + 'fut,
+        poll_options: PollEventLoopOptions,
+    ) -> Result<T, Error>
+    where
+        deno_core::error::AnyError: From<E>,
+        Error: std::convert::From<E>,
+    {
+        // Manually implement tokio::select
+        std::future::poll_fn(|cx| {
+            if let Poll::Ready(t) = fut.poll_unpin(cx) {
+                return if let Poll::Ready(Err(e)) =
+                    self.deno_runtime.poll_event_loop(cx, poll_options)
+                {
+                    // Run one more tick to check for errors
+                    Poll::Ready(Err(e.into()))
+                } else {
+                    // No errors - continue
+                    Poll::Ready(t.map_err(Into::into))
+                };
+            }
+
+            if let Poll::Ready(Err(e)) = self.deno_runtime.poll_event_loop(cx, poll_options) {
+                // Evetn loop failed
+                return Poll::Ready(Err(e.into()));
+            }
+
+            if self
+                .deno_runtime
+                .poll_event_loop(cx, poll_options)
+                .is_ready()
+            {
+                // Event loop resolved - continue
+                println!("Event loop resolved");
+            }
+
+            Poll::Pending
+        })
+        .await
+    }
+
     /// Get the entrypoint function for a module
     pub fn get_module_entrypoint(
         &mut self,
@@ -621,8 +671,7 @@ impl InnerRuntime {
             );
 
             let mod_load = self.deno_runtime.mod_evaluate(s_modid);
-            self.deno_runtime
-                .with_event_loop_future(mod_load, PollEventLoopOptions::default())
+            self.with_event_loop_future(mod_load, PollEventLoopOptions::default())
                 .await?;
             module_handle_stub = ModuleHandle::new(side_module, s_modid, None);
         }
@@ -647,8 +696,7 @@ impl InnerRuntime {
 
             // Finish execution
             let mod_load = self.deno_runtime.mod_evaluate(module_id);
-            self.deno_runtime
-                .with_event_loop_future(mod_load, PollEventLoopOptions::default())
+            self.with_event_loop_future(mod_load, PollEventLoopOptions::default())
                 .await?;
             module_handle_stub = ModuleHandle::new(module, module_id, None);
         }
