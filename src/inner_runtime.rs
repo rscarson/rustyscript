@@ -1143,6 +1143,37 @@ mod test_inner_runtime {
     }
 
     #[test]
+    fn test_async_load_errors() {
+        let module = Module::new(
+            "test.js",
+            "
+            throw new Error('msg');
+        ",
+        );
+
+        let mut runtime = InnerRuntime::new(RuntimeOptions::default(), CancellationToken::new())
+            .expect("Could not load runtime");
+
+        let rt = &mut runtime;
+        let module_ = module.clone();
+        let result =
+            run_async_task(
+                || async move { Ok(rt.load_modules(Some(&module_), vec![]).await.is_err()) },
+            );
+        assert!(result);
+
+        let mut runtime = InnerRuntime::new(RuntimeOptions::default(), CancellationToken::new())
+            .expect("Could not load runtime");
+
+        let rt = &mut runtime;
+        let result =
+            run_async_task(
+                || async move { Ok(rt.load_modules(None, vec![&module]).await.is_err()) },
+            );
+        assert!(result);
+    }
+
+    #[test]
     fn test_serialize_fn() {
         let module = Module::new(
             "test.js",

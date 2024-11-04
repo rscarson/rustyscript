@@ -304,12 +304,12 @@ function formatException(error) {
 		/*
 		Need to process ErrorEvent here into an exception string
 		*/
-		const msg = error.message;
-		if (error.filename.length) {
-			return `${msg} at ${error.filename}:${error.lineno}:${error.colno}`;
-		} else {
-			return msg;
-		}
+		let filename = error.filename.length ? error.filename : undefined;
+		let lineno = error.filename.length ? error.lineno : undefined;
+		let error = new Error(error.message, filename, lineno);
+
+		// This is a bit of a hack, but we need to set the stack to the error event's error
+		throw error;
 	} else {
 		return `Uncaught ${inspectArgs([error], { colors: !getStderrNoColor() })}`;
 	}
