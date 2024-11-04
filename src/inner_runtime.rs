@@ -579,7 +579,7 @@ impl InnerRuntime {
             }
 
             if let Poll::Ready(Err(e)) = self.deno_runtime.poll_event_loop(cx, poll_options) {
-                // Evetn loop failed
+                // Event loop failed
                 return Poll::Ready(Err(e.into()));
             }
 
