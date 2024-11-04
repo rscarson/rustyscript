@@ -90,7 +90,7 @@ serde = "1.0.214"
 paste = "1.0.15"
 
 # The deno runtime itself, and the webidl extension for the web APIs
-deno_core = "0.314.2"
+deno_core = "0.317.0"
 
 # For transpiling typescript
 deno_ast = { version = "0.43.3", features = ["transpiling"]}
