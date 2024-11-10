@@ -11,10 +11,49 @@ categories = ["web-programming", "network-programming", "api-bindings", "compile
 readme = "readme.md"
 
 [features]
-default = ["worker", "web_stub", "console", "url", "crypto"]
+default = ["worker", "safe_extensions", "node_experimental"]
 
-no_extensions = []
-all = ["web", "io", "webstorage", "cache", "websocket"]
+#
+# Feature groups
+#
+
+#
+# Extensions that are safe to use in a sandboxed environment
+# These extensions do not provide access to the network or filesystem
+safe_extensions = ["web_stub", "console", "url", "crypto"]
+
+#
+# Enables all available extensions, except for node support
+# These extensions are not safe to use in a sandboxed environment without additional restrictions
+# (See [WebPermissions]
+all_extensions = ["network_extensions", "io_extensions"]
+
+#
+# Extensions that provide access to the network. Also enables URL imports from JS
+# These extensions are not safe to use in a sandboxed environment without additional restrictions
+# (See [WebPermissions]
+network_extensions = ["web", "webstorage", "websocket", "http", "url", "crypto", "console", "broadcast_channel", "url_import"]
+
+#
+# Extensions that provide access to the filesystem. Also enables file imports from JS
+# These extensions are not safe to use in a sandboxed environment without additional restrictions
+# (See [FsPermissions]
+io_extensions = ["web", "webstorage", "fs", "io", "cache", "console", "ffi", "webgpu", "kv", "cron", "fs_import"]
+
+#
+# Additional features that are not part of the core runtime
+# These features are safe to use in a sandboxed environment without additional restrictions
+extra_features = ["worker", "snapshot_builder"]
+
+#
+# Highly experimental NodeJS compatibility layer. Enables all other extensions
+# Enables the use of the node and npm modules
+# CJS support not yet implemented
+# These extensions are not safe to use in a sandboxed environment without additional restrictions
+# (See [NodePermissions]
+node_experimental = [
+    "deno_node", "deno_resolver", "node_resolver", "deno_npm", "deno_semver", "deno_napi", "deno_runtime", "checksum", "all_extensions"
+]
 
 # By default, an extension stub is included in the runtime if the `web` feature is disabled
 # It provides a minimal set of APIs for parts of the runtime, such as timers and the DOM exception class
@@ -33,14 +72,32 @@ web_stub = ["webidl", "base64-simd"]
 # I have annotated each with the section of the w3c spec that it implements
 #
 
+    # [https://html.spec.whatwg.org/multipage/web-messaging.html]
+    broadcast_channel = ["deno_broadcast_channel", "web", "webidl"]
+
     # [https://w3c.github.io/ServiceWorker/#cache-interface]
     cache = ["deno_cache", "webidl", "web"]
 
     # [https://console.spec.whatwg.org/]
-    console = ["deno_console"]
+    console = ["deno_console", "deno_terminal"]
+
+    # Implements scheduled tasks (crons) API 
+    cron = ["deno_cron", "console"]
 
     # [https://www.w3.org/TR/WebCryptoAPI/]
     crypto = ["deno_crypto", "webidl"]
+
+    # Dynamic library ffi
+    ffi = ["deno_ffi"]
+
+    # Provides ops for interacting with the file system.
+    fs = ["deno_fs", "web",  "io"]
+    
+    # [https://fetch.spec.whatwg.org/]
+    http = ["deno_http", "web", "websocket"]
+
+    # [https://github.com/denoland/denokv/blob/main/proto/kv-connect.md]
+    kv = ["deno_kv", "web", "console"]
 
     # Provides IO primitives for other Deno extensions (stdio streams, etc)
     io = ["deno_io", "web", "rustyline", "winapi", "nix", "libc", "once_cell"]
@@ -52,7 +109,13 @@ web_stub = ["webidl", "base64-simd"]
     # Timers, events, text encoder/decoder, 
     # [https://w3c.github.io/FileAPI]
     # [https://fetch.spec.whatwg.org/]
-    web = ["deno_web", "webidl", "deno_tls", "deno_fetch", "deno_net", "console", "url", "crypto", "url_import", "fs_import", "http"]
+    web = [
+        "deno_web", "deno_tls", "deno_fetch", "deno_net", "dep:http", "deno_permissions", 
+        "webidl", "console", "url", "crypto", "url_import", "fs_import"
+    ]
+
+    # [https://gpuweb.github.io/gpuweb/]
+    webgpu = ["deno_webgpu", "web"]
 
     # [https://webidl.spec.whatwg.org/]
     webidl = ["deno_webidl"]
@@ -86,14 +149,17 @@ worker = []
 thiserror = "1.0.65"
 serde = "1.0.214"
 
+# Used for NodeJS compatibility and other features
+async-trait = "0.1.83"
+
 # Used to generate identifiers for callbacks
 paste = "1.0.15"
 
 # The deno runtime itself, and the webidl extension for the web APIs
-deno_core = "0.314.2"
+deno_core = "0.318.0"
 
 # For transpiling typescript
-deno_ast = { version = "0.43.3", features = ["transpiling"]}
+deno_ast = { version = "0.43.3", features = ["transpiling", "cjs"]}
 
 # Runtime for async tasks
 tokio = "=1.41.0"
@@ -103,25 +169,35 @@ tokio-util = "0.7.12"
 # Pinned for now due to upstream issues
 reqwest = { version = "=0.12.8", optional = true, default-features = false, features = ["blocking", "rustls-tls"] }
 http = { version = "1.1.0", optional = true }
+deno_permissions = { version = "0.36.0", optional = true }
 
 #
 # Dependencies for the various extension features
 #
 
-deno_cache      = {version = "0.107.0", optional = true}
-deno_console    = {version = "0.175.0", optional = true}
-deno_crypto     = {version = "0.189.0", optional = true}
-deno_fetch      = {version = "0.199.0", optional = true}
-deno_net        = {version = "0.167.0", optional = true}
-deno_tls        = {version = "0.162.0", optional = true} # Options for the web feature
-deno_url        = {version = "0.175.0", optional = true}
+deno_broadcast_channel = {version = "0.170.0", optional = true}
 
-deno_web        = {version = "0.206.0", optional = true}
-deno_webidl     = {version = "0.175.0", optional = true}
-deno_webstorage = {version = "0.170.0", optional = true}
-deno_websocket  = {version = "0.180.0", optional = true }
+deno_cache      = {version = "0.108.0", optional = true}
+deno_console    = {version = "0.176.0", optional = true}
+deno_cron       = {version = "0.56.0", optional = true}
+deno_crypto     = {version = "0.190.0", optional = true}
+deno_fetch      = {version = "0.200.0", optional = true}
+deno_ffi        = {version = "0.163.0", optional = true}
+deno_fs         = {version = "0.86.0", optional = true, features = ["sync_fs"]}
+deno_http       = {version = "0.174.0", optional = true}
+deno_kv         = {version = "0.84.0", optional = true}
+deno_net        = {version = "0.168.0", optional = true}
+deno_node       = {version = "0.113.0", optional = true}
+deno_tls        = {version = "0.163.0", optional = true} # Options for the web feature
+deno_url        = {version = "0.176.0", optional = true}
 
-deno_io         = {version = "0.85.0", optional = true}
+deno_web        = {version = "0.207.0", optional = true}
+deno_webidl     = {version = "0.176.0", optional = true}
+deno_webstorage = {version = "0.171.0", optional = true}
+deno_websocket  = {version = "0.181.0", optional = true }
+deno_webgpu     = {version = "0.143.0", optional = true}
+
+deno_io         = {version = "0.86.0", optional = true}
 
 # Dependencies for the IO feature
 rustyline = {version = "=14.0.0", optional = true}
@@ -136,6 +212,16 @@ once_cell = {version = "1.20.2", optional = true}
 
 # Dependencies for the web stub feature
 base64-simd = {version = "0.8.0", optional = true}
+
+# Dependencies for the node feature
+deno_resolver = {version = "0.8.0", optional = true}
+node_resolver = {version = "0.15.0", optional = true, features = ["sync"]}
+deno_runtime  = {version = "0.185.0", optional = true, features = ["exclude_runtime_main_js"]}
+deno_terminal = {version = "0.2.0", optional = true}
+deno_semver   = {version = "0.5.16", optional = true}
+deno_napi     = {version = "0.107.0", optional = true}
+deno_npm      = {version = "0.25.4", optional = true}
+checksum      = {version = "0.2.1", optional = true}
 
 [dev-dependencies]
 version-sync = "0.9.5"
@@ -172,6 +258,10 @@ required-features = ["web_stub"]
 [[example]]
 name = "websocket"
 required-features = ["websocket", "web"]
+
+[[example]]
+name = "node_import"
+required-features = ["node_experimental"]
 
 [[bench]]
 name = "runtime"

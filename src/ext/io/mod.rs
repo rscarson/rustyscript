@@ -18,7 +18,7 @@ extension!(
     esm = [ dir "src/ext/io", "init_io.js" ],
 );
 impl ExtensionTrait<()> for init_io {
-    fn init(_: ()) -> Extension {
+    fn init((): ()) -> Extension {
         init_io::init_ops_and_esm()
     }
 }
@@ -28,7 +28,7 @@ impl ExtensionTrait<Option<deno_io::Stdio>> for deno_io::deno_io {
     }
 }
 impl ExtensionTrait<()> for tty::deno_tty {
-    fn init(_: ()) -> Extension {
+    fn init((): ()) -> Extension {
         tty::deno_tty::init_ops_and_esm()
     }
 }

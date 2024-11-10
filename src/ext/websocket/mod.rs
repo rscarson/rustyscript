@@ -1,9 +1,11 @@
 use super::{web::PermissionsContainer, web::WebOptions, ExtensionTrait};
-use deno_core::{error::AnyError, extension, url::Url, Extension};
+use deno_core::{extension, url::Url, Extension};
+use deno_permissions::PermissionCheckError;
 
 impl deno_websocket::WebSocketPermissions for PermissionsContainer {
-    fn check_net_url(&mut self, url: &Url, api_name: &str) -> Result<(), AnyError> {
-        self.0.check_url(url, api_name)
+    fn check_net_url(&mut self, url: &Url, api_name: &str) -> Result<(), PermissionCheckError> {
+        self.0.check_url(url, api_name)?;
+        Ok(())
     }
 }
 
@@ -14,7 +16,7 @@ extension!(
     esm = [ dir "src/ext/websocket", "init_websocket.js" ],
 );
 impl ExtensionTrait<()> for init_websocket {
-    fn init(_: ()) -> Extension {
+    fn init((): ()) -> Extension {
         init_websocket::init_ops_and_esm()
     }
 }

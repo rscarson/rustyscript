@@ -8,7 +8,7 @@ extension!(
     esm = [ dir "src/ext/cache", "init_cache.js" ],
 );
 impl ExtensionTrait<()> for init_cache {
-    fn init(_: ()) -> Extension {
+    fn init((): ()) -> Extension {
         init_cache::init_ops_and_esm()
     }
 }

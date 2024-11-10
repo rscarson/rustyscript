@@ -9,7 +9,7 @@ extension!(
     esm = [ dir "src/ext/webstorage", "init_webstorage.js" ],
 );
 impl ExtensionTrait<()> for init_webstorage {
-    fn init(_: ()) -> Extension {
+    fn init((): ()) -> Extension {
         init_webstorage::init_ops_and_esm()
     }
 }

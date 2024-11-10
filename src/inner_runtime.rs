@@ -2,8 +2,8 @@ use crate::{
     ext,
     module_loader::{LoaderOptions, RustyLoader},
     traits::{ToDefinedValue, ToModuleSpecifier, ToV8String},
-    transpiler::{transpile, transpile_extension},
-    Error, ExtensionOptions, Module, ModuleHandle,
+    transpiler::transpile,
+    utilities, Error, ExtensionOptions, Module, ModuleHandle,
 };
 use deno_core::{
     futures::FutureExt, serde_json, serde_v8::from_v8, v8, JsRuntime, PollEventLoopOptions,
@@ -11,6 +11,7 @@ use deno_core::{
 use serde::de::DeserializeOwned;
 use std::{
     collections::{HashMap, HashSet},
+    path::{Path, PathBuf},
     pin::Pin,
     rc::Rc,
     task::Poll,
@@ -151,6 +152,7 @@ pub struct InnerRuntime {
     pub module_loader: Rc<RustyLoader>,
     pub deno_runtime: JsRuntime,
 
+    pub cwd: PathBuf,
     pub default_entrypoint: Option<String>,
 }
 impl InnerRuntime {
@@ -158,18 +160,27 @@ impl InnerRuntime {
         options: RuntimeOptions,
         heap_exhausted_token: CancellationToken,
     ) -> Result<Self, Error> {
+        let cwd = std::env::current_dir()?;
         let module_loader = Rc::new(RustyLoader::new(LoaderOptions {
             cache_provider: options.module_cache,
             import_provider: options.import_provider,
             schema_whlist: options.schema_whlist,
+            cwd: cwd.clone(),
+
+            #[cfg(feature = "node_experimental")]
+            node_resolver: options.extension_options.node_resolver.clone(),
 
             ..Default::default()
         }));
 
         // If a snapshot is provided, do not reload ESM for extensions
         let is_snapshot = options.startup_snapshot.is_some();
-        let extensions =
-            ext::all_extensions(options.extensions, options.extension_options, is_snapshot);
+        let extensions = ext::all_extensions(
+            options.extensions,
+            options.extension_options,
+            options.shared_array_buffer_store.clone(),
+            is_snapshot,
+        );
 
         // If a heap size is provided, set the isolate params (preserving any user-provided params otherwise)
         let isolate_params = match options.isolate_params {
@@ -193,10 +204,7 @@ impl InnerRuntime {
         let mut deno_runtime = JsRuntime::try_new(deno_core::RuntimeOptions {
             module_loader: Some(module_loader.clone()),
 
-            extension_transpiler: Some(Rc::new(|specifier, code| {
-                transpile_extension(&specifier, &code)
-            })),
-
+            extension_transpiler: Some(module_loader.as_extension_transpiler()),
             create_params: isolate_params,
             shared_array_buffer_store: options.shared_array_buffer_store.clone(),
 
@@ -222,17 +230,35 @@ impl InnerRuntime {
             });
         }
 
+        let default_entrypoint = options.default_entrypoint;
         Ok(Self {
-            deno_runtime,
             module_loader,
-
-            default_entrypoint: options.default_entrypoint,
+            deno_runtime,
+            cwd,
+            default_entrypoint,
         })
     }
 
     /// Access the underlying deno runtime instance directly
     pub fn deno_runtime(&mut self) -> &mut JsRuntime {
         &mut self.deno_runtime
+    }
+
+    /// Set the current working directory for the runtime
+    /// This is used to resolve relative paths in the module loader
+    pub fn set_current_dir(&mut self, path: impl AsRef<Path>) -> Result<&Path, Error> {
+        let path = path.as_ref();
+        let path = utilities::resolve_path(path, Some(&self.cwd))?
+            .to_file_path()
+            .map_err(|()| Error::Runtime("Invalid path".to_string()))?;
+
+        self.cwd = path;
+        self.module_loader.set_current_dir(self.cwd.clone());
+        Ok(&self.cwd)
+    }
+
+    pub fn current_dir(&self) -> &Path {
+        &self.cwd
     }
 
     /// Remove and return a value from the state
@@ -654,7 +680,7 @@ impl InnerRuntime {
 
         // Get additional modules first
         for side_module in side_modules {
-            let module_specifier = side_module.filename().to_module_specifier(None)?;
+            let module_specifier = side_module.filename().to_module_specifier(&self.cwd)?;
             let (code, sourcemap) = transpile(&module_specifier, side_module.contents())?;
             let fast_code = deno_core::FastString::from(code.clone());
 
@@ -678,7 +704,7 @@ impl InnerRuntime {
 
         // Load main module
         if let Some(module) = main_module {
-            let module_specifier = module.filename().to_module_specifier(None)?;
+            let module_specifier = module.filename().to_module_specifier(&self.cwd)?;
             let (code, sourcemap) = transpile(&module_specifier, module.contents())?;
             let fast_code = deno_core::FastString::from(code.clone());
 

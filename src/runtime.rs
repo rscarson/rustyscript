@@ -4,7 +4,7 @@ use crate::{
     Error, Module, ModuleHandle,
 };
 use deno_core::{serde_json, PollEventLoopOptions};
-use std::{rc::Rc, time::Duration};
+use std::{path::Path, rc::Rc, time::Duration};
 use tokio_util::sync::CancellationToken;
 
 /// Represents the set of options accepted by the runtime constructor
@@ -121,6 +121,7 @@ impl Runtime {
     }
 
     /// Returns the heap exhausted token for the runtime
+    /// Used to detect when the runtime has run out of memory
     #[must_use]
     pub fn heap_exhausted_token(&self) -> CancellationToken {
         self.heap_exhausted_token.clone()
@@ -131,6 +132,26 @@ impl Runtime {
     #[must_use]
     pub fn into_tokio_runtime(self) -> Rc<tokio::runtime::Runtime> {
         self.tokio
+    }
+
+    /// Set the current working directory for the runtime
+    /// This is used to resolve relative paths in the module loader
+    ///
+    /// The runtime will begin with the current working directory of the process
+    ///
+    /// # Errors
+    /// Can fail if the given path is not valid
+    pub fn set_current_dir(&mut self, path: impl AsRef<Path>) -> Result<&Path, Error> {
+        self.inner.set_current_dir(path)
+    }
+
+    /// Get the current working directory for the runtime
+    /// This is used to resolve relative paths in the module loader
+    ///
+    /// The runtime will begin with the current working directory of the process
+    #[must_use]
+    pub fn current_dir(&self) -> &Path {
+        self.inner.current_dir()
     }
 
     /// Advance the JS event loop by a single tick

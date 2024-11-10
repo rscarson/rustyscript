@@ -1,0 +1,1 @@
+import * as ffi from 'ext:deno_ffi/00_ffi.js';

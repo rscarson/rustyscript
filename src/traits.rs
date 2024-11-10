@@ -1,7 +1,6 @@
 use crate::Error;
 use deno_core::v8::{self, HandleScope};
 use deno_core::ModuleSpecifier;
-use std::env::current_dir;
 use std::path::Path;
 
 /// Converts a string representing a relative or absolute path into a
@@ -20,16 +19,12 @@ fn resolve_path(
 }
 
 pub trait ToModuleSpecifier {
-    fn to_module_specifier(&self, base: Option<&Path>) -> Result<ModuleSpecifier, Error>;
+    fn to_module_specifier(&self, base: &Path) -> Result<ModuleSpecifier, Error>;
 }
 
 impl<T: AsRef<Path>> ToModuleSpecifier for T {
-    fn to_module_specifier(&self, base: Option<&Path>) -> Result<ModuleSpecifier, Error> {
-        let path = match base {
-            Some(base) => resolve_path(self, base),
-            None => resolve_path(self, &current_dir()?),
-        }?;
-        Ok(path)
+    fn to_module_specifier(&self, base: &Path) -> Result<ModuleSpecifier, Error> {
+        Ok(resolve_path(self, base)?)
     }
 }
 

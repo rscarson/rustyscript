@@ -290,9 +290,14 @@ pub use tokio;
 #[cfg(feature = "web")]
 pub use deno_tls;
 
+#[cfg(feature = "kv")]
+pub use ext::kv::{KvConfig, KvStore};
+
+#[cfg(feature = "node_experimental")]
+pub use ext::node::RustyResolver;
+
 #[cfg(feature = "web")]
 pub use ext::web::{AllowlistWebPermissions, DefaultWebPermissions, WebOptions, WebPermissions};
-
 pub use ext::ExtensionOptions;
 
 // Expose some important stuff from us

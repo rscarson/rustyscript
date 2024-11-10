@@ -2,7 +2,7 @@
 //! This module provides tools for caching module data, resolving module specifiers, and loading modules
 #![allow(deprecated)]
 use deno_core::{anyhow::Error, ModuleLoader, ModuleSpecifier};
-use std::{cell::RefCell, rc::Rc};
+use std::{cell::RefCell, path::PathBuf, rc::Rc};
 
 mod cache_provider;
 mod import_provider;
@@ -14,6 +14,8 @@ pub(crate) use inner_loader::LoaderOptions;
 // Public exports
 pub use cache_provider::{ClonableSource, ModuleCacheProvider};
 pub use import_provider::ImportProvider;
+
+use crate::transpiler::ExtensionTranspiler;
 
 /// The primary module loader implementation for rustyscript
 /// This structure manages fetching module code, transpilation, and caching
@@ -28,13 +30,28 @@ impl RustyLoader {
         Self { inner }
     }
 
+    pub fn set_current_dir(&self, current_dir: PathBuf) {
+        self.inner_mut().set_current_dir(current_dir);
+    }
+
+    fn inner(&self) -> std::cell::Ref<InnerRustyLoader> {
+        self.inner.borrow()
+    }
+
+    fn inner_mut(&self) -> std::cell::RefMut<InnerRustyLoader> {
+        self.inner.borrow_mut()
+    }
+
     /// Inserts a source map into the source map cache
     /// This is used to provide source maps for loaded modules
     /// for error message generation
     pub fn insert_source_map(&self, file_name: &str, code: String, source_map: Option<Vec<u8>>) {
-        self.inner
-            .borrow_mut()
-            .add_source_map(file_name, code, source_map);
+        self.inner_mut().add_source_map(file_name, code, source_map);
+    }
+
+    pub fn as_extension_transpiler(self: &Rc<Self>) -> ExtensionTranspiler {
+        let loader = self.clone();
+        Rc::new(move |specifier, code| loader.inner().transpile_extension(&specifier, &code))
     }
 }
 
@@ -53,7 +70,7 @@ impl ModuleLoader for RustyLoader {
         referrer: &str,
         kind: deno_core::ResolutionKind,
     ) -> Result<ModuleSpecifier, Error> {
-        self.inner.borrow_mut().resolve(specifier, referrer, kind)
+        self.inner_mut().resolve(specifier, referrer, kind)
     }
 
     /// Load a module by it's name
@@ -75,11 +92,11 @@ impl ModuleLoader for RustyLoader {
     }
 
     fn get_source_map(&self, file_name: &str) -> Option<Vec<u8>> {
-        self.inner.borrow().get_source_map(file_name)?.1.clone()
+        self.inner().get_source_map(file_name)?.1.clone()
     }
 
     fn get_source_mapped_source_line(&self, file_name: &str, line_number: usize) -> Option<String> {
-        let inner = self.inner.borrow();
+        let inner = self.inner();
         let lines: Vec<_> = inner.get_source_map(file_name)?.0.split('\n').collect();
         if line_number >= lines.len() {
             return None;
@@ -113,7 +130,9 @@ mod test {
     #[tokio::test]
     async fn test_loader() {
         let mut cache_provider = MemoryModuleCacheProvider::default();
-        let specifier = "file:///test.ts".to_module_specifier(None).unwrap();
+        let specifier = "file:///test.ts"
+            .to_module_specifier(&std::env::current_dir().unwrap())
+            .unwrap();
         let source = ModuleSource::new(
             ModuleType::JavaScript,
             ModuleSourceCode::String("console.log('Hello, World!')".to_string().into()),

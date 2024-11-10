@@ -1,6 +1,6 @@
 use super::{DefaultWebPermissions, WebPermissions};
 use deno_core::error::AnyError;
-use std::rc::Rc;
+use std::sync::Arc;
 
 type RequestBuilderHook = fn(&mut http::Request<deno_fetch::ReqBody>) -> Result<(), AnyError>;
 
@@ -33,8 +33,11 @@ pub struct WebOptions {
     /// File fetch handler for fetch
     pub file_fetch_handler: std::rc::Rc<dyn deno_fetch::FetchHandler>,
 
-    /// Permissions manager for the web related extensions
-    pub permissions: Rc<dyn WebPermissions>,
+    /// Permissions manager for sandbox-breaking extensions
+    pub permissions: Arc<dyn WebPermissions>,
+
+    /// Blob store for the web related extensions
+    pub blob_store: Arc<deno_web::BlobStore>,
 }
 
 impl Default for WebOptions {
@@ -48,7 +51,8 @@ impl Default for WebOptions {
             unsafely_ignore_certificate_errors: None,
             client_cert_chain_and_key: deno_tls::TlsKeys::Null,
             file_fetch_handler: std::rc::Rc::new(deno_fetch::DefaultFileFetchHandler),
-            permissions: Rc::new(DefaultWebPermissions),
+            permissions: Arc::new(DefaultWebPermissions),
+            blob_store: Arc::new(deno_web::BlobStore::default()),
         }
     }
 }

@@ -1,13 +1,15 @@
 use super::ExtensionTrait;
 use deno_core::{extension, Extension};
-use std::{rc::Rc, sync::Arc};
+use std::sync::Arc;
 
 mod options;
 pub use options::WebOptions;
 
 mod permissions;
 pub(crate) use permissions::PermissionsContainer;
-pub use permissions::{AllowlistWebPermissions, DefaultWebPermissions, WebPermissions};
+pub use permissions::{
+    AllowlistWebPermissions, DefaultWebPermissions, SystemsPermissionKind, WebPermissions,
+};
 
 extension!(
     init_fetch,
@@ -62,7 +64,7 @@ extension!(
     esm_entry_point = "ext:init_web/init_web.js",
     esm = [ dir "src/ext/web", "init_web.js", "init_errors.js" ],
     options = {
-        permissions: Rc<dyn WebPermissions>
+        permissions: Arc<dyn WebPermissions>
     },
     state = |state, config| state.put(PermissionsContainer(config.permissions)),
 );
@@ -75,9 +77,15 @@ impl ExtensionTrait<WebOptions> for init_web {
 impl ExtensionTrait<WebOptions> for deno_web::deno_web {
     fn init(options: WebOptions) -> Extension {
         deno_web::deno_web::init_ops_and_esm::<PermissionsContainer>(
-            Arc::default(),
-            options.base_url.clone(),
+            options.blob_store,
+            options.base_url,
         )
+    }
+}
+
+impl ExtensionTrait<()> for deno_tls::deno_tls {
+    fn init((): ()) -> Extension {
+        deno_tls::deno_tls::init_ops_and_esm()
     }
 }
 
@@ -86,6 +94,7 @@ pub fn extensions(options: WebOptions, is_snapshot: bool) -> Vec<Extension> {
         deno_web::deno_web::build(options.clone(), is_snapshot),
         deno_net::deno_net::build(options.clone(), is_snapshot),
         deno_fetch::deno_fetch::build(options.clone(), is_snapshot),
+        deno_tls::deno_tls::build((), is_snapshot),
         init_web::build(options.clone(), is_snapshot),
         init_net::build(options.clone(), is_snapshot),
         init_fetch::build(options, is_snapshot),
