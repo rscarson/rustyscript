@@ -47,6 +47,19 @@ macro_rules! module {
     };
 }
 
+/// Creates a static module based on a statically included file
+///
+/// # Arguments
+/// * `filename` - A string representing the filename of the module.
+///
+/// See [module] for an example
+#[macro_export]
+macro_rules! include_module {
+    ($filename:literal) => {
+        StaticModule::new($filename, include_str!($filename))
+    };
+}
+
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize, Default)]
 /// Represents a pice of javascript for execution.
 pub struct Module {

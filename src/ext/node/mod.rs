@@ -40,6 +40,20 @@ pub fn extensions(resolver: Arc<RustyResolver>, is_snapshot: bool) -> Vec<Extens
 }
 
 impl NodePermissions for PermissionsContainer {
+    fn check_net(
+        &mut self,
+        host: (&str, Option<u16>),
+        api_name: &str,
+    ) -> Result<(), PermissionCheckError> {
+        self.0.check_host(host.0, host.1, api_name)?;
+        Ok(())
+    }
+
+    fn check_read(&mut self, path: &str) -> Result<std::path::PathBuf, PermissionCheckError> {
+        let p = self.0.check_read(Path::new(path), None)?;
+        Ok(p.into_owned())
+    }
+
     fn check_net_url(
         &mut self,
         url: &reqwest::Url,

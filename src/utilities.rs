@@ -1,7 +1,6 @@
-use reqwest::Url;
-
 use crate::traits::ToModuleSpecifier;
 use crate::{Error, Module, ModuleWrapper, Runtime, RuntimeOptions};
+use deno_core::ModuleSpecifier;
 use std::path::Path;
 
 /// Evaluate a piece of non-ECMAScript-module JavaScript code
@@ -85,6 +84,8 @@ pub fn import(path: &str) -> Result<ModuleWrapper, Error> {
 /// Resolve a path to absolute path, relative to the current working directory
 /// or an optional base directory
 ///
+/// The resulting `ModuleSpecifier` is a wrapper around `reqwest::Url`
+///
 /// # Arguments
 /// * `path` - A path
 /// * `base_dir` - An optional base directory to resolve the path from
@@ -102,7 +103,7 @@ pub fn import(path: &str) -> Result<ModuleWrapper, Error> {
 pub fn resolve_path(
     path: impl AsRef<std::path::Path>,
     base_dir: Option<&Path>,
-) -> Result<Url, Error> {
+) -> Result<ModuleSpecifier, Error> {
     let path = path.as_ref();
     let url = match base_dir {
         Some(dir) => path.to_module_specifier(dir),

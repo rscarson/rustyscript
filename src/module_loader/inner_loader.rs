@@ -10,7 +10,6 @@ use deno_core::futures::FutureExt;
 use deno_core::{
     FastString, ModuleLoadResponse, ModuleSource, ModuleSourceCode, ModuleSpecifier, ModuleType,
 };
-use node_resolver::InNpmPackageChecker;
 use std::cell::RefCell;
 use std::path::PathBuf;
 use std::rc::Rc;
@@ -26,6 +25,8 @@ use crate::ext::node::NodeCodeTranslator;
 use crate::ext::node::RustyResolver;
 #[cfg(feature = "node_experimental")]
 use deno_node::NodeResolver;
+#[cfg(feature = "node_experimental")]
+use node_resolver::InNpmPackageChecker;
 #[cfg(feature = "node_experimental")]
 use node_resolver::{NodeModuleKind, NodeResolutionMode};
 
@@ -324,6 +325,7 @@ impl InnerRustyLoader {
         }
     }
 
+    #[allow(unused_variables)]
     async fn load_file(
         inner: Rc<RefCell<Self>>,
         module_specifier: ModuleSpecifier,

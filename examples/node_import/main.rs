@@ -34,7 +34,7 @@ fn run() -> Result<(), Error> {
     // We set the current directory to the examples/node_import directory
     // so that `node_modules` can be found
     let mut runtime = Runtime::new(RuntimeOptions::default())?;
-    runtime.set_current_dir("examples/node_import");
+    runtime.set_current_dir("examples/node_import")?;
     let module_handle = runtime.load_module(&module)?;
 
     // Now we can call the function we defined in the module

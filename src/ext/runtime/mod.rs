@@ -251,7 +251,6 @@ fn create_web_worker_callback(options: WebWorkerCallbackOptions) -> Arc<CreateWe
             close_on_idle: false,
             maybe_worker_metadata: None,
         };
-
         WebWorker::bootstrap_from_options(services, options)
     })
 }
