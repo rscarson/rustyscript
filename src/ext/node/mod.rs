@@ -88,7 +88,7 @@ impl NodePermissions for PermissionsContainer {
     }
 
     fn check_sys(&mut self, kind: &str, api_name: &str) -> Result<(), PermissionCheckError> {
-        let kind = SystemsPermissionKind::from_str(kind);
+        let kind = SystemsPermissionKind::new(kind);
         self.0.check_sys(kind, api_name)?;
         Ok(())
     }

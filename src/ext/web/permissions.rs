@@ -548,17 +548,26 @@ macro_rules! impl_sys_permission_kinds {
         /// <https://github.com/search?q=repo%3Adenoland%2Fdeno%20check_sys&type=code>
         #[derive(Debug, Clone, PartialEq, Eq, Hash)]
         pub enum SystemsPermissionKind {
-            $( $kind, )+
+            $(
+                #[doc = stringify!($kind)]
+                $kind,
+            )+
+
+            /// A custom permission kind
             Other(String),
         }
         impl SystemsPermissionKind {
-            pub fn from_str(s: &str) -> Self {
+            /// Create a new instance from a string
+            #[must_use]
+            pub fn new(s: &str) -> Self {
                 match s {
                     $( $name => Self::$kind, )+
                     _ => Self::Other(s.to_string()),
                 }
             }
 
+            /// Get the string representation of the permission
+            #[must_use]
             pub fn as_str(&self) -> &str {
                 match self {
                     $( Self::$kind => $name, )+
