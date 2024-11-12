@@ -206,19 +206,19 @@ These functions provide simple one-liner access to common features of this crate
 - `validate`; Validate the syntax of a JS expression
 - `init_platform`; Initialize the V8 platform for multi-threaded applications
 
+Commonly used features have been grouped into the following feature-sets:
+- **`safe_extensions`** - On by default, these extensions are safe to use in a sandboxed environment
+- **`network_extensions`** - These extensions break sandboxing by allowing network connectivity
+- **`io_extensions`** - These extensions break sandboxing by allowing filesystem access (WARNING: Also allows some network access)
+- **`all_extensions`** - All 3 above groups are included
+- **`extra_features`** - Enables the `worker` feature (enabled by default), and the `snapshot_builder` feature
+- **`node_experimental`** - HIGHLY EXPERIMENTAL nodeJS support that enables all available Deno extensions
+
 #### Crate features
 The table below lists the available features for this crate. Features marked at `Preserves Sandbox: NO` break isolation between loaded JS modules and the host system.
 Use with caution.
 
 More details on the features can be found in `Cargo.toml`
-
-Commonly used features have been grouped into the following feature-sets:
-- **safe_extensions** - On by default, these extensions are safe to use in a sandboxed environment
-- **network_extensions** - These extensions break sandboxing by allowing network connectivity
-- **io_extensions** - These extensions break sandboxing by allowing filesystem access (WARNING: Also allows some network access)
-- **all_extensions** - All 3 above groups are included
-- **extra_features** - Enables the `worker` feature (enabled by default), and the `snapshot_builder` feature
-- **node_experimental** - HIGHLY EXPERIMENTAL nodeJS support that enables all available Deno extensions
 
 Please note that the `web` feature will also enable `fs_import` and `url_import`, allowing arbitrary filesystem and network access for import statements
 - This is because the `deno_web` crate allows both fetch and FS reads already

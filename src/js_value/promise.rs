@@ -1,3 +1,5 @@
+use crate::async_bridge::AsyncBridgeExt;
+
 use super::V8Value;
 use deno_core::{
     v8::{self},
@@ -51,7 +53,7 @@ where
     /// Will return an error if the promise cannot be resolved into the given type,
     /// or if a runtime error occurs
     pub fn into_value(self, runtime: &mut crate::Runtime) -> Result<T, crate::Error> {
-        runtime.run_async_task(move |runtime| async move { self.into_future(runtime).await })
+        runtime.block_on(move |runtime| async move { self.into_future(runtime).await })
     }
 }
 
