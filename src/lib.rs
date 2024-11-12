@@ -315,7 +315,10 @@ pub use ext::kv::{KvConfig, KvStore};
 pub use ext::node::RustyResolver;
 
 #[cfg(feature = "web")]
-pub use ext::web::{AllowlistWebPermissions, DefaultWebPermissions, WebOptions, WebPermissions};
+pub use ext::web::{
+    AllowlistWebPermissions, DefaultWebPermissions, SystemsPermissionKind, WebOptions,
+    WebPermissions,
+};
 pub use ext::ExtensionOptions;
 
 // Expose some important stuff from us

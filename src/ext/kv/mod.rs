@@ -4,7 +4,6 @@ use deno_kv::{
     dynamic::MultiBackendDbHandler,
     remote::{RemoteDbHandler, RemoteDbHandlerPermissions},
     sqlite::{SqliteDbHandler, SqliteDbHandlerPermissions},
-    KvConfigBuilder,
 };
 use std::path::PathBuf;
 
@@ -52,9 +51,6 @@ pub struct KvConfig {
     /// Maximum size of a key in bytes
     pub max_write_key_size_bytes: usize,
 
-    /// Maximum size of a key in bytes
-    pub max_read_key_size_bytes: usize,
-
     /// Maximum size of a value in bytes
     pub max_value_size_bytes: usize,
 
@@ -81,19 +77,42 @@ pub struct KvConfig {
 }
 impl From<KvConfig> for deno_kv::KvConfig {
     fn from(value: KvConfig) -> Self {
-        assert_eq!(size_of::<KvConfig>(), size_of::<deno_kv::KvConfig>());
-
-        // Safety: None - this is horrendously unsafe
-        unsafe { std::mem::transmute(value) }
+        deno_kv::KvConfigBuilder::default()
+            .max_write_key_size_bytes(value.max_write_key_size_bytes)
+            .max_value_size_bytes(value.max_value_size_bytes)
+            .max_read_ranges(value.max_read_ranges)
+            .max_read_entries(value.max_read_entries)
+            .max_checks(value.max_checks)
+            .max_mutations(value.max_mutations)
+            .max_watched_keys(value.max_watched_keys)
+            .max_total_mutation_size_bytes(value.max_total_mutation_size_bytes)
+            .max_total_key_size_bytes(value.max_total_key_size_bytes)
+            .build()
     }
 }
 impl Default for KvConfig {
     fn default() -> Self {
-        let cnf = KvConfigBuilder::default().build();
-        assert_eq!(size_of::<KvConfig>(), size_of::<deno_kv::KvConfig>());
+        const MAX_WRITE_KEY_SIZE_BYTES: usize = 2048;
+        const MAX_VALUE_SIZE_BYTES: usize = 65536;
+        const MAX_READ_RANGES: usize = 10;
+        const MAX_READ_ENTRIES: usize = 1000;
+        const MAX_CHECKS: usize = 100;
+        const MAX_MUTATIONS: usize = 1000;
+        const MAX_WATCHED_KEYS: usize = 10;
+        const MAX_TOTAL_MUTATION_SIZE_BYTES: usize = 800 * 1024;
+        const MAX_TOTAL_KEY_SIZE_BYTES: usize = 80 * 1024;
 
-        // Safety: None - this is horrendously unsafe
-        unsafe { std::mem::transmute(cnf) }
+        KvConfig {
+            max_write_key_size_bytes: MAX_WRITE_KEY_SIZE_BYTES,
+            max_value_size_bytes: MAX_VALUE_SIZE_BYTES,
+            max_read_ranges: MAX_READ_RANGES,
+            max_read_entries: MAX_READ_ENTRIES,
+            max_checks: MAX_CHECKS,
+            max_mutations: MAX_MUTATIONS,
+            max_watched_keys: MAX_WATCHED_KEYS,
+            max_total_mutation_size_bytes: MAX_TOTAL_MUTATION_SIZE_BYTES,
+            max_total_key_size_bytes: MAX_TOTAL_KEY_SIZE_BYTES,
+        }
     }
 }
 

@@ -275,6 +275,7 @@ impl<RT: RuntimeTrait> InnerRuntime<RT> {
     }
 
     /// Destroy the `RustyScript` runtime, returning the deno RT instance
+    #[allow(dead_code)]
     pub fn into_inner(self) -> RT {
         self.deno_runtime
     }

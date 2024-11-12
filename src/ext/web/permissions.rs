@@ -1,4 +1,4 @@
-use deno_permissions::{PermissionCheckError, PermissionDeniedError};
+use deno_permissions::{PathResolveError, PermissionCheckError};
 use std::{
     borrow::Cow,
     collections::HashSet,
@@ -26,19 +26,11 @@ impl PermissionDenied {
         Err(Self::new(access, "Not Allowed"))
     }
 }
+
+// Nonsense error for now
 impl From<PermissionDenied> for PermissionCheckError {
     fn from(e: PermissionDenied) -> Self {
-        // Forcibly transmute PermissionDenied into PermissionDeniedError first
-        // First, a static check of the size of the target type is performed
-        // Then, the data is copied from the source type to the target type
-        assert_eq!(
-            std::mem::size_of::<PermissionDenied>(),
-            std::mem::size_of::<PermissionDeniedError>()
-        );
-
-        // Safety: None - this is horrendously unsafe
-        let e: PermissionDeniedError = unsafe { std::mem::transmute(e) };
-        e.into()
+        PermissionCheckError::PathResolve(PathResolveError::EmptyPath)
     }
 }
 
