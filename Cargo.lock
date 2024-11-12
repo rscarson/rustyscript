@@ -4877,7 +4877,7 @@ dependencies = [
 
 [[package]]
 name = "rustyscript"
-version = "0.9.0"
+version = "0.10.0"
 dependencies = [
  "async-trait",
  "base64-simd 0.8.0",
