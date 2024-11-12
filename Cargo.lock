@@ -4906,6 +4906,7 @@ dependencies = [
  "deno_semver",
  "deno_terminal 0.2.0",
  "deno_tls",
+ "deno_unsync",
  "deno_url",
  "deno_web",
  "deno_webgpu",
