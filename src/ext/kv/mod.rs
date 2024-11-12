@@ -82,6 +82,8 @@ pub struct KvConfig {
 impl From<KvConfig> for deno_kv::KvConfig {
     fn from(value: KvConfig) -> Self {
         assert_eq!(size_of::<KvConfig>(), size_of::<deno_kv::KvConfig>());
+
+        // Safety: None - this is horrendously unsafe
         unsafe { std::mem::transmute(value) }
     }
 }
@@ -89,6 +91,8 @@ impl Default for KvConfig {
     fn default() -> Self {
         let cnf = KvConfigBuilder::default().build();
         assert_eq!(size_of::<KvConfig>(), size_of::<deno_kv::KvConfig>());
+
+        // Safety: None - this is horrendously unsafe
         unsafe { std::mem::transmute(cnf) }
     }
 }
