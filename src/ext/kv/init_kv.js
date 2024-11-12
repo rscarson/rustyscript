@@ -1,0 +1,1 @@
+import * as init from 'ext:deno_kv/01_db.ts';
