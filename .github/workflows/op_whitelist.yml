@@ -1,5 +1,4 @@
-name: Default Feature OPs Sandbox Safety Check
-
+name: Sandbox integrity checks
 on:
   push:
     branches: [ master ]
@@ -15,7 +14,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
 
     - name: Run whitelist check for default-feature provided ops
       run: cargo run --bin verify_ops

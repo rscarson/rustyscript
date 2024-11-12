@@ -16,7 +16,11 @@ use node_resolver::{
 };
 use serde::{Deserialize, Serialize};
 use std::{
-    borrow::Cow, collections::HashMap, path::{Path, PathBuf}, rc::Rc, sync::{RwLock, Arc}
+    borrow::Cow,
+    collections::HashMap,
+    path::{Path, PathBuf},
+    rc::Rc,
+    sync::{Arc, RwLock},
 };
 
 use super::cjs_translator::{CjsCodeAnalyzer, NodeCodeTranslator};
@@ -32,7 +36,7 @@ pub struct RustyResolver {
     require_loader: RequireLoader,
     root_node_modules_dir: Option<PathBuf>,
 
-    known: RwLock<HashMap<ModuleSpecifier, bool>>
+    known: RwLock<HashMap<ModuleSpecifier, bool>>,
 }
 impl Default for RustyResolver {
     fn default() -> Self {
@@ -70,17 +74,24 @@ impl RustyResolver {
             require_loader,
             root_node_modules_dir,
 
-            known: RwLock::new(HashMap::new())
+            known: RwLock::new(HashMap::new()),
         }
     }
 
     /// Returns a structure capable of translating CJS to ESM
     #[must_use]
-    pub fn code_translator(self: &Arc<Self>, node_resolver: Arc<NodeResolver>) -> NodeCodeTranslator {
+    pub fn code_translator(
+        self: &Arc<Self>,
+        node_resolver: Arc<NodeResolver>,
+    ) -> NodeCodeTranslator {
         let cjs = CjsCodeAnalyzer::new(self.filesystem(), self.clone());
         NodeCodeTranslator::new(
-            cjs, Self::fs_env(self.filesystem()),
-            self.clone(), node_resolver, self.clone(), self.pjson.clone()
+            cjs,
+            Self::fs_env(self.filesystem()),
+            self.clone(),
+            node_resolver,
+            self.clone(),
+            self.pjson.clone(),
         )
     }
 
@@ -103,27 +114,30 @@ impl RustyResolver {
     /// Resolves an importalias for a given specifier
     pub fn resolve_alias(&self, specifier: &str, referrer: &ModuleSpecifier) -> Option<String> {
         let package = self
-        .package_json_resolver()
-        .get_closest_package_json(referrer).ok()??;
-            let imports = package.imports.as_ref()?;
-            let alias = imports.get(specifier)?;
-            
-            if let Some(obj) = alias.as_object() {
-                if let Some(node) = obj.get("node") {
-                    if let Some(alias) = node.as_str() {
-                        return Some(alias.to_string());
-                    }
-                }
-            } else if let Some(str) = alias.as_str() {
-                return Some(str.to_string());
-            }
+            .package_json_resolver()
+            .get_closest_package_json(referrer)
+            .ok()??;
+        let imports = package.imports.as_ref()?;
+        let alias = imports.get(specifier)?;
 
-            None
+        if let Some(obj) = alias.as_object() {
+            if let Some(node) = obj.get("node") {
+                if let Some(alias) = node.as_str() {
+                    return Some(alias.to_string());
+                }
+            }
+        } else if let Some(str) = alias.as_str() {
+            return Some(str.to_string());
         }
-    
+
+        None
+    }
 
     fn get_known_is_cjs(&self, specifier: &ModuleSpecifier) -> Option<bool> {
-        self.known.read().ok().and_then(|k| k.get(specifier).copied())
+        self.known
+            .read()
+            .ok()
+            .and_then(|k| k.get(specifier).copied())
     }
 
     fn set_is_cjs(&self, specifier: &ModuleSpecifier, value: bool) {
@@ -150,10 +164,10 @@ impl RustyResolver {
             Ok(false)
         }
     }
-    
+
     /// Returns true if the given specifier is a `CommonJS` module
     /// based on the package.json of the module or the specifier itself
-    /// 
+    ///
     /// Used to transpile `CommonJS` modules to ES modules
     pub fn is_cjs(
         &self,
@@ -182,8 +196,7 @@ impl RustyResolver {
                     }
                     value.unwrap_or(true)
                 }
-            } 
-            
+            }
 
             MediaType::JavaScript | MediaType::Jsx | MediaType::TypeScript | MediaType::Tsx
             // treat these as unknown
