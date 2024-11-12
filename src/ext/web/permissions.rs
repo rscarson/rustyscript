@@ -35,6 +35,8 @@ impl From<PermissionDenied> for PermissionCheckError {
             std::mem::size_of::<PermissionDenied>(),
             std::mem::size_of::<PermissionDeniedError>()
         );
+
+        // Safety: The Source and Target types are identical
         let e: PermissionDeniedError = unsafe { std::mem::transmute(e) };
         e.into()
     }
