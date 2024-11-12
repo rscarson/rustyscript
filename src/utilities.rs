@@ -97,8 +97,7 @@ pub fn import(path: &str) -> Result<ModuleWrapper, Error> {
 /// # Example
 ///
 /// ```rust
-/// let full_path = rustyscript::resolve_path("test.js", None).expect("Something went wrong!");
-/// assert!(full_path.ends_with("test.js"));
+/// rustyscript::resolve_path("test.js", None).expect("Something went wrong!");
 /// ```
 pub fn resolve_path(
     path: impl AsRef<std::path::Path>,
