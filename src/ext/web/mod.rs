@@ -8,7 +8,8 @@ pub use options::WebOptions;
 mod permissions;
 pub(crate) use permissions::PermissionsContainer;
 pub use permissions::{
-    AllowlistWebPermissions, DefaultWebPermissions, SystemsPermissionKind, WebPermissions,
+    AllowlistWebPermissions, DefaultWebPermissions, PermissionDenied, SystemsPermissionKind,
+    WebPermissions,
 };
 
 extension!(
