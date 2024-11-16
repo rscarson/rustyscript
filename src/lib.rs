@@ -317,7 +317,7 @@ pub use ext::node::RustyResolver;
 #[cfg(feature = "web")]
 pub use ext::web::{
     AllowlistWebPermissions, DefaultWebPermissions, SystemsPermissionKind, WebOptions,
-    WebPermissions,
+    WebPermissions, PermissionDenied
 };
 pub use ext::ExtensionOptions;
 
