@@ -11,10 +11,14 @@ use std::{
 /// This type is needed since `deno_permissions` does not expose any way to
 /// externally create a `PermissionCheckError`
 pub struct PermissionDenied {
+    /// The resource being accessed
     pub access: String,
+
+    /// The reason or kind of denial
     pub name: &'static str,
 }
 impl PermissionDenied {
+    /// Create a new error
     pub fn new(access: impl ToString, reason: &'static str) -> Self {
         Self {
             access: access.to_string(),
@@ -22,6 +26,7 @@ impl PermissionDenied {
         }
     }
 
+    /// Resolved to an Err(Self) with a generic "Not Allowed" message
     pub fn oops<T>(access: impl ToString) -> Result<T, Self> {
         Err(Self::new(access, "Not Allowed"))
     }
