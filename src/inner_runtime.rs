@@ -6,8 +6,8 @@ use crate::{
     utilities, Error, ExtensionOptions, Module, ModuleHandle,
 };
 use deno_core::{
-    futures::FutureExt, serde_json, serde_v8::from_v8, v8, JsRuntime, JsRuntimeForSnapshot,
-    PollEventLoopOptions,
+    futures::FutureExt, serde_json, serde_v8::from_v8, v8, FeatureChecker, JsRuntime,
+    JsRuntimeForSnapshot, PollEventLoopOptions,
 };
 use serde::de::DeserializeOwned;
 use std::{
@@ -152,7 +152,8 @@ pub struct RuntimeOptions {
     /// Allows data-sharing between runtimes across threads
     pub shared_array_buffer_store: Option<deno_core::SharedArrayBufferStore>,
 
-    /// A whitelist of custom schema prefixes that are allowed to be loaded
+    /// A whitelist of custom schema prefixes that are allowed to be loaded from javascript
+    /// By default only `http`/`https` (`url_import` crate feature), and `file` (`fs_import` crate feature) are allowed
     pub schema_whlist: HashSet<String>,
 }
 
@@ -234,8 +235,13 @@ impl<RT: RuntimeTrait> InnerRuntime<RT> {
             }
         };
 
+        let mut feature_checker = FeatureChecker::default();
+        feature_checker.set_exit_cb(Box::new(|_, _| {}));
+
         let mut deno_runtime = RT::try_new(deno_core::RuntimeOptions {
             module_loader: Some(module_loader.clone()),
+
+            feature_checker: Some(feature_checker.into()),
 
             extension_transpiler: Some(module_loader.as_extension_transpiler()),
             create_params: isolate_params,

@@ -11,6 +11,8 @@ applyToGlobal({
     clearTimeout: writeable(timers.clearTimeout),
     setInterval: writeable(timers.setInterval),
     setTimeout: writeable(timers.setTimeout),
+    refTimer: writeable(timers.refTimer),
+    unrefTimer: writeable(timers.unrefTimer),
 
     atob: writeable(base64.atob),
     btoa: writeable(base64.btoa),

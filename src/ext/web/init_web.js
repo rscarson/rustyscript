@@ -88,6 +88,12 @@ applyToGlobal({
     reportError: writeable(event.reportError),
     setInterval: writeable(timers.setInterval),
     setTimeout: writeable(timers.setTimeout),
+    refTimer: writeable(timers.refTimer),
+    setImmediate: writeable(timers.setImmediate),
+    setInterval: writeable(timers.setInterval),
+    setTimeout: writeable(timers.setTimeout),
+    unrefTimer: writeable(timers.unrefTimer),
+  
     structuredClone: writeable(messagePort.structuredClone),
     ImageData: nonEnumerable(imageData.ImageData),
 });

@@ -31,7 +31,9 @@ extension!(
     state = |state| {
         let options = BootstrapOptions {
             no_color: false,
-            args: vec!["--colors".to_string()],
+            args: vec![
+                "--colors".to_string(),
+            ],
             ..BootstrapOptions::default()
         };
         state.put(options);
@@ -193,6 +195,9 @@ fn create_web_worker_callback(options: WebWorkerCallbackOptions) -> Arc<CreateWe
 
         let create_web_worker_cb = create_web_worker_callback(options.clone());
 
+        let mut feature_checker = FeatureChecker::default();
+        feature_checker.set_exit_cb(Box::new(|_, _| {}));
+
         let services = WebWorkerServiceOptions {
             root_cert_store_provider: options.root_cert_store_provider.clone(),
             module_loader,
@@ -203,7 +208,7 @@ fn create_web_worker_callback(options: WebWorkerCallbackOptions) -> Arc<CreateWe
             shared_array_buffer_store: options.shared_array_buffer_store.clone(),
             compiled_wasm_module_store: None,
             maybe_inspector_server: None,
-            feature_checker: Arc::new(FeatureChecker::default()),
+            feature_checker: feature_checker.into(),
             npm_process_state_provider: Some(node_resolver.clone()),
             permissions: args.permissions,
         };

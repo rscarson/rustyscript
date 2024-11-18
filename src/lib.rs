@@ -305,6 +305,38 @@ pub use deno_core;
 pub use deno_core::serde_json;
 pub use tokio;
 
+/// Re-exports of the deno extension crates used by this library
+pub mod extensions {
+    #[cfg(feature = "broadcast_channel")]
+    pub use deno_broadcast_channel;
+    #[cfg(feature = "cache")]
+    pub use deno_cache;
+    #[cfg(feature = "console")]
+    pub use deno_console;
+    #[cfg(feature = "cron")]
+    pub use deno_cron;
+    #[cfg(feature = "crypto")]
+    pub use deno_crypto;
+    #[cfg(feature = "ffi")]
+    pub use deno_ffi;
+    #[cfg(feature = "fs")]
+    pub use deno_fs;
+    #[cfg(feature = "http")]
+    pub use deno_http;
+    #[cfg(feature = "io")]
+    pub use deno_io;
+    #[cfg(feature = "kv")]
+    pub use deno_kv;
+    #[cfg(feature = "url")]
+    pub use deno_url;
+    #[cfg(feature = "webgpu")]
+    pub use deno_webgpu;
+    #[cfg(feature = "websocket")]
+    pub use deno_websocket;
+    #[cfg(feature = "webstorage")]
+    pub use deno_webstorage;
+}
+
 #[cfg(feature = "web")]
 pub use deno_tls;
 

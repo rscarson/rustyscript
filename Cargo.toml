@@ -1,5 +1,6 @@
 [package]
 name = "rustyscript"
+authors = ["@rscarson"]
 description = "Effortless JS Integration for Rust"
 edition = "2021"
 license = "MIT OR Apache-2.0"
@@ -63,8 +64,8 @@ node_experimental = [
 # By disabling this feature, you can opt out of the web stub extension, and the webidl extension
 #
 # The primary use-case for this is for creating a runtime using a deno_core version incompatible with the deno extensions
-# And for the sake of those googling it:
-# `setTimeout is not enabled in this environment` is happening because neither this feature nor the web feature are enabled
+#
+# Note that by turning off both web_stub and web, btoa/atob and timer APIs will not be available
 web_stub = ["webidl", "base64-simd"]
 
 #
@@ -235,6 +236,9 @@ checksum      = { version = "0.2.1", optional = true }
 [dev-dependencies]
 version-sync = "0.9.5"
 criterion = "0.5.1"
+
+[package.metadata.docs.rs]
+all-features = true
 
 [[example]]
 name = "custom_threaded_worker"

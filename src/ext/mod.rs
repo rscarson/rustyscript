@@ -114,10 +114,11 @@ pub struct ExtensionOptions {
     /// Shared in-memory broadcast channel for the `deno_broadcast_channel` extension
     /// Also used by `WebWorker` to communicate with the main thread, if node is enabled
     #[cfg(feature = "broadcast_channel")]
-    broadcast_channel: deno_broadcast_channel::InMemoryBroadcastChannel,
+    pub broadcast_channel: deno_broadcast_channel::InMemoryBroadcastChannel,
 
+    /// Key-value store for the `deno_kv` extension
     #[cfg(feature = "kv")]
-    kv_store: kv::KvStore,
+    pub kv_store: kv::KvStore,
 
     /// Package resolver for the `deno_node` extension
     /// `RustyResolver` allows you to select the base dir for modules
