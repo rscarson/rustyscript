@@ -253,6 +253,21 @@ where
         self.rx.recv().map_err(|e| Error::Runtime(e.to_string()))
     }
 
+    /// Try to receive a response from the worker without blocking
+    /// This will return `Ok(None)` if no response is available
+    ///
+    /// # Errors
+    /// Will return an error if the worker has already been stopped, or if the worker thread panicked
+    pub fn try_receive(&self) -> Result<Option<W::Response>, Error> {
+        match self.rx.try_recv() {
+            Ok(v) => Ok(Some(v)),
+            Err(e) => match e {
+                std::sync::mpsc::TryRecvError::Empty => Ok(None),
+                std::sync::mpsc::TryRecvError::Disconnected => Err(Error::Runtime(e.to_string())),
+            },
+        }
+    }
+
     /// Send a request to the worker and wait for a response
     /// This will block the current thread until a response is received
     /// Will return an error if the worker has stopped or panicked
@@ -591,6 +606,11 @@ impl DefaultWorker {
                 "Unexpected response from the worker".to_string(),
             )),
         }
+    }
+}
+impl AsRef<Worker<DefaultWorker>> for DefaultWorker {
+    fn as_ref(&self) -> &Worker<DefaultWorker> {
+        &self.0
     }
 }
 
