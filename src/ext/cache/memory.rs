@@ -61,39 +61,51 @@ struct CacheEntry {
 }
 
 #[derive(Clone)]
-pub struct InMemoryCache {
-    next_id: RefCell<i64>,
-    entries: RefCell<Vec<CacheEntry>>,
+pub struct InnerInMemoryCache {
+    next_id: i64,
+    entries: Vec<CacheEntry>,
 }
 
-impl Default for InMemoryCache {
+impl Default for InnerInMemoryCache {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl InMemoryCache {
+impl InnerInMemoryCache {
     pub fn new() -> Self {
         Self {
-            next_id: RefCell::new(1),
-            entries: RefCell::new(Vec::new()),
+            next_id: 1,
+            entries: Vec::new(),
         }
     }
 
-    pub fn insert(&self, name: String) -> i64 {
-        let id = {
-            let mut id = self.next_id.borrow_mut();
-            *id += 1;
-
-            *id
-        };
-
-        self.entries.borrow_mut().push(CacheEntry {
+    pub fn insert(&mut self, name: String) -> i64 {
+        let id = self.next_id;
+        self.next_id += 1;
+        self.entries.push(CacheEntry {
             id,
             name,
             entries: Vec::new(),
         });
         id
+    }
+}
+
+#[derive(Clone)]
+pub struct InMemoryCache {
+    inner: Rc<RefCell<InnerInMemoryCache>>,
+}
+impl InMemoryCache {
+    pub fn new() -> Self {
+        Self {
+            inner: Rc::new(RefCell::new(InnerInMemoryCache::new())),
+        }
+    }
+}
+impl Default for InMemoryCache {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -112,13 +124,14 @@ impl Cache for InMemoryCache {
         Self: 'async_trait,
     {
         Box::pin(async move {
-            let cache = self.entries.borrow();
-            let cache = cache.iter().find(|entry| entry.name == cache_name);
+            let inner = self.inner.clone();
+            let mut inner = inner.borrow_mut();
 
+            let cache = inner.entries.iter().find(|entry| entry.name == cache_name);
             if let Some(cache) = cache {
                 Ok(cache.id)
             } else {
-                Ok(self.insert(cache_name))
+                Ok(inner.insert(cache_name))
             }
         })
     }
@@ -135,8 +148,10 @@ impl Cache for InMemoryCache {
         Self: 'async_trait,
     {
         Box::pin(async move {
-            let cache = self.entries.borrow();
-            let cache = cache.iter().find(|entry| entry.name == cache_name);
+            let inner = self.inner.clone();
+            let inner = inner.borrow();
+
+            let cache = inner.entries.iter().find(|entry| entry.name == cache_name);
             Ok(cache.is_some())
         })
     }
@@ -153,11 +168,13 @@ impl Cache for InMemoryCache {
         Self: 'async_trait,
     {
         Box::pin(async move {
-            let cache = self.entries.borrow();
-            let cache = cache.iter().find(|entry| entry.name == cache_name);
+            let inner = self.inner.clone();
+            let mut inner = inner.borrow_mut();
+
+            let cache = inner.entries.iter().find(|entry| entry.name == cache_name);
             let id = cache.map(|entry| entry.id);
             if let Some(id) = id {
-                self.entries.borrow_mut().retain(|entry| entry.id != id);
+                inner.entries.retain(|entry| entry.id != id);
                 Ok(true)
             } else {
                 Ok(false)
@@ -178,8 +195,11 @@ impl Cache for InMemoryCache {
         Self: 'async_trait,
     {
         Box::pin(async move {
-            let mut cache = self.entries.borrow_mut();
-            let cache = cache
+            let inner = self.inner.clone();
+            let mut inner = inner.borrow_mut();
+
+            let cache = inner
+                .entries
                 .iter_mut()
                 .find(|entry| entry.id == request_response.cache_id);
 
@@ -226,8 +246,13 @@ impl Cache for InMemoryCache {
         Self: 'async_trait,
     {
         Box::pin(async move {
-            let cache = self.entries.borrow();
-            let cache = cache.iter().find(|entry| entry.id == request.cache_id);
+            let inner = self.inner.clone();
+            let inner = inner.borrow();
+
+            let cache = inner
+                .entries
+                .iter()
+                .find(|entry| entry.id == request.cache_id);
 
             if let Some(cache) = cache {
                 let entry = cache
@@ -267,8 +292,13 @@ impl Cache for InMemoryCache {
         Self: 'async_trait,
     {
         Box::pin(async move {
-            let mut cache = self.entries.borrow_mut();
-            let cache = cache.iter_mut().find(|entry| entry.id == request.cache_id);
+            let inner = self.inner.clone();
+            let mut inner = inner.borrow_mut();
+
+            let cache = inner
+                .entries
+                .iter_mut()
+                .find(|entry| entry.id == request.cache_id);
             if let Some(cache) = cache {
                 let matches = cache
                     .entries

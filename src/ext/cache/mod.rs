@@ -31,3 +31,29 @@ pub fn extensions(
         init_cache::build((), is_snapshot),
     ]
 }
+
+#[cfg(test)]
+mod test {
+    use crate::{Module, Runtime, RuntimeOptions};
+
+    #[test]
+    fn test_default_mem_cache() {
+        let mut runtime = Runtime::new(RuntimeOptions::default()).unwrap();
+        let module = Module::new(
+            "test.js",
+            "
+                let cache = await caches.open('my_cache');
+
+                fetch('http://web.simmons.edu/').then((response) => {
+                    cache.put('http://web.simmons.edu/', response);
+                });
+
+                cache.match('http://web.simmons.edu/').then((response) => {
+                    console.log('Got response from cache!');
+                });
+            ",
+        );
+
+        runtime.load_module(&module).unwrap();
+    }
+}
