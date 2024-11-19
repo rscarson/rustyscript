@@ -81,10 +81,13 @@ impl InMemoryCache {
     }
 
     pub fn insert(&self, name: String) -> i64 {
-        let mut id = self.next_id.borrow_mut();
-        *id += 1;
+        let id = {
+            let mut id = self.next_id.borrow_mut();
+            *id += 1;
 
-        let id = *id;
+            *id
+        };
+
         self.entries.borrow_mut().push(CacheEntry {
             id,
             name,
