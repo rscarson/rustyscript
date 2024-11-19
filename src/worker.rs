@@ -468,6 +468,12 @@ impl DefaultWorker {
         Worker::new(options).map(Self)
     }
 
+    /// Get a reference to the underlying worker instance
+    #[must_use]
+    pub fn as_worker(&self) -> &Worker<DefaultWorker> {
+        &self.0
+    }
+
     /// Evaluate a string of javascript code
     /// Returns the result of the evaluation
     ///
