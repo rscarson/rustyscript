@@ -635,6 +635,7 @@ pub struct DefaultWorkerOptions {
 }
 
 /// Query types for the default worker
+#[derive(Debug, Clone)]
 pub enum DefaultWorkerQuery {
     /// Evaluates a string of javascript code
     Eval(String),
@@ -660,6 +661,7 @@ pub enum DefaultWorkerQuery {
 }
 
 /// Response types for the default worker
+#[derive(Debug, Clone)]
 pub enum DefaultWorkerResponse {
     /// A successful response with a value
     Value(crate::serde_json::Value),
