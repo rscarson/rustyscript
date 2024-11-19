@@ -12,7 +12,7 @@ categories = ["web-programming", "network-programming", "api-bindings", "compile
 readme = "readme.md"
 
 [features]
-default = ["worker", "safe_extensions", "cache"]
+default = ["worker", "safe_extensions"]
 
 #
 # Feature groups
