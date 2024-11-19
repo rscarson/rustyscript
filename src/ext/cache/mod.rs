@@ -1,6 +1,10 @@
 use super::ExtensionTrait;
 use deno_core::{extension, Extension};
 
+mod cache_backend;
+mod memory;
+pub use cache_backend::CacheBackend;
+
 extension!(
     init_cache,
     deps = [rustyscript],
@@ -12,16 +16,14 @@ impl ExtensionTrait<()> for init_cache {
         init_cache::init_ops_and_esm()
     }
 }
-impl ExtensionTrait<Option<deno_cache::CreateCache<deno_cache::SqliteBackedCache>>>
-    for deno_cache::deno_cache
-{
-    fn init(options: Option<deno_cache::CreateCache<deno_cache::SqliteBackedCache>>) -> Extension {
-        deno_cache::deno_cache::init_ops_and_esm::<deno_cache::SqliteBackedCache>(options)
+impl ExtensionTrait<Option<deno_cache::CreateCache<CacheBackend>>> for deno_cache::deno_cache {
+    fn init(options: Option<deno_cache::CreateCache<CacheBackend>>) -> Extension {
+        deno_cache::deno_cache::init_ops_and_esm::<CacheBackend>(options)
     }
 }
 
 pub fn extensions(
-    options: Option<deno_cache::CreateCache<deno_cache::SqliteBackedCache>>,
+    options: Option<deno_cache::CreateCache<CacheBackend>>,
     is_snapshot: bool,
 ) -> Vec<Extension> {
     vec![

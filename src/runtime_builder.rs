@@ -1,6 +1,5 @@
-use crate::{Error, RuntimeOptions};
-
 use crate::module_loader::ImportProvider;
+use crate::{Error, RuntimeOptions};
 
 /// A builder for creating a new runtime
 /// Just a helper wrapper around `RuntimeOptions` for `Runtime` and `SnapshotBuilder`
@@ -138,10 +137,7 @@ impl RuntimeBuilder {
     /// Set the options for the cache extension
     #[cfg(feature = "cache")]
     #[must_use]
-    pub fn with_cache(
-        mut self,
-        cache: deno_cache::CreateCache<deno_cache::SqliteBackedCache>,
-    ) -> Self {
+    pub fn with_cache(mut self, cache: deno_cache::CreateCache<crate::CacheBackend>) -> Self {
         self.0.extension_options.cache = Some(cache);
         self
     }

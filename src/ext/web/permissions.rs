@@ -27,6 +27,9 @@ impl PermissionDenied {
     }
 
     /// Resolved to an Err(Self) with a generic "Not Allowed" message
+    ///
+    /// # Errors
+    /// Always returns an error
     pub fn oops<T>(access: impl ToString) -> Result<T, Self> {
         Err(Self::new(access, "Not Allowed"))
     }

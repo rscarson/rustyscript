@@ -343,6 +343,9 @@ pub use deno_tls;
 #[cfg(feature = "kv")]
 pub use ext::kv::{KvConfig, KvStore};
 
+#[cfg(feature = "cache")]
+pub use ext::cache::CacheBackend;
+
 #[cfg(feature = "node_experimental")]
 pub use ext::node::RustyResolver;
 

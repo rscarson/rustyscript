@@ -105,7 +105,7 @@ pub struct ExtensionOptions {
 
     /// Optional cache configuration for the `deno_cache` extension
     #[cfg(feature = "cache")]
-    pub cache: Option<deno_cache::CreateCache<deno_cache::SqliteBackedCache>>,
+    pub cache: Option<deno_cache::CreateCache<cache::CacheBackend>>,
 
     /// Filesystem implementation for the `deno_fs` extension
     #[cfg(feature = "fs")]
@@ -143,7 +143,9 @@ impl Default for ExtensionOptions {
             webstorage_origin_storage_dir: None,
 
             #[cfg(feature = "cache")]
-            cache: None,
+            cache: Some(deno_cache::CreateCache(std::sync::Arc::new(|| {
+                Ok(cache::CacheBackend::new_memory())
+            }))),
 
             #[cfg(feature = "fs")]
             filesystem: std::sync::Arc::new(deno_fs::RealFs),
