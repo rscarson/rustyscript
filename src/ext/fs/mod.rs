@@ -88,7 +88,7 @@ impl deno_fs::FsPermissions for PermissionsContainer {
         path: &str,
         api_name: &str,
     ) -> Result<std::path::PathBuf, PermissionCheckError> {
-        self.0.check_write_all(Some(api_name))?;
+        self.0.check_write_all(api_name)?;
         let p = self
             .0
             .check_write(Path::new(path), Some(api_name))
@@ -101,7 +101,7 @@ impl deno_fs::FsPermissions for PermissionsContainer {
         path: &'a std::path::Path,
         api_name: &str,
     ) -> Result<std::borrow::Cow<'a, std::path::Path>, PermissionCheckError> {
-        self.0.check_write_all(Some(api_name))?;
+        self.0.check_write_all(api_name)?;
         let p = self.0.check_write(path, Some(api_name))?;
         Ok(p)
     }
@@ -111,13 +111,13 @@ impl deno_fs::FsPermissions for PermissionsContainer {
         path: &str,
         api_name: &str,
     ) -> Result<std::path::PathBuf, PermissionCheckError> {
-        self.0.check_write_all(Some(api_name))?;
+        self.0.check_write_all(api_name)?;
         let p = self.0.check_write_partial(path, api_name)?;
         Ok(p)
     }
 
     fn check_write_all(&mut self, api_name: &str) -> Result<(), PermissionCheckError> {
-        self.0.check_write_all(Some(api_name))?;
+        self.0.check_write_all(api_name)?;
         Ok(())
     }
 
@@ -127,7 +127,7 @@ impl deno_fs::FsPermissions for PermissionsContainer {
         display: &str,
         api_name: &str,
     ) -> Result<(), PermissionCheckError> {
-        self.0.check_write_all(Some(api_name))?;
+        self.0.check_write_all(api_name)?;
         self.0.check_write_blind(p, display, api_name)?;
         Ok(())
     }
