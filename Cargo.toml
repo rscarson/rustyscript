@@ -162,7 +162,7 @@ async-trait = "0.1.83"
 paste = "1.0.15"
 
 # The deno runtime itself, and the webidl extension for the web APIs
-deno_core = "0.318.0"
+deno_core = "0.321.0"
 deno_unsync = "0.4.1"
 
 # For transpiling typescript
