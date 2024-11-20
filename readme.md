@@ -16,7 +16,7 @@ I also have attempted to abstract away the v8 engine details so you can for the 
 
 ###### Sandboxed
 By default, the code being run is entirely sandboxed from the host, having no filesystem or network access.
-[extensions](../extensions) can be added to grant additional capabilities that may violate sandboxing
+[extensions](https://rscarson.github.io/rustyscript-book/extensions) can be added to grant additional capabilities that may violate sandboxing
 
 ###### Flexible
 The runtime is designed to be as flexible as possible, allowing you to modify capabilities, the module loader, and more.  
