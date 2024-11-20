@@ -143,9 +143,7 @@ impl Default for ExtensionOptions {
             webstorage_origin_storage_dir: None,
 
             #[cfg(feature = "cache")]
-            cache: Some(deno_cache::CreateCache(std::sync::Arc::new(|| {
-                Ok(cache::CacheBackend::new_memory())
-            }))),
+            cache: Some(cache::CacheBackend::new_memory()),
 
             #[cfg(feature = "fs")]
             filesystem: std::sync::Arc::new(deno_fs::RealFs),

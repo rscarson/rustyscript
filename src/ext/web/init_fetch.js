@@ -17,3 +17,6 @@ applyToGlobal({
     FormData: nonEnumerable(formData.FormData),
     EventSource: nonEnumerable(eventSource.EventSource)
 });
+
+globalThis.Deno.HttpClient = httpClient.HttpClient;
+globalThis.Deno.createHttpClient = httpClient.createHttpClient;

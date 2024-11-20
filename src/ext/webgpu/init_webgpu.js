@@ -1,6 +1,11 @@
 import * as init from 'ext:deno_webgpu/00_init.js';
 //import * as webgpu from 'ext:deno_webgpu/01_webgpu.js';
 import * as webgpuSurface from 'ext:deno_webgpu/02_surface.js';
+
+globalThis.Deno.UnsafeWindowSurface = webgpuSurface.UnsafeWindowSurface;
+
+
+
 /*
 import { applyToGlobal, nonEnumerable } from 'ext:rustyscript/rustyscript.js';
 applyToGlobal({

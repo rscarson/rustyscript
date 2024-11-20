@@ -22,9 +22,9 @@ pub struct WebOptions {
     /// Request builder hook for fetch
     pub request_builder_hook: Option<RequestBuilderHook>,
 
-    /// If true, fetches and network OPs will ignore SSL errors
+    /// List of domain names or IP addresses for which
+    /// fetches and network OPs will ignore SSL errors
     /// This is useful for testing with self-signed certificates
-    /// Entries in this list should be domain names or IP addresses
     pub unsafely_ignore_certificate_errors: Option<Vec<String>>,
 
     /// Client certificate and key for fetch

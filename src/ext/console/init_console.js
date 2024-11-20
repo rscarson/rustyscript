@@ -6,3 +6,5 @@ applyToGlobal({
       new _console.Console((msg, level) => globalThis.Deno.core.print(msg, level > 1)),
     ),
 });
+
+globalThis.Deno.inspect = _console.inspect;

@@ -19,6 +19,9 @@ import * as imageData from 'ext:deno_web/16_image_data.js';
 
 import * as errors from 'ext:init_web/init_errors.js';
 
+globalThis.Deno.refTimer = timers.refTimer;
+globalThis.Deno.unrefTimer = timers.unrefTimer;
+
 import { applyToGlobal, nonEnumerable, writeable } from 'ext:rustyscript/rustyscript.js';
 applyToGlobal({
     AbortController: nonEnumerable(abortSignal.AbortController),

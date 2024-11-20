@@ -3,10 +3,10 @@
 use super::memory::{InMemoryCache, MyResource};
 use deno_cache::{
     Cache, CacheDeleteRequest, CacheError, CacheMatchRequest, CacheMatchResponseMeta,
-    CachePutRequest, SqliteBackedCache,
+    CachePutRequest, CreateCache, SqliteBackedCache,
 };
 use deno_core::Resource;
-use std::{path::Path, rc::Rc};
+use std::{path::Path, rc::Rc, sync::Arc};
 
 type SqliteMeta = <SqliteBackedCache as Cache>::CacheMatchResourceType;
 pub enum ResourceType {
@@ -197,12 +197,6 @@ impl Cache for CacheBackend {
     }
 }
 
-impl Default for CacheBackend {
-    fn default() -> Self {
-        Self::new_memory()
-    }
-}
-
 impl CacheBackend {
     /// Create a persistent cache backend that stores data in a sqlite database
     ///
@@ -211,14 +205,19 @@ impl CacheBackend {
     ///
     /// # Errors
     /// Will return an error if the sqlite database cannot be created
-    pub fn new_sqlite(dir: impl AsRef<Path>) -> Result<Self, CacheError> {
-        let inner = deno_cache::SqliteBackedCache::new(dir.as_ref().to_path_buf())?;
-        Ok(Self::Sqlite(inner))
+    pub fn new_sqlite(dir: impl AsRef<Path>) -> Result<CreateCache<Self>, CacheError> {
+        let dir = dir.as_ref().to_path_buf();
+        let f = move || {
+            let inner = deno_cache::SqliteBackedCache::new(dir.clone())?;
+            Ok(Self::Sqlite(inner))
+        };
+        Ok(CreateCache(Arc::new(f)))
     }
 
     /// Create a new cache backend that stores data in memory
     #[must_use]
-    pub fn new_memory() -> Self {
-        Self::Memory(InMemoryCache::new())
+    pub fn new_memory() -> CreateCache<Self> {
+        let f = || Ok(Self::Memory(InMemoryCache::new()));
+        CreateCache(Arc::new(f))
     }
 }
