@@ -1,7 +1,7 @@
-//! rustyscript provides a quick and simple way to integrate a runtime javascript or typescript component from within Rust.  
+//! rustyscript provides a quick and simple way to integrate a runtime javascript or typescript component from within Rust.
 //! It uses the v8 engine through the `deno_core`
 //!
-//! I also have attempted to abstract away the v8 engine details so you can for the most part operate directly on rust types.
+//! I have attempted to abstract away the v8 engine details so you can for the most part operate directly on rust types.
 //!
 //! ### Sandboxed
 //! By default, the code being run is entirely sandboxed from the host, having no filesystem or network access.
@@ -17,10 +17,12 @@
 //! Rustyscript is designed to be a thin wrapper over the Deno runtime, to remove potential pitfalls and simplify the API
 //! without sacrificing flexibility or performance.
 //!
+//! -----
+//!
 //! A draft version of the rustyscript user guide can be found here:
 //! <https://rscarson.github.io/rustyscript-book/>
 //!
-//! ----
+//! -----
 //!
 //! Here is a very basic use of this crate to execute a JS module. It will:
 //! - Create a basic runtime
@@ -275,8 +277,6 @@
 //! ----
 //!
 //! For an example of this crate in use, see [Lavendeux](https://github.com/rscarson/lavendeux)
-//!
-//! Please also check out [@Bromeon/js_sandbox](https://github.com/Bromeon/js-sandbox), another great crate in this niche
 //!
 #![warn(missing_docs)]
 #![warn(clippy::pedantic)]
