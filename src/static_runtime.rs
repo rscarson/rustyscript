@@ -11,7 +11,7 @@
 ///     MY_DEFAULT_RUNTIME.with(|rt| {
 ///         let mut lock = rt.lock()?;
 ///         lock.runtime().eval::<()>("console.log('Hello, world!')")
-///     }
+///     })
 /// }
 /// ```
 ///
@@ -73,7 +73,7 @@ impl<'a> StaticRuntimeLock<'a> {
 ///     MY_DEFAULT_RUNTIME.with(|rt| {
 ///         let mut lock = rt.lock()?;
 ///         lock.runtime().eval::<()>("console.log('Hello, world!')")
-///     }
+///     })
 /// }
 /// ```
 ///
@@ -168,6 +168,7 @@ impl StaticRuntime {
 /// # Example
 /// ```rust
 /// use rustyscript::{static_runtime, RuntimeOptions};
+/// use std::time::Duration;
 ///
 /// static_runtime!(MY_DEFAULT_RUNTIME);
 ///
