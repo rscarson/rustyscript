@@ -49,9 +49,20 @@ impl RustyLoader {
         self.inner_mut().add_source_map(file_name, code, source_map);
     }
 
+    /// Get an extension transpiler that can be injected into a `deno_core::JsRuntime`
     pub fn as_extension_transpiler(self: &Rc<Self>) -> ExtensionTranspiler {
         let loader = self.clone();
         Rc::new(move |specifier, code| loader.inner().transpile_extension(&specifier, &code))
+    }
+
+    /// Transpile a module from CJS to ESM
+    pub async fn translate_cjs(
+        &self,
+        specifier: &ModuleSpecifier,
+        source: &str,
+    ) -> Result<String, Error> {
+        InnerRustyLoader::translate_cjs(self.inner.clone(), specifier.clone(), source.to_string())
+            .await
     }
 }
 
