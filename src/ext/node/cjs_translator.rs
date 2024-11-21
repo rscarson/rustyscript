@@ -18,7 +18,7 @@ use serde::Serialize;
 use super::RustyResolver;
 
 pub type NodeCodeTranslator =
-    node_resolver::analyze::NodeCodeTranslator<CjsCodeAnalyzer, DenoFsNodeResolverEnv>;
+    node_resolver::analyze::NodeCodeTranslator<RustyCjsCodeAnalyzer, DenoFsNodeResolverEnv>;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum CjsAnalysis {
@@ -30,14 +30,33 @@ pub enum CjsAnalysis {
         reexports: Vec<String>,
     },
 }
+impl<'a> From<ExtNodeCjsAnalysis<'a>> for CjsAnalysis {
+    fn from(analysis: ExtNodeCjsAnalysis) -> Self {
+        match analysis {
+            ExtNodeCjsAnalysis::Esm(_) => CjsAnalysis::Esm,
+            ExtNodeCjsAnalysis::Cjs(analysis) => CjsAnalysis::Cjs {
+                exports: analysis.exports,
+                reexports: analysis.reexports,
+            },
+        }
+    }
+}
+impl From<deno_ast::CjsAnalysis> for CjsAnalysis {
+    fn from(analysis: deno_ast::CjsAnalysis) -> Self {
+        Self::Cjs {
+            exports: analysis.exports,
+            reexports: analysis.reexports,
+        }
+    }
+}
 
-pub struct CjsCodeAnalyzer {
+pub struct RustyCjsCodeAnalyzer {
     fs: deno_fs::FileSystemRc,
     cache: RefCell<HashMap<String, CjsAnalysis>>,
     cjs_tracker: Arc<RustyResolver>,
 }
 
-impl CjsCodeAnalyzer {
+impl RustyCjsCodeAnalyzer {
     pub fn new(fs: deno_fs::FileSystemRc, cjs_tracker: Arc<RustyResolver>) -> Self {
         Self {
             fs,
@@ -76,11 +95,7 @@ impl CjsCodeAnalyzer {
             .cjs_tracker
             .is_cjs(parsed_source.specifier(), media_type, is_script);
         let analysis = if is_cjs {
-            let analysis = parsed_source.analyze_cjs();
-            CjsAnalysis::Cjs {
-                exports: analysis.exports,
-                reexports: analysis.reexports,
-            }
+            parsed_source.analyze_cjs().into()
         } else {
             CjsAnalysis::Esm
         };
@@ -91,10 +106,27 @@ impl CjsCodeAnalyzer {
 
         Ok(analysis)
     }
+
+    fn analyze_cjs<'a>(
+        &self,
+        specifier: &ModuleSpecifier,
+        source: Cow<'a, str>,
+    ) -> Result<ExtNodeCjsAnalysis<'a>, AnyError> {
+        let analysis = self.inner_cjs_analysis(specifier, &source)?;
+        match analysis {
+            CjsAnalysis::Esm => Ok(ExtNodeCjsAnalysis::Esm(source)),
+            CjsAnalysis::Cjs { exports, reexports } => {
+                Ok(ExtNodeCjsAnalysis::Cjs(CjsAnalysisExports {
+                    exports,
+                    reexports,
+                }))
+            }
+        }
+    }
 }
 
 #[async_trait::async_trait(?Send)]
-impl node_resolver::analyze::CjsCodeAnalyzer for CjsCodeAnalyzer {
+impl node_resolver::analyze::CjsCodeAnalyzer for RustyCjsCodeAnalyzer {
     async fn analyze_cjs<'a>(
         &self,
         specifier: &ModuleSpecifier,
@@ -122,15 +154,7 @@ impl node_resolver::analyze::CjsCodeAnalyzer for CjsCodeAnalyzer {
                 }
             }
         };
-        let analysis = self.inner_cjs_analysis(specifier, &source)?;
-        match analysis {
-            CjsAnalysis::Esm => Ok(ExtNodeCjsAnalysis::Esm(source)),
-            CjsAnalysis::Cjs { exports, reexports } => {
-                Ok(ExtNodeCjsAnalysis::Cjs(CjsAnalysisExports {
-                    exports,
-                    reexports,
-                }))
-            }
-        }
+
+        self.analyze_cjs(specifier, source)
     }
 }

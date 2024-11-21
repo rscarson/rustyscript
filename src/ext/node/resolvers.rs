@@ -23,7 +23,7 @@ use std::{
     sync::{Arc, RwLock},
 };
 
-use super::cjs_translator::{CjsCodeAnalyzer, NodeCodeTranslator};
+use super::cjs_translator::{NodeCodeTranslator, RustyCjsCodeAnalyzer};
 
 const NODE_MODULES_DIR: &str = "node_modules";
 
@@ -84,7 +84,7 @@ impl RustyResolver {
         self: &Arc<Self>,
         node_resolver: Arc<NodeResolver>,
     ) -> NodeCodeTranslator {
-        let cjs = CjsCodeAnalyzer::new(self.filesystem(), self.clone());
+        let cjs = RustyCjsCodeAnalyzer::new(self.filesystem(), self.clone());
         NodeCodeTranslator::new(
             cjs,
             Self::fs_env(self.filesystem()),
@@ -176,13 +176,17 @@ impl RustyResolver {
         is_script: bool,
     ) -> bool {
         if specifier.scheme() != "file" {
-            return true;
+            return false;
         }
 
         match media_type {
-            MediaType::Wasm | MediaType::Json | MediaType::Mts | MediaType::Mjs | MediaType::Dmts => true,
+            MediaType::Wasm
+            | MediaType::Json
+            | MediaType::Mts
+            | MediaType::Mjs
+            | MediaType::Dmts => false,
 
-            MediaType::Cjs | MediaType::Cts | MediaType::Dcts => false,
+            MediaType::Cjs | MediaType::Cts | MediaType::Dcts => true,
 
             MediaType::Dts => {
                 // dts files are always determined based on the package.json because
@@ -194,28 +198,35 @@ impl RustyResolver {
                     if let Some(value) = value {
                         self.set_is_cjs(specifier, value);
                     }
-                    value.unwrap_or(true)
+                    value.unwrap_or(false)
                 }
             }
 
-            MediaType::JavaScript | MediaType::Jsx | MediaType::TypeScript | MediaType::Tsx
-            // treat these as unknown
-            | MediaType::Css | MediaType::SourceMap | MediaType::Unknown => {
+            MediaType::JavaScript
+            | MediaType::Jsx
+            | MediaType::TypeScript
+            | MediaType::Tsx
+            | MediaType::Css
+            | MediaType::SourceMap
+            | MediaType::Unknown => {
                 if let Some(value) = self.get_known_is_cjs(specifier) {
                     if value && !is_script {
-                    // we now know this is actually esm
-                        true
+                        // we now know this is actually esm
+                        self.set_is_cjs(specifier, false);
+                        false
                     } else {
                         value
                     }
                 } else if !is_script {
-                    true
+                    // we now know this is esm
+                    self.set_is_cjs(specifier, false);
+                    false
                 } else {
                     let value = self.check_based_on_pkg_json(specifier).ok();
                     if let Some(value) = value {
                         self.set_is_cjs(specifier, value);
                     }
-                    value.unwrap_or(true)
+                    value.unwrap_or(false)
                 }
             }
         }

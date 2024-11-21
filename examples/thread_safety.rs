@@ -1,39 +1,14 @@
-//#![allow(clippy::missing_const_for_thread_local)]
 ///
 /// rustyscript is not thread-safe
 /// This is due to a limitation of the underlying engine, deno_core
-///
-/// We can slither around that limitation however, like this!
-/// Use this method with extreme caution, and only if you understand
-/// how it works
+/// However, rustyscript provides a mechanism to safely use it in a static context
 ///
 /// See `examples/default_threaded_worker` and `examples/custom_threaded_worker`
-/// for a more robust way to run rustyscript in a threaded environment
+/// for a more flexible way to run rustyscript in a threaded environment
 ///
-use rustyscript::{json_args, module, Error, Runtime, StaticModule};
-use std::cell::{OnceCell, RefCell};
+use rustyscript::{module, static_runtime, Error, StaticModule};
 
-// Create a thread-local version of the runtime
-// This allows the following to be enforced:
-// - thread_local: Runtime is not sent between threads
-// - OnceCell: Runtime is only initialized once
-// - RefCell: Runtime is never accessed concurrently
-thread_local! {
-    static RUNTIME_CELL: OnceCell<RefCell<Runtime>> = const { OnceCell::new() };
-}
-
-/// Perform an operation on the runtime instance
-/// Will return T if we can get access to the runtime
-/// or panic went wrong
-fn with_runtime<T, F: FnMut(&mut Runtime) -> T>(mut callback: F) -> T {
-    RUNTIME_CELL.with(|once_lock| {
-        let rt_mut = once_lock.get_or_init(|| {
-            RefCell::new(Runtime::new(Default::default()).expect("could not create the runtime"))
-        });
-        let mut runtime = rt_mut.borrow_mut();
-        callback(&mut runtime)
-    })
-}
+static_runtime!(RUNTIME);
 
 // Modules can be defined statically using this macro!
 static MY_MODULE: StaticModule = module!(
@@ -44,9 +19,12 @@ static MY_MODULE: StaticModule = module!(
 );
 
 fn main() -> Result<(), Error> {
-    let value: String = with_runtime(|runtime| {
+    let value: String = RUNTIME.with(|rt| {
+        let mut lock = rt.lock()?;
+        let runtime = lock.runtime();
+
         let module_context = runtime.load_module(&MY_MODULE.to_module())?;
-        runtime.call_function(Some(&module_context), "my_function", json_args!())
+        runtime.call_function(Some(&module_context), "my_function", &())
     })?;
 
     assert_eq!(value, "test");

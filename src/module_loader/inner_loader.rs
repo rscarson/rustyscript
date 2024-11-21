@@ -326,14 +326,16 @@ impl InnerRustyLoader {
     }
 
     #[allow(unused_variables)]
-    async fn load_file(
+    #[allow(clippy::unused_async)]
+    pub async fn translate_cjs(
         inner: Rc<RefCell<Self>>,
         module_specifier: ModuleSpecifier,
+        content: String,
     ) -> Result<String, Error> {
-        let path = module_specifier
-            .to_file_path()
-            .map_err(|()| anyhow!("`{module_specifier}` is not a valid file URL."))?;
-        let content = tokio::fs::read_to_string(path).await?;
+        #[cfg(not(feature = "node_experimental"))]
+        {
+            Ok(content)
+        }
 
         #[cfg(feature = "node_experimental")]
         {
@@ -344,17 +346,31 @@ impl InnerRustyLoader {
                 .in_npm_package(&module_specifier);
             if is_npm {
                 let translator = inner.borrow().node.code_translator.clone();
-                let _source = translator
+
+                let source = translator
                     .translate_cjs_to_esm(
                         &module_specifier,
                         Some(std::borrow::Cow::Borrowed(&content)),
                     )
                     .await?
                     .into_owned();
-                // TODO : This breaks some modules
-                //   return Ok(source);
+                Ok(source)
+            } else {
+                Ok(content)
             }
         }
+    }
+
+    #[allow(unused_variables)]
+    async fn load_file(
+        inner: Rc<RefCell<Self>>,
+        module_specifier: ModuleSpecifier,
+    ) -> Result<String, Error> {
+        let path = module_specifier
+            .to_file_path()
+            .map_err(|()| anyhow!("`{module_specifier}` is not a valid file URL."))?;
+        let content = tokio::fs::read_to_string(path).await?;
+        let content = Self::translate_cjs(inner, module_specifier, content).await?;
 
         Ok(content)
     }
