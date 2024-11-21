@@ -7,7 +7,7 @@
 
 <!-- cargo-rdme start -->
 
-rustyscript provides a quick and simple way to integrate a runtime javascript or typescript component from within Rust. 
+rustyscript provides a quick and simple way to integrate a runtime javascript or typescript component from within Rust.
 It uses the v8 engine through the `deno_core`.
 
 I have attempted to abstract away the v8 engine details so you can for the most part operate directly on rust types.
@@ -271,7 +271,5 @@ Please note that the `web` feature will also enable `fs_import` and `url_import`
 ----
 
 For an example of this crate in use, see [Lavendeux](https://github.com/rscarson/lavendeux)
-
-Please also check out [@Bromeon/js_sandbox](https://github.com/Bromeon/js-sandbox), another great crate in this niche
 
 <!-- cargo-rdme end -->
