@@ -20,7 +20,7 @@ static MY_MODULE: StaticModule = module!(
 
 fn main() -> Result<(), Error> {
     let value: String = RUNTIME.with(|rt| {
-        let lock = rt.lock()?;
+        let mut lock = rt.lock()?;
         let runtime = lock.runtime();
 
         let module_context = runtime.load_module(&MY_MODULE.to_module())?;

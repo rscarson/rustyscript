@@ -56,6 +56,7 @@ impl RustyLoader {
     }
 
     /// Transpile a module from CJS to ESM
+    #[allow(dead_code)]
     pub async fn translate_cjs(
         &self,
         specifier: &ModuleSpecifier,

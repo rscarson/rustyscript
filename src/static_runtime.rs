@@ -36,8 +36,7 @@
 ///     })?
 /// }
 use crate::{Error, Runtime, RuntimeOptions};
-use once_cell::sync::OnceCell;
-use std::cell::{RefCell, RefMut};
+use std::cell::{OnceCell, RefCell, RefMut};
 
 /// A lock for the static runtime
 /// Created using `StaticRuntime::lock`

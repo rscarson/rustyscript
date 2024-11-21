@@ -325,6 +325,8 @@ impl InnerRustyLoader {
         }
     }
 
+    #[allow(unused_variables)]
+    #[allow(clippy::unused_async)]
     pub async fn translate_cjs(
         inner: Rc<RefCell<Self>>,
         module_specifier: ModuleSpecifier,
