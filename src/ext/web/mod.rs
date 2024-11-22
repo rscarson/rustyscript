@@ -33,6 +33,8 @@ impl ExtensionTrait<WebOptions> for deno_fetch::deno_fetch {
             unsafely_ignore_certificate_errors: options.unsafely_ignore_certificate_errors.clone(),
             client_cert_chain_and_key: options.client_cert_chain_and_key.clone(),
             file_fetch_handler: options.file_fetch_handler.clone(),
+            client_builder_hook: options.client_builder_hook,
+            resolver: options.resolver.clone(),
         };
 
         deno_fetch::deno_fetch::init_ops_and_esm::<PermissionsContainer>(options)

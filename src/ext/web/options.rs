@@ -1,5 +1,7 @@
 use super::{DefaultWebPermissions, WebPermissions};
 use deno_core::error::AnyError;
+use deno_fetch::dns::Resolver;
+use hyper_util::client::legacy::Builder;
 use std::sync::Arc;
 
 type RequestBuilderHook = fn(&mut http::Request<deno_fetch::ReqBody>) -> Result<(), AnyError>;
@@ -38,6 +40,13 @@ pub struct WebOptions {
 
     /// Blob store for the web related extensions
     pub blob_store: Arc<deno_web::BlobStore>,
+
+    ///A callback to customize HTTP client configuration.
+    /// For more info on what can be configured, see [`hyper_util::client::legacy::Builder`]
+    pub client_builder_hook: Option<fn(Builder) -> Builder>,
+
+    /// Resolver for DNS resolution
+    pub resolver: Resolver,
 }
 
 impl Default for WebOptions {
@@ -53,6 +62,8 @@ impl Default for WebOptions {
             file_fetch_handler: std::rc::Rc::new(deno_fetch::DefaultFileFetchHandler),
             permissions: Arc::new(DefaultWebPermissions),
             blob_store: Arc::new(deno_web::BlobStore::default()),
+            client_builder_hook: None,
+            resolver: Resolver::default(),
         }
     }
 }

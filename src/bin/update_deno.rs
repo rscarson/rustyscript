@@ -19,9 +19,18 @@ fn main() {
 
 fn get_crates_api_data(name: &str) -> Result<serde_json::Value, anyhow::Error> {
     let client = reqwest::blocking::Client::builder()
+        .user_agent("rustyscript_updatebot (https://github.com/rscarson/rustyscript)")
         .danger_accept_invalid_certs(true)
         .build()?;
-    let request = client.get(&format!("https://crates.io/api/v1/crates/{}", name));
+
+    // Get the first 4 alphanumeric characters of the name
+    // So deno_runtime becomes de/no
+    let prefix = name.chars().take(4).collect::<String>();
+    let p1 = &prefix[..2];
+    let p2 = &prefix[2..4];
+
+    // Version first
+    let request = client.get(&format!("https://index.crates.io/{p1}/{p2}/{name}"));
     let response = request.send()?.text()?;
 
     // Only the last line

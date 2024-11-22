@@ -1,4 +1,4 @@
-use deno_permissions::{PathResolveError, PermissionCheckError};
+use deno_permissions::{PermissionCheckError, PermissionDeniedError};
 use std::{
     borrow::Cow,
     collections::HashSet,
@@ -8,8 +8,6 @@ use std::{
 
 /// Wrapper error for deno permissions checks
 /// This will resolve to `PermissionCheckError::PermissionDeniedError`
-/// This type is needed since `deno_permissions` does not expose any way to
-/// externally create a `PermissionCheckError`
 pub struct PermissionDenied {
     /// The resource being accessed
     pub access: String,
@@ -38,7 +36,10 @@ impl PermissionDenied {
 // Nonsense error for now
 impl From<PermissionDenied> for PermissionCheckError {
     fn from(e: PermissionDenied) -> Self {
-        PermissionCheckError::PathResolve(PathResolveError::EmptyPath)
+        PermissionCheckError::PermissionDenied(PermissionDeniedError {
+            access: e.access,
+            name: e.name,
+        })
     }
 }
 

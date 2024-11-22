@@ -221,6 +221,11 @@ map_error!(deno_core::futures::channel::oneshot::Canceled, |e| {
     Error::Timeout(e.to_string())
 });
 
+#[cfg(feature = "broadcast_channel")]
+map_error!(deno_broadcast_channel::BroadcastChannelError, |e| {
+    Error::Runtime(e.to_string())
+});
+
 #[cfg(test)]
 mod test {
     use crate::{error::ErrorFormattingOptions, Module, Runtime, RuntimeOptions, Undefined};

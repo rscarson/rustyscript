@@ -1,10 +1,6 @@
-use crate::async_bridge::AsyncBridgeExt;
-
 use super::V8Value;
-use deno_core::{
-    v8::{self},
-    PollEventLoopOptions,
-};
+use crate::async_bridge::AsyncBridgeExt;
+use deno_core::{v8, PollEventLoopOptions};
 use serde::Deserialize;
 
 /// A Deserializable javascript promise, that can be stored and used later
@@ -54,6 +50,13 @@ where
     /// or if a runtime error occurs
     pub fn into_value(self, runtime: &mut crate::Runtime) -> Result<T, crate::Error> {
         runtime.block_on(move |runtime| async move { self.into_future(runtime).await })
+    }
+
+    /// Checks if the promise is pending or already resolved
+    pub fn is_pending(&self, runtime: &mut crate::Runtime) -> bool {
+        let mut scope = runtime.deno_runtime().handle_scope();
+        let value = self.0.as_local(&mut scope);
+        value.state() == v8::PromiseState::Pending
     }
 }
 

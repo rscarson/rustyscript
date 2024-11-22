@@ -376,6 +376,12 @@ pub use module_wrapper::ModuleWrapper;
 pub use runtime::{Runtime, RuntimeOptions, Undefined};
 pub use utilities::{evaluate, import, init_platform, resolve_path, validate};
 
+#[cfg(feature = "broadcast_channel")]
+pub use ext::broadcast_channel::BroadcastChannelWrapper;
+
+#[cfg(feature = "web")]
+pub use hyper_util;
+
 #[cfg(test)]
 mod test {
     #[test]
