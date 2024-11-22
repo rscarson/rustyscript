@@ -23,7 +23,10 @@ impl ExtensionTrait<()> for init_http {
 }
 impl ExtensionTrait<()> for deno_http::deno_http {
     fn init((): ()) -> Extension {
-        deno_http::deno_http::init_ops_and_esm::<DefaultHttpPropertyExtractor>()
+        deno_http::deno_http::init_ops_and_esm::<DefaultHttpPropertyExtractor>(deno_http::Options {
+            http2_builder_hook: None,
+            http1_builder_hook: None,
+        })
     }
 }
 

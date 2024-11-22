@@ -241,6 +241,7 @@ fn create_web_worker_callback(options: WebWorkerCallbackOptions) -> Arc<CreateWe
                 mode: WorkerExecutionMode::Worker,
                 serve_port: None,
                 serve_host: None,
+                otel_config: None,
             },
             extensions: vec![],
             startup_snapshot: None,
@@ -255,6 +256,8 @@ fn create_web_worker_callback(options: WebWorkerCallbackOptions) -> Arc<CreateWe
             strace_ops: None,
             close_on_idle: false,
             maybe_worker_metadata: None,
+            create_params: None,
+            enable_stack_trace_arg_in_ops: false,
         };
         WebWorker::bootstrap_from_options(services, options)
     })

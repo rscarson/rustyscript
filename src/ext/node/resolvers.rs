@@ -12,7 +12,7 @@ use deno_runtime::ops::process::NpmProcessStateProvider;
 use deno_semver::package::PackageReq;
 use node_resolver::{
     errors::{ClosestPkgJsonError, PackageFolderResolveErrorKind, PackageNotFoundError},
-    InNpmPackageChecker, NpmResolver,
+    InNpmPackageChecker, NpmPackageFolderResolver,
 };
 use serde::{Deserialize, Serialize};
 use std::{
@@ -275,7 +275,7 @@ impl InNpmPackageChecker for RustyResolver {
     }
 }
 
-impl NpmResolver for RustyResolver {
+impl NpmPackageFolderResolver for RustyResolver {
     fn resolve_package_folder_from_package(
         &self,
         specifier: &str,
@@ -351,6 +351,22 @@ impl NodeRequireLoader for RequireLoader {
             Ok(Cow::Borrowed(path))
         }
     }
+
+    fn is_maybe_cjs(&self, specifier: &reqwest::Url) -> Result<bool, ClosestPkgJsonError> {
+        if specifier.scheme() != "file" {
+            return Ok(false);
+        }
+
+        match MediaType::from_specifier(specifier) {
+            MediaType::Wasm
+            | MediaType::Json
+            | MediaType::Mts
+            | MediaType::Mjs
+            | MediaType::Dmts => Ok(false),
+
+            _ => Ok(true),
+        }
+    }
 }
 impl Clone for RequireLoader {
     fn clone(&self) -> Self {
@@ -361,6 +377,10 @@ impl Clone for RequireLoader {
 #[derive(Debug, Clone)]
 struct ResolverFs(Arc<dyn FileSystem + Send + Sync>);
 impl DenoResolverFs for ResolverFs {
+    fn exists_sync(&self, path: &Path) -> bool {
+        self.0.exists_sync(path)
+    }
+
     fn read_to_string_lossy(&self, path: &Path) -> std::io::Result<String> {
         self.0
             .read_text_file_lossy_sync(path, None)
