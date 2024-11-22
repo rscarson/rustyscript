@@ -8,9 +8,8 @@
 //! static_runtime!(MY_DEFAULT_RUNTIME);
 //!
 //! fn main() -> Result<(), Error> {
-//!     MY_DEFAULT_RUNTIME.with(|rt| {
-//!         let mut lock = rt.lock()?;
-//!         lock.runtime().eval::<()>("console.log('Hello, world!')")
+//!     MY_DEFAULT_RUNTIME::with(|runtime| {
+//!         runtime.eval::<()>("console.log('Hello, world!')")
 //!     })
 //! }
 //! ```
@@ -28,12 +27,9 @@
 //! });
 //!
 //! fn main() -> Result<(), Error> {
-//!     MY_CUSTOM_RUNTIME.with(|rt| {
-//!         // Instead of a lock we can use the `with_runtime` method
-//!         rt.with_runtime(|runtime| {
-//!             runtime.eval::<()>("console.log('Hello, world!')")
-//!         })
-//!     })?
+//!     MY_CUSTOM_RUNTIME::with(|runtime| {
+//!         runtime.eval::<()>("console.log('Hello, world!')")
+//!     })
 //! }
 use crate::{Error, Runtime, RuntimeOptions};
 use std::cell::{OnceCell, RefCell, RefMut};
@@ -70,9 +66,8 @@ impl<'a> StaticRuntimeLock<'a> {
 /// static_runtime!(MY_DEFAULT_RUNTIME);
 ///
 /// fn main() -> Result<(), Error> {
-///     MY_DEFAULT_RUNTIME.with(|rt| {
-///         let mut lock = rt.lock()?;
-///         lock.runtime().eval::<()>("console.log('Hello, world!')")
+///     MY_DEFAULT_RUNTIME::with(|runtime| {
+///         runtime.eval::<()>("console.log('Hello, world!')")
 ///     })
 /// }
 /// ```
@@ -90,12 +85,9 @@ impl<'a> StaticRuntimeLock<'a> {
 /// });
 ///
 /// fn main() -> Result<(), Error> {
-///     MY_CUSTOM_RUNTIME.with(|rt| {
-///         // Instead of a lock we can use the `with_runtime` method
-///         rt.with_runtime(|runtime| {
-///             runtime.eval::<()>("console.log('Hello, world!')")
-///         })
-///     })?
+///     MY_CUSTOM_RUNTIME::with(|rt| {
+///         runtime.eval::<()>("console.log('Hello, world!')")
+///     })
 /// }
 pub struct StaticRuntime {
     init_options: fn() -> RuntimeOptions,
@@ -185,14 +177,30 @@ impl StaticRuntime {
 #[macro_export]
 macro_rules! static_runtime {
     ($name:ident, $options:block) => {
-        thread_local! {
-            static $name: $crate::static_runtime::StaticRuntime = const { $crate::static_runtime::StaticRuntime::new(|| $options) };
+        /// A thread-local static runtime instance
+        /// Use the `with` method to access the runtime
+        #[allow(non_snake_case)]
+        mod $name {
+            #[allow(unused_imports)]
+            use super::*;
+
+            thread_local! {
+                static RUNTIME: $crate::static_runtime::StaticRuntime
+                    = const { $crate::static_runtime::StaticRuntime::new(|| $options) };
+            }
+
+            pub fn with<T, F>(callback: F) -> Result<T, $crate::Error>
+            where
+                F: FnMut(&mut $crate::Runtime) -> Result<T, $crate::Error>,
+            {
+                RUNTIME::with(|rt| rt.with_runtime(callback))?
+            }
         }
     };
 
     ($name:ident) => {
-        static_runtime!( $name, { $crate::RuntimeOptions::default() } );
-    }
+        static_runtime!($name, { $crate::RuntimeOptions::default() });
+    };
 }
 
 #[cfg(test)]
@@ -210,18 +218,10 @@ mod test {
 
     #[test]
     fn test_static_runtime() {
-        MY_DEFAULT_RUNTIME
-            .with(|rt| {
-                let mut lock = rt.lock().unwrap();
-                lock.runtime().eval::<()>("console.log('Hello, world!')")
-            })
+        MY_DEFAULT_RUNTIME::with(|runtime| runtime.eval::<()>("console.log('Hello, world!')"))
             .unwrap();
 
-        MY_CUSTOM_RUNTIME
-            .with(|rt| {
-                rt.with_runtime(|runtime| runtime.eval::<()>("console.log('Hello, world!')"))
-            })
-            .unwrap()
+        MY_CUSTOM_RUNTIME::with(|runtime| runtime.eval::<()>("console.log('Hello, world!')"))
             .unwrap();
     }
 }

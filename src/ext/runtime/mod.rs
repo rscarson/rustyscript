@@ -105,6 +105,13 @@ impl ExtensionTrait<()> for deno_signal {
     }
 }
 
+use deno_runtime::ops::otel::deno_otel;
+impl ExtensionTrait<()> for deno_otel {
+    fn init((): ()) -> Extension {
+        deno_otel::init_ops_and_esm()
+    }
+}
+
 use deno_runtime::ops::os::deno_os;
 impl ExtensionTrait<()> for deno_os {
     fn init((): ()) -> Extension {
@@ -135,6 +142,7 @@ pub fn extensions(
         deno_fs_events::build((), is_snapshot),
         deno_bootstrap::build((), is_snapshot),
         deno_os::build((), is_snapshot),
+        deno_otel::build((), is_snapshot),
         deno_signal::build((), is_snapshot),
         deno_process::build(options.node_resolver.clone(), is_snapshot),
         deno_web_worker::build((), is_snapshot),
