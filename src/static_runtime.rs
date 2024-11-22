@@ -193,7 +193,7 @@ macro_rules! static_runtime {
             where
                 F: FnMut(&mut $crate::Runtime) -> Result<T, $crate::Error>,
             {
-                RUNTIME::with(|rt| rt.with_runtime(callback))?
+                RUNTIME.with(|rt| rt.with_runtime(callback))?
             }
         }
     };
