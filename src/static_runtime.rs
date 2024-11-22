@@ -160,9 +160,38 @@ impl StaticRuntime {
 /// The first argument is the name of the static runtime
 /// The second argument is an optional block that should return a `RuntimeOptions` instance
 ///
-/// See [`crate::static_runtime`] for an example
+/// Can be used with default `RuntimeOptions` like so:
+/// ```rust
+/// use rustyscript::{RuntimeOptions, Error, static_runtime};
+/// use std::time::Duration;
 ///
-/// The resulting runtime can be accessed using `with`, which accepts a closure that takes a mutable reference to the runtime
+/// static_runtime!(MY_DEFAULT_RUNTIME);
+///
+/// fn main() -> Result<(), Error> {
+///     MY_DEFAULT_RUNTIME::with(|runtime| {
+///         runtime.eval::<()>("console.log('Hello, world!')")
+///     })
+/// }
+/// ```
+///
+/// Or with custom `RuntimeOptions`:
+/// ```rust
+/// use rustyscript::{Error, RuntimeOptions, static_runtime};
+/// use std::time::Duration;
+///
+/// static_runtime!(MY_CUSTOM_RUNTIME, {
+///    RuntimeOptions {
+///        timeout: Duration::from_secs(5),
+///        ..Default::default()
+///    }
+/// });
+///
+/// fn main() -> Result<(), Error> {
+///     MY_CUSTOM_RUNTIME::with(|runtime| {
+///         runtime.eval::<()>("console.log('Hello, world!')")
+///     })
+/// }
+/// ```
 #[macro_export]
 macro_rules! static_runtime {
     ($name:ident, $options:block) => {
@@ -170,12 +199,17 @@ macro_rules! static_runtime {
         /// Use the `with` method to access the runtime
         #[allow(non_snake_case)]
         mod $name {
-            #[allow(unused_imports)]
-            use super::*;
+
+            fn init_options() -> $crate::RuntimeOptions {
+                #[allow(unused_imports)]
+                use super::*;
+
+                $options
+            }
 
             thread_local! {
                 static RUNTIME: $crate::static_runtime::StaticRuntime
-                    = const { $crate::static_runtime::StaticRuntime::new(|| $options) };
+                    = const { $crate::static_runtime::StaticRuntime::new(init_options) };
             }
 
             /// Perform an operation on the runtime instance
