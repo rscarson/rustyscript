@@ -32,6 +32,7 @@
 //!         runtime.eval::<()>("console.log('Hello, world!')")
 //!     })
 //! }
+//! ```
 use crate::{Error, Runtime, RuntimeOptions};
 use std::cell::{OnceCell, RefCell, RefMut};
 
@@ -90,6 +91,7 @@ impl<'a> StaticRuntimeLock<'a> {
 ///         runtime.eval::<()>("console.log('Hello, world!')")
 ///     })
 /// }
+/// ```
 pub struct StaticRuntime {
     init_options: fn() -> RuntimeOptions,
     cell: OnceCell<RefCell<Result<Runtime, Error>>>,
@@ -158,23 +160,9 @@ impl StaticRuntime {
 /// The first argument is the name of the static runtime
 /// The second argument is an optional block that should return a `RuntimeOptions` instance
 ///
-/// # Example
-/// ```rust
-/// use rustyscript::{static_runtime, RuntimeOptions};
-/// use std::time::Duration;
+/// See [`crate::static_runtime`] for an example
 ///
-/// static_runtime!(MY_DEFAULT_RUNTIME);
-///
-/// static_runtime!(MY_CUSTOM_RUNTIME, {
-///     RuntimeOptions {
-///         timeout: Duration::from_secs(5),
-///         ..Default::default()
-///     }
-/// });
-/// ```
-///
-/// The resulting runtime can be accessed using `with`, following by either `lock` or `with_runtime`  
-/// See [`static_runtime::StaticRuntime`] for more information
+/// The resulting runtime can be accessed using `with`, which accepts a closure that takes a mutable reference to the runtime
 #[macro_export]
 macro_rules! static_runtime {
     ($name:ident, $options:block) => {
@@ -190,6 +178,8 @@ macro_rules! static_runtime {
                     = const { $crate::static_runtime::StaticRuntime::new(|| $options) };
             }
 
+            /// Perform an operation on the runtime instance
+            #[allow(dead_code)]
             pub fn with<T, F>(callback: F) -> Result<T, $crate::Error>
             where
                 F: FnMut(&mut $crate::Runtime) -> Result<T, $crate::Error>,

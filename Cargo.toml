@@ -11,6 +11,9 @@ keywords = ["rust", "javascript", "deno", "runtime", "embedding"]
 categories = ["web-programming", "network-programming", "api-bindings", "compilers", "development-tools::ffi"]
 readme = "readme.md"
 
+[package.metadata.docs.rs]
+all-features = true
+
 [features]
 default = ["worker", "safe_extensions"]
 
@@ -240,9 +243,6 @@ checksum      = { version = "0.2.1", optional = true }
 [dev-dependencies]
 version-sync = "0.9.5"
 criterion = "0.5.1"
-
-[package.metadata.docs.rs]
-all-features = true
 
 [[example]]
 name = "custom_threaded_worker"

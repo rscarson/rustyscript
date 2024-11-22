@@ -6,9 +6,15 @@
 /// See `examples/default_threaded_worker` and `examples/custom_threaded_worker`
 /// for a more flexible way to run rustyscript in a threaded environment
 ///
-use rustyscript::{module, static_runtime, Error, StaticModule};
+use rustyscript::{module, static_runtime, Error, RuntimeOptions, StaticModule};
+use std::time::Duration;
 
-static_runtime!(RUNTIME);
+static_runtime!(RUNTIME, {
+    RuntimeOptions {
+        timeout: Duration::from_secs(5),
+        ..Default::default()
+    }
+});
 
 // Modules can be defined statically using this macro!
 static MY_MODULE: StaticModule = module!(

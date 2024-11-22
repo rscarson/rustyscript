@@ -96,7 +96,7 @@ impl SnapshotBuilder {
     }
 
     /// Creates a new instance of the runtime with the provided options and a pre-configured tokio runtime.
-    /// See [`Runtime::new`] for more information.
+    /// See [`crate::Runtime::new`] for more information.
     ///
     /// # Errors
     /// Can fail if the deno runtime initialization fails (usually issues with extensions)
@@ -161,7 +161,7 @@ impl SnapshotBuilder {
     }
 
     /// Advance the JS event loop by a single tick
-    /// See [`Runtime::await_event_loop`] for fully running the event loop
+    /// See [`crate::Runtime::await_event_loop`] for fully running the event loop
     ///
     /// Returns true if the event loop has pending work, or false if it has completed
     ///
@@ -194,7 +194,7 @@ impl SnapshotBuilder {
     /// Run the JS event loop to completion, or until a timeout is reached
     /// Required when using the `_immediate` variants of functions
     ///
-    /// This is the blocking variant of [`Runtime::await_event_loop`]
+    /// This is the blocking variant of [`crate::Runtime::await_event_loop`]
     ///
     /// # Arguments
     /// * `options` - Options for the event loop polling, see [`deno_core::PollEventLoopOptions`]
@@ -307,7 +307,7 @@ impl SnapshotBuilder {
     ///
     /// Note that synchronous functions are run synchronously. Returned promises will be run asynchronously, however.
     ///
-    /// See [`Runtime::call_function`] for an example
+    /// See [`crate::Runtime::call_function`] for an example
     ///
     /// # Arguments
     /// * `module_context` - Optional handle to a module to search - if None, or if the search fails, the global context is used
@@ -390,7 +390,7 @@ impl SnapshotBuilder {
     /// Calls a javascript function within the Deno runtime by its name and deserializes its return value.
     /// Will not attempt to resolve promises, or run the event loop
     /// Promises can be returned by specifying the return type as [`crate::js_value::Promise`]
-    /// The event loop should be run using [`Runtime::await_event_loop`]
+    /// The event loop should be run using [`crate::Runtime::await_event_loop`]
     ///
     /// # Arguments
     /// * `module_context` - Optional handle to a module to search - if None, or if the search fails, the global context is used
@@ -480,7 +480,7 @@ impl SnapshotBuilder {
     /// - The event loop is resolved, and
     /// - If the value is a promise, the promise is resolved
     ///
-    /// See [`Runtime::get_value`] for an example
+    /// See [`crate::Runtime::get_value`] for an example
     ///
     /// # Arguments
     /// * `module_context` - Optional handle to a module to search - if None, or if the search fails, the global context is used
@@ -508,7 +508,7 @@ impl SnapshotBuilder {
     /// Get a value from a runtime instance
     /// Will not attempt to resolve promises, or run the event loop
     /// Promises can be returned by specifying the return type as [`crate::js_value::Promise`]
-    /// The event loop should be run using [`Runtime::await_event_loop`]
+    /// The event loop should be run using [`crate::Runtime::await_event_loop`]
     ///
     /// # Arguments
     /// * `module_context` - Optional handle to a module to search - if None, or if the search fails, the global context is used
@@ -550,7 +550,7 @@ impl SnapshotBuilder {
     /// And call functions
     ///
     /// Blocks until the module has been executed AND the event loop has fully resolved
-    /// See [`Runtime::load_module_async`] for a non-blocking variant, or use with async
+    /// See [`crate::Runtime::load_module_async`] for a non-blocking variant, or use with async
     /// background tasks
     ///
     /// # Arguments
@@ -590,7 +590,7 @@ impl SnapshotBuilder {
     /// And call functions
     ///
     /// Returns a future that resolves to the handle for the loaded module
-    /// Makes no attempt to fully resolve the event loop - call [`Runtime::await_event_loop`]
+    /// Makes no attempt to fully resolve the event loop - call [`crate::Runtime::await_event_loop`]
     /// to resolve background tasks and async listeners
     ///
     /// # Arguments
@@ -603,7 +603,7 @@ impl SnapshotBuilder {
     /// # Errors
     /// Can fail if the module cannot be loaded, or execution fails
     ///
-    /// See [`Runtime::load_module`] for an example
+    /// See [`crate::Runtime::load_module`] for an example
     pub async fn load_module_async(&mut self, module: &Module) -> Result<ModuleHandle, Error> {
         self.inner.load_modules(None, vec![module]).await
     }
@@ -612,7 +612,7 @@ impl SnapshotBuilder {
     /// And call functions.
     ///
     /// Blocks until all modules have been executed AND the event loop has fully resolved
-    /// See [`Runtime::load_module_async`] for a non-blocking variant, or use with async
+    /// See [`crate::Runtime::load_module_async`] for a non-blocking variant, or use with async
     /// background tasks
     ///
     /// This will load 'module' as the main module, and the others as side-modules.
@@ -660,13 +660,13 @@ impl SnapshotBuilder {
     /// And call functions.
     ///
     /// Returns a future that resolves to the handle for the loaded module
-    /// Makes no attempt to resolve the event loop - call [`Runtime::await_event_loop`] to
+    /// Makes no attempt to resolve the event loop - call [`crate::Runtime::await_event_loop`] to
     /// resolve background tasks and async listeners
     ///
     /// This will load 'module' as the main module, and the others as side-modules.
     /// Only one main module can be loaded per runtime
     ///
-    /// See [`Runtime::load_modules`] for an example
+    /// See [`crate::Runtime::load_modules`] for an example
     ///
     /// # Arguments
     /// * `module` - A `Module` object containing the module's filename and contents.
