@@ -1,40 +1,40 @@
 //! This module contains a macro for creating a static runtime instance
 //! It creates a safe, thread-local runtime static.
 //!
-/// Can be used with default `RuntimeOptions` like so:
-/// ```rust
-/// use rustyscript::{Error, static_runtime};
-///
-/// static_runtime!(MY_DEFAULT_RUNTIME);
-///
-/// fn main() -> Result<(), Error> {
-///     MY_DEFAULT_RUNTIME.with(|rt| {
-///         let mut lock = rt.lock()?;
-///         lock.runtime().eval::<()>("console.log('Hello, world!')")
-///     })
-/// }
-/// ```
-///
-/// Or with custom `RuntimeOptions`:
-/// ```rust
-/// use rustyscript::{Error, RuntimeOptions, static_runtime};
-/// use std::time::Duration;
-///
-/// static_runtime!(MY_CUSTOM_RUNTIME, {
-///    RuntimeOptions {
-///        timeout: Duration::from_secs(5),
-///        ..Default::default()
-///    }
-/// });
-///
-/// fn main() -> Result<(), Error> {
-///     MY_CUSTOM_RUNTIME.with(|rt| {
-///         // Instead of a lock we can use the `with_runtime` method
-///         rt.with_runtime(|runtime| {
-///             runtime.eval::<()>("console.log('Hello, world!')")
-///         })
-///     })?
-/// }
+//! Can be used with default `RuntimeOptions` like so:
+//! ```rust
+//! use rustyscript::{Error, static_runtime};
+//!
+//! static_runtime!(MY_DEFAULT_RUNTIME);
+//!
+//! fn main() -> Result<(), Error> {
+//!     MY_DEFAULT_RUNTIME.with(|rt| {
+//!         let mut lock = rt.lock()?;
+//!         lock.runtime().eval::<()>("console.log('Hello, world!')")
+//!     })
+//! }
+//! ```
+//!
+//! Or with custom `RuntimeOptions`:
+//! ```rust
+//! use rustyscript::{Error, RuntimeOptions, static_runtime};
+//! use std::time::Duration;
+//!
+//! static_runtime!(MY_CUSTOM_RUNTIME, {
+//!    RuntimeOptions {
+//!        timeout: Duration::from_secs(5),
+//!        ..Default::default()
+//!    }
+//! });
+//!
+//! fn main() -> Result<(), Error> {
+//!     MY_CUSTOM_RUNTIME.with(|rt| {
+//!         // Instead of a lock we can use the `with_runtime` method
+//!         rt.with_runtime(|runtime| {
+//!             runtime.eval::<()>("console.log('Hello, world!')")
+//!         })
+//!     })?
+//! }
 use crate::{Error, Runtime, RuntimeOptions};
 use std::cell::{OnceCell, RefCell, RefMut};
 
