@@ -3,7 +3,8 @@
 //!
 //! Can be used with default `RuntimeOptions` like so:
 //! ```rust
-//! use rustyscript::{Error, static_runtime};
+//! use rustyscript::{RuntimeOptions, Error, static_runtime};
+//! use std::time::Duration;
 //!
 //! static_runtime!(MY_DEFAULT_RUNTIME);
 //!
@@ -85,7 +86,7 @@ impl<'a> StaticRuntimeLock<'a> {
 /// });
 ///
 /// fn main() -> Result<(), Error> {
-///     MY_CUSTOM_RUNTIME::with(|rt| {
+///     MY_CUSTOM_RUNTIME::with(|runtime| {
 ///         runtime.eval::<()>("console.log('Hello, world!')")
 ///     })
 /// }

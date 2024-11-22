@@ -1,6 +1,9 @@
 use super::V8Value;
-use crate::async_bridge::AsyncBridgeExt;
-use deno_core::{v8, PollEventLoopOptions};
+use crate::{async_bridge::AsyncBridgeExt, Error};
+use deno_core::{
+    v8::{self, PromiseState},
+    PollEventLoopOptions,
+};
 use serde::Deserialize;
 
 /// A Deserializable javascript promise, that can be stored and used later
@@ -57,6 +60,30 @@ where
         let mut scope = runtime.deno_runtime().handle_scope();
         let value = self.0.as_local(&mut scope);
         value.state() == v8::PromiseState::Pending
+    }
+
+    /// Polls the promise, returning `Poll::Pending` if the promise is still pending
+    /// or `Poll::Ready(Ok(T))` if the promise is resolved
+    /// or `Poll::Ready(Err(Error))` if the promise is rejected
+    pub fn poll_promise(&self, runtime: &mut crate::Runtime) -> std::task::Poll<Result<T, Error>> {
+        let mut scope = runtime.deno_runtime().handle_scope();
+        let value = self.0.as_local(&mut scope);
+
+        match value.state() {
+            PromiseState::Pending => std::task::Poll::Pending,
+            PromiseState::Rejected => {
+                let error = value.result(&mut scope);
+                let error = deno_core::error::JsError::from_v8_exception(&mut scope, error);
+                std::task::Poll::Ready(Err(error.into()))
+            }
+            PromiseState::Fulfilled => {
+                let result = value.result(&mut scope);
+                match deno_core::serde_v8::from_v8::<T>(&mut scope, result) {
+                    Ok(value) => std::task::Poll::Ready(Ok(value)),
+                    Err(e) => std::task::Poll::Ready(Err(e.into())),
+                }
+            }
+        }
     }
 }
 
