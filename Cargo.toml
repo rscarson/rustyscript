@@ -159,6 +159,7 @@ __dependency_manager = ["toml", "node_experimental"]
 thiserror = "1.0.65"
 serde = "1.0.215"
 
+
 # Used for NodeJS compatibility and other features
 async-trait = "0.1.83"
 

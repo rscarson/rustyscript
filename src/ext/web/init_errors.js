@@ -21,6 +21,8 @@ import {
 	quoteString,
 } from "ext:deno_console/01_console.js";
 
+globalThis.DOMException = DOMException;
+
 
 class NotFound extends Error {
 	constructor(msg) {
