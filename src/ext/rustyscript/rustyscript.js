@@ -23,6 +23,7 @@ const getterOnly = (getter) => {
     };
 }
 const applyToGlobal = (properties) => Object.defineProperties(globalThis, properties);
+const applyToDeno = (properties) => Object.defineProperties(globalThis.Deno, properties);
 
 // Populate the global object
 globalThis.rustyscript = {
@@ -44,5 +45,5 @@ globalThis.rustyscript = {
 Object.freeze(globalThis.rustyscript);
 
 export {
-    nonEnumerable, readOnly, writeable, getterOnly, applyToGlobal
+    nonEnumerable, readOnly, writeable, getterOnly, applyToGlobal, applyToDeno
 };

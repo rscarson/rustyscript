@@ -1,5 +1,5 @@
 import * as infra from 'ext:deno_web/00_infra.js';
-import * as DOMException from 'ext:deno_web/01_dom_exception.js';
+import { DOMException } from "ext:deno_web/01_dom_exception.js";
 import * as mimesniff from 'ext:deno_web/01_mimesniff.js';
 import * as event from 'ext:deno_web/02_event.js';
 import * as structuredClone from 'ext:deno_web/02_structured_clone.js';

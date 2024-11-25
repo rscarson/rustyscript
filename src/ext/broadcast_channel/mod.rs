@@ -1,9 +1,6 @@
 use super::ExtensionTrait;
-use crate::{big_json_args, Error, Runtime};
-use deno_broadcast_channel::{BroadcastChannel, InMemoryBroadcastChannel};
+use deno_broadcast_channel::InMemoryBroadcastChannel;
 use deno_core::{extension, Extension};
-use serde::{de::DeserializeOwned, Serialize};
-use std::time::Duration;
 
 mod wrapper;
 pub use wrapper::BroadcastChannelWrapper;
