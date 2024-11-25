@@ -156,7 +156,7 @@ __dependency_manager = ["toml", "node_experimental"]
 #
 
 [dependencies]
-thiserror = "1.0.65"
+thiserror = "2.0.3"
 serde = "1.0.215"
 
 
