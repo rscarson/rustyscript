@@ -423,15 +423,9 @@ impl<RT: RuntimeTrait> InnerRuntime<RT> {
     /// A `Result` containing the deserialized result of the expression (`T`)
     /// or an error (`Error`) if the expression cannot be evaluated or if the
     /// result cannot be deserialized.
-    pub fn eval<T>(&mut self, expr: &str) -> Result<T, Error>
-    where
-        T: DeserializeOwned,
-    {
+    pub fn eval(&mut self, expr: impl ToString) -> Result<v8::Global<v8::Value>, Error> {
         let result = self.deno_runtime().execute_script("", expr.to_string())?;
-
-        let mut scope = self.deno_runtime().handle_scope();
-        let result = v8::Local::new(&mut scope, result);
-        Ok(from_v8(&mut scope, result)?)
+        Ok(result)
     }
 
     /// Attempt to get a value out of the global context (globalThis.name)
@@ -937,10 +931,10 @@ mod test_inner_runtime {
             )
             .expect("Could not register function");
 
-        let result: i64 = runtime
+        let v = runtime
             .eval("rustyscript.functions.test(2, 3)")
-            .expect("Could not eval");
-        assert_eq!(result, 5);
+            .expect("failed to eval");
+        assert_v8!(v, 5, usize, runtime);
     }
 
     #[cfg(any(feature = "web", feature = "web_stub"))]
@@ -950,22 +944,25 @@ mod test_inner_runtime {
             InnerRuntime::<JsRuntime>::new(RuntimeOptions::default(), CancellationToken::new())
                 .expect("Could not load runtime");
 
-        let result: usize = runtime.eval("2 + 2").expect("Could not eval");
-        assert_eq!(result, 4);
+        let v = runtime.eval("2 + 2").expect("failed to eval");
+        assert_v8!(v, 4, usize, runtime);
 
         run_async_task(|| async move {
-            let result: Promise<usize> = runtime
+            let result = runtime
                 .eval(
                     "
                 let sleep = (ms) => new Promise((r) => setTimeout(r, ms));
                 sleep(500).then(() => 2);
             ",
                 )
-                .expect("Could not eval");
+                .expect("failed to eval");
 
-            let result: usize = result.resolve(runtime.deno_runtime()).await?;
+            let result: Promise<u32> = runtime
+                .decode_value(result)
+                .expect("Could not decode promise");
+
+            let result: u32 = result.resolve(runtime.deno_runtime()).await?;
             assert_eq!(result, 2);
-
             Ok(())
         });
     }
@@ -977,11 +974,11 @@ mod test_inner_runtime {
             InnerRuntime::<JsRuntime>::new(RuntimeOptions::default(), CancellationToken::new())
                 .expect("Could not load runtime");
 
-        let result: String = runtime.eval("btoa('foo')").expect("Could not eval");
-        assert_eq!(result, "Zm9v");
+        let result = runtime.eval("btoa('foo')").expect("failed to eval");
+        assert_v8!(result, "Zm9v", String, runtime);
 
-        let result: String = runtime.eval("atob(btoa('foo'))").expect("Could not eval");
-        assert_eq!(result, "foo");
+        let result = runtime.eval("atob(btoa('foo'))").expect("failed to eval");
+        assert_v8!(result, "foo", String, runtime);
     }
 
     #[test]

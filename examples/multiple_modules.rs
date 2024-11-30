@@ -1,11 +1,9 @@
-use rustyscript::{
-    json_args, module, Error, Module, Runtime, RuntimeOptions, StaticModule, Undefined,
-};
+use rustyscript::{json_args, module, Error, Module, Runtime, RuntimeOptions, Undefined};
 
 // This time we will embed this module into the executable directly.
 // After all, it is a very small file we will always need - why
 // take the extra overhead for the filesystem!
-const API_MODULE: StaticModule = module!(
+const API_MODULE: Module = module!(
     "examples/get_value.ts",
     "
     let my_internal_value:number;
@@ -39,7 +37,7 @@ fn main() -> Result<(), Error> {
     // made with less overhead.
     // Just like before, `::<Undefined` means we do not care if the
     // function returns a result.
-    let module_handle = runtime.load_module(&API_MODULE.to_module())?;
+    let module_handle = runtime.load_module(&API_MODULE)?;
     runtime.call_entrypoint::<Undefined>(&module_handle, json_args!(2))?;
 
     // Now we can load our new module from the filesystem

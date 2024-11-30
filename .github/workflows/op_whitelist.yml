@@ -17,4 +17,4 @@ jobs:
     - uses: actions/checkout@v4
 
     - name: Run whitelist check for default-feature provided ops
-      run: cargo run --bin verify_ops
+      run: cargo test --lib -- test::check_op_whitelist --exact --show-output  

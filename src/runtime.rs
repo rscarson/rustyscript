@@ -4,29 +4,30 @@ use crate::{
     js_value::Function,
     Error, Module, ModuleHandle,
 };
-use deno_core::{serde_json, PollEventLoopOptions};
+use deno_core::PollEventLoopOptions;
 use std::{path::Path, rc::Rc, time::Duration};
 use tokio_util::sync::CancellationToken;
 
 /// Represents the set of options accepted by the runtime constructor
 pub use crate::inner_runtime::RuntimeOptions;
 
-/// For functions returning nothing. Acts as a placeholder for the return type
+/// For functions returning nothing. Acts as a placeholder for the return type  
 /// Should accept any type of value from javascript
 ///
-/// It is in fact an alias for [`crate::js_value::Value`]
+/// It is in fact an alias for [`crate::js_value::Value`]  
 /// Note: This used to be an alias for `serde_json::Value`, but was changed for performance reasons
 pub type Undefined = crate::js_value::Value;
 
-/// A runtime instance that can be used to execute JavaScript code and interact with it
+/// A runtime instance that can be used to execute JavaScript code and interact with it.  
 /// Most runtime functions have 3 variants - blocking, async, and immediate
+///
 /// For example:
 /// - `call_function` will block until the function is resolved and the event loop is empty
 /// - `call_function_async` will return a future that resolves when the function is resolved and the event loop is empty
 /// - `call_function_immediate` will return the result immediately, without resolving promises or running the event loop
 ///   (See [`crate::js_value::Promise`])
 ///
-/// Note: For multithreaded applications, you may need to call `init_platform` before creating a `Runtime`
+/// Note: For multithreaded applications, you may need to call `init_platform` before creating a `Runtime`  
 /// (See [[`crate::init_platform`])
 pub struct Runtime {
     inner: InnerRuntime<deno_core::JsRuntime>,
@@ -70,7 +71,7 @@ impl Runtime {
     /// ```
     ///
     /// # Errors
-    /// Can fail if the tokio runtime cannot be created,
+    /// Can fail if the tokio runtime cannot be created,  
     /// Or if the deno runtime initialization fails (usually issues with extensions)
     ///
     pub fn new(options: RuntimeOptions) -> Result<Self, Error> {
@@ -79,7 +80,7 @@ impl Runtime {
         Ok(Self { inner, tokio })
     }
 
-    /// Creates a new instance of the runtime with the provided options and a pre-configured tokio runtime.
+    /// Creates a new instance of the runtime with the provided options and a pre-configured tokio runtime.  
     /// See [`Runtime::new`] for more information.
     ///
     /// # Errors
@@ -110,21 +111,21 @@ impl Runtime {
         self.tokio.timeout()
     }
 
-    /// Returns the heap exhausted token for the runtime
+    /// Returns the heap exhausted token for the runtime  
     /// Used to detect when the runtime has run out of memory
     #[must_use]
     pub fn heap_exhausted_token(&self) -> CancellationToken {
         self.tokio.heap_exhausted_token()
     }
 
-    /// Destroy the v8 runtime, releasing all resources
+    /// Destroy the v8 runtime, releasing all resources  
     /// Then the internal tokio runtime will be returned
     #[must_use]
     pub fn into_tokio_runtime(self) -> Rc<tokio::runtime::Runtime> {
         self.tokio.into_tokio_runtime()
     }
 
-    /// Set the current working directory for the runtime
+    /// Set the current working directory for the runtime  
     /// This is used to resolve relative paths in the module loader
     ///
     /// The runtime will begin with the current working directory of the process
@@ -135,7 +136,7 @@ impl Runtime {
         self.inner.set_current_dir(path)
     }
 
-    /// Get the current working directory for the runtime
+    /// Get the current working directory for the runtime  
     /// This is used to resolve relative paths in the module loader
     ///
     /// The runtime will begin with the current working directory of the process
@@ -144,7 +145,7 @@ impl Runtime {
         self.inner.current_dir()
     }
 
-    /// Advance the JS event loop by a single tick
+    /// Advance the JS event loop by a single tick  
     /// See [`Runtime::await_event_loop`] for fully running the event loop
     ///
     /// Returns true if the event loop has pending work, or false if it has completed
@@ -158,7 +159,7 @@ impl Runtime {
         self.block_on(|runtime| async move { runtime.inner.advance_event_loop(options).await })
     }
 
-    /// Run the JS event loop to completion, or until a timeout is reached
+    /// Run the JS event loop to completion, or until a timeout is reached  
     /// Required when using the `_immediate` variants of functions
     ///
     /// # Arguments
@@ -175,7 +176,7 @@ impl Runtime {
         self.inner.await_event_loop(options, timeout).await
     }
 
-    /// Run the JS event loop to completion, or until a timeout is reached
+    /// Run the JS event loop to completion, or until a timeout is reached  
     /// Required when using the `_immediate` variants of functions
     ///
     /// This is the blocking variant of [`Runtime::await_event_loop`]
@@ -192,87 +193,6 @@ impl Runtime {
         timeout: Option<Duration>,
     ) -> Result<(), Error> {
         self.block_on(|runtime| async move { runtime.await_event_loop(options, timeout).await })
-    }
-
-    /// Encode an argument as a json value for use as a function argument
-    /// ```rust
-    /// use rustyscript::{ Runtime, RuntimeOptions, Module };
-    /// use serde::Serialize;
-    /// use std::time::Duration;
-    ///
-    /// # fn main() -> Result<(), rustyscript::Error> {
-    /// let module = Module::new("test.js", "
-    ///     function load(obj) {
-    ///         console.log(`Hello world: a=${obj.a}, b=${obj.b}`);
-    ///     }
-    ///     export default load;
-    /// ");
-    ///
-    /// #[derive(Serialize)]
-    /// struct MyStruct {a: usize, b: usize}
-    ///
-    /// Runtime::execute_module(
-    ///     &module, vec![],
-    ///     Default::default(),
-    ///     &[
-    ///         Runtime::arg(MyStruct{a: 1, b: 2})?,
-    ///     ]
-    /// )?;
-    /// # Ok(())
-    /// # }
-    /// ```
-    ///
-    /// # Deprecated
-    /// This function is deprecated in favor of passing values and tuples directly
-    /// Or using the `json_args!` macro
-    ///
-    /// # Errors
-    /// This conversion can fail if A's implementation of Serialize decides to fail, or if A contains a map with non-string keys
-    #[deprecated(
-        since = "0.6.0",
-        note = "No longer needed, pass values and tuples directly, or with json_args!()"
-    )]
-    pub fn arg<A>(value: A) -> Result<serde_json::Value, Error>
-    where
-        A: serde::Serialize,
-    {
-        Ok(serde_json::to_value(value)?)
-    }
-
-    /// Encode a primitive as a json value for use as a function argument
-    /// Only for types with `Into<Value>`. For other types, use `Runtime::arg`
-    /// ```rust
-    /// use rustyscript::{ Runtime, RuntimeOptions, Module };
-    /// use std::time::Duration;
-    ///
-    /// # fn main() -> Result<(), rustyscript::Error> {
-    /// let module = Module::new("test.js", "
-    ///     function load(a, b) {
-    ///         console.log(`Hello world: a=${a}, b=${b}`);
-    ///     }
-    ///     rustyscript.register_entrypoint(load);
-    /// ");
-    ///
-    /// Runtime::execute_module(
-    ///     &module, vec![],
-    ///     Default::default(),
-    ///     &[
-    ///         Runtime::into_arg("test"),
-    ///         Runtime::into_arg(5),
-    ///     ]
-    /// )?;
-    /// # Ok(())
-    /// # }
-    /// ```
-    #[deprecated(
-        since = "0.6.0",
-        note = "No longer needed, pass values and tuples directly"
-    )]
-    pub fn into_arg<A>(value: A) -> serde_json::Value
-    where
-        serde_json::Value: From<A>,
-    {
-        serde_json::Value::from(value)
     }
 
     /// Remove and return a value from the state, if one exists
@@ -294,9 +214,8 @@ impl Runtime {
         self.inner.take()
     }
 
-    /// Add a value to the state
-    /// Only one value of each type is stored - additional calls to put overwrite the
-    /// old value
+    /// Add a value to the state  
+    /// Only one value of each type is stored - additional calls to `put` overwrite the old value
     ///
     /// # Errors
     /// Can fail if the inner state cannot be borrowed mutably
@@ -376,15 +295,16 @@ impl Runtime {
         self.inner.register_async_function(name, callback)
     }
 
-    /// Evaluate a piece of non-ECMAScript-module JavaScript code
+    /// Evaluate a piece of non-ECMAScript-module JavaScript code  
     /// The expression is evaluated in the global context, so changes persist
+    ///
+    /// Blocks on promise resolution, and runs the event loop to completion
     ///
     /// Asynchronous code is supported, partially
     /// - Top-level await is not supported
     /// - The event loop will be run to completion after the expression is evaluated
-    /// - Eval must be run inside a tokio runtime for some async operations
     ///
-    /// For proper async support, use one of:
+    /// For top-level await support, use one of:
     /// - `call_function_async`
     /// - `call_stored_function_async`
     /// - `load_module_async`
@@ -396,7 +316,7 @@ impl Runtime {
     /// * `expr` - A string representing the JavaScript expression to evaluate
     ///
     /// # Returns
-    /// A `Result` containing the deserialized result of the expression (`T`)
+    /// A `Result` containing the deserialized result of the expression (`T`)  
     /// or an error (`Error`) if the expression cannot be evaluated or if the
     /// result cannot be deserialized.
     ///
@@ -409,20 +329,103 @@ impl Runtime {
     ///
     /// # fn main() -> Result<(), Error> {
     /// let mut runtime = Runtime::new(Default::default())?;
-    /// let value:
-    ///    usize = runtime.eval("2 + 2")?;
+    ///
+    /// let value: u32 = runtime.eval("2 + 2")?;
     /// assert_eq!(4, value);
+    ///
+    /// let value: String = runtime.eval("new Promise(resolve => resolve('test'))")?;
+    /// assert_eq!("test", value);
+    ///
     /// # Ok(())
     /// # }
     /// ```
-    pub fn eval<T>(&mut self, expr: &str) -> Result<T, Error>
+    pub fn eval<T>(&mut self, expr: impl ToString) -> Result<T, Error>
     where
         T: serde::de::DeserializeOwned,
     {
-        self.inner.eval(expr)
+        self.block_on(|runtime| async move { runtime.eval_async(expr).await })
+    }
+
+    /// Evaluate a piece of non-ECMAScript-module JavaScript code  
+    /// The expression is evaluated in the global context, so changes persist
+    ///
+    /// Awaits promise resolution, and runs the event loop to completion
+    ///
+    /// Asynchronous code is supported, partially
+    /// - Top-level await is not supported
+    /// - The event loop will be run to completion after the expression is evaluated
+    ///
+    /// For top-level await support, use one of:
+    /// - `call_function_async`
+    /// - `call_stored_function_async`
+    /// - `load_module_async`
+    /// - `load_modules_async`
+    ///
+    /// Or any of the `_immmediate` variants, paired with [`crate::js_value::Promise`]
+    ///
+    /// # Arguments
+    /// * `expr` - A string representing the JavaScript expression to evaluate
+    ///
+    /// # Returns
+    /// A `Result` containing the deserialized result of the expression (`T`)  
+    /// or an error (`Error`) if the expression cannot be evaluated or if the
+    /// result cannot be deserialized.
+    ///
+    /// # Errors
+    /// Can fail if the expression cannot be evaluated, or if the result cannot be deserialized into the requested type
+    ///
+    /// # Example
+    /// For an example, see [`Runtime::eval`]
+    pub async fn eval_async<T>(&mut self, expr: impl ToString) -> Result<T, Error>
+    where
+        T: serde::de::DeserializeOwned,
+    {
+        let result = self.inner.eval(expr.to_string())?;
+        let result = self.inner.resolve_with_event_loop(result).await?;
+        self.inner.decode_value(result)
+    }
+
+    /// Evaluate a piece of non-ECMAScript-module JavaScript code  
+    /// The expression is evaluated in the global context, so changes persist
+    ///
+    /// Does not await promise resolution, or run the event loop  
+    /// Promises can be returned by specifying the return type as [`crate::js_value::Promise`]  
+    /// The event loop should be run using [`Runtime::await_event_loop`]
+    ///
+    /// Asynchronous code is supported, partially
+    /// - Top-level await is not supported
+    ///
+    /// For top-level await support, use one of:
+    /// - `call_function_async`
+    /// - `call_stored_function_async`
+    /// - `load_module_async`
+    /// - `load_modules_async`
+    ///
+    /// Or any of the `_immmediate` variants, paired with [`crate::js_value::Promise`]
+    ///
+    /// # Arguments
+    /// * `expr` - A string representing the JavaScript expression to evaluate
+    ///
+    /// # Returns
+    /// A `Result` containing the deserialized result of the expression (`T`)  
+    /// or an error (`Error`) if the expression cannot be evaluated or if the
+    /// result cannot be deserialized.
+    ///
+    /// # Errors
+    /// Can fail if the expression cannot be evaluated, or if the result cannot be deserialized into the requested type
+    ///
+    /// # Example
+    /// For an example, see [`Runtime::eval`]
+    pub fn eval_immediate<T>(&mut self, expr: impl ToString) -> Result<T, Error>
+    where
+        T: serde::de::DeserializeOwned,
+    {
+        let result = self.inner.eval(expr.to_string())?;
+        self.inner.decode_value(result)
     }
 
     /// Calls a stored javascript function and deserializes its return value.
+    ///
     /// Returns a future that resolves when:
     /// - The event loop is resolved, and
     /// - If the value is a promise, the promise is resolved
@@ -437,7 +440,7 @@ impl Runtime {
     /// * `args` - The arguments to pass to the function
     ///
     /// # Returns
-    /// A `Result` containing the deserialized result of the function call (`T`)
+    /// A `Result` containing the deserialized result of the function call (`T`)  
     /// or an error (`Error`) if there are issues with calling the function,
     /// or if the result cannot be deserialized.
     ///
@@ -461,6 +464,7 @@ impl Runtime {
     }
 
     /// Calls a stored javascript function and deserializes its return value.
+    ///
     /// Blocks until:
     /// - The event loop is resolved, and
     /// - If the value is a promise, the promise is resolved
@@ -473,7 +477,7 @@ impl Runtime {
     /// * `args` - The arguments to pass to the function
     ///
     /// # Returns
-    /// A `Result` containing the deserialized result of the function call (`T`)
+    /// A `Result` containing the deserialized result of the function call (`T`)  
     /// or an error (`Error`) if there are issues with calling the function,
     /// or if the result cannot be deserialized.
     ///
@@ -496,8 +500,9 @@ impl Runtime {
     }
 
     /// Calls a stored javascript function and deserializes its return value.
-    /// Will not attempt to resolve promises, or run the event loop
-    /// Promises can be returned by specifying the return type as [`crate::js_value::Promise`]
+    ///
+    /// Will not attempt to resolve promises, or run the event loop  
+    /// Promises can be returned by specifying the return type as [`crate::js_value::Promise`]  
     /// The event loop should be run using [`Runtime::await_event_loop`]
     ///
     /// See [`Runtime::call_function`] for an example
@@ -508,7 +513,7 @@ impl Runtime {
     /// * `args` - The arguments to pass to the function
     ///
     /// # Returns
-    /// A `Result` containing the deserialized result of the function call (`T`)
+    /// A `Result` containing the deserialized result of the function call (`T`)  
     /// or an error (`Error`) if there are issues with calling the function,
     /// or if the result cannot be deserialized.
     ///
@@ -531,6 +536,7 @@ impl Runtime {
     }
 
     /// Calls a javascript function within the Deno runtime by its name and deserializes its return value.
+    ///
     /// Returns a future that resolves when:
     /// - The event loop is resolved, and
     /// - If the value is a promise, the promise is resolved
@@ -545,7 +551,7 @@ impl Runtime {
     /// * `args` - The arguments to pass to the function
     ///
     /// # Returns
-    /// A `Result` containing the deserialized result of the function call (`T`)
+    /// A `Result` containing the deserialized result of the function call (`T`)  
     /// or an error (`Error`) if the function cannot be found, if there are issues with
     /// calling the function, or if the result cannot be deserialized.
     ///
@@ -570,6 +576,7 @@ impl Runtime {
     }
 
     /// Calls a javascript function within the Deno runtime by its name and deserializes its return value.
+    ///
     /// Blocks until:
     /// - The event loop is resolved, and
     /// - If the value is a promise, the promise is resolved
@@ -580,12 +587,12 @@ impl Runtime {
     /// * `args` - The arguments to pass to the function
     ///
     /// # Returns
-    /// A `Result` containing the deserialized result of the function call (`T`)
+    /// A `Result` containing the deserialized result of the function call (`T`)  
     /// or an error (`Error`) if the function cannot be found, if there are issues with
     /// calling the function, or if the result cannot be deserialized.
     ///
     /// # Errors
-    /// Fails if the function cannot be found, if there are issues with calling the function,
+    /// Fails if the function cannot be found, if there are issues with calling the function,  
     /// Or if the result cannot be deserialized into the requested type
     ///
     /// # Example
@@ -618,8 +625,9 @@ impl Runtime {
     }
 
     /// Calls a javascript function within the Deno runtime by its name and deserializes its return value.
-    /// Will not attempt to resolve promises, or run the event loop
-    /// Promises can be returned by specifying the return type as [`crate::js_value::Promise`]
+    ///
+    /// Will not attempt to resolve promises, or run the event loop  
+    /// Promises can be returned by specifying the return type as [`crate::js_value::Promise`]  
     /// The event loop should be run using [`Runtime::await_event_loop`]
     ///
     /// # Arguments
@@ -628,12 +636,12 @@ impl Runtime {
     /// * `args` - The arguments to pass to the function
     ///
     /// # Returns
-    /// A `Result` containing the deserialized result of the function call (`T`)
+    /// A `Result` containing the deserialized result of the function call (`T`)  
     /// or an error (`Error`) if the function cannot be found, if there are issues with
     /// calling the function, or if the result cannot be deserialized.
     ///
     /// # Errors
-    /// Fails if the function cannot be found, if there are issues with calling the function,
+    /// Fails if the function cannot be found, if there are issues with calling the function,  
     /// Or if the result cannot be deserialized into the requested type
     ///
     /// # Example
@@ -666,6 +674,7 @@ impl Runtime {
     }
 
     /// Get a value from a runtime instance
+    ///
     /// Blocks until:
     /// - The event loop is resolved, and
     /// - If the value is a promise, the promise is resolved
@@ -706,6 +715,7 @@ impl Runtime {
     }
 
     /// Get a value from a runtime instance
+    ///
     /// Returns a future that resolves when:
     /// - The event loop is resolved, and
     /// - If the value is a promise, the promise is resolved
@@ -717,7 +727,7 @@ impl Runtime {
     /// * `name` - A string representing the name of the value to find
     ///
     /// # Returns
-    /// A `Result` containing the deserialized result or an error (`Error`) if the value cannot be found,
+    /// A `Result` containing the deserialized result or an error (`Error`) if the value cannot be found,  
     /// Or if the result cannot be deserialized into the requested type
     ///
     /// # Errors
@@ -736,8 +746,9 @@ impl Runtime {
     }
 
     /// Get a value from a runtime instance
-    /// Will not attempt to resolve promises, or run the event loop
-    /// Promises can be returned by specifying the return type as [`crate::js_value::Promise`]
+    ///
+    /// Will not attempt to resolve promises, or run the event loop  
+    /// Promises can be returned by specifying the return type as [`crate::js_value::Promise`]  
     /// The event loop should be run using [`Runtime::await_event_loop`]
     ///
     /// # Arguments
@@ -777,9 +788,9 @@ impl Runtime {
     }
 
     /// Executes the given module, and returns a handle allowing you to extract values
-    /// And call functions
+    /// and call functions
     ///
-    /// Blocks until the module has been executed AND the event loop has fully resolved
+    /// Blocks until the module has been executed AND the event loop has fully resolved  
     /// See [`Runtime::load_module_async`] for a non-blocking variant, or use with async
     /// background tasks
     ///
@@ -817,9 +828,9 @@ impl Runtime {
     }
 
     /// Executes the given module, and returns a handle allowing you to extract values
-    /// And call functions
+    /// and call functions
     ///
-    /// Returns a future that resolves to the handle for the loaded module
+    /// Returns a future that resolves to the handle for the loaded module  
     /// Makes no attempt to fully resolve the event loop - call [`Runtime::await_event_loop`]
     /// to resolve background tasks and async listeners
     ///
@@ -839,13 +850,13 @@ impl Runtime {
     }
 
     /// Executes the given module, and returns a handle allowing you to extract values
-    /// And call functions.
+    /// and call functions.
     ///
-    /// Blocks until all modules have been executed AND the event loop has fully resolved
+    /// Blocks until all modules have been executed AND the event loop has fully resolved  
     /// See [`Runtime::load_module_async`] for a non-blocking variant, or use with async
     /// background tasks
     ///
-    /// This will load 'module' as the main module, and the others as side-modules.
+    /// This will load 'module' as the main module, and the others as side-modules.  
     /// Only one main module can be loaded per runtime
     ///
     /// # Arguments
@@ -887,13 +898,13 @@ impl Runtime {
     }
 
     /// Executes the given module, and returns a handle allowing you to extract values
-    /// And call functions.
+    /// and call functions.
     ///
-    /// Returns a future that resolves to the handle for the loaded module
+    /// Returns a future that resolves to the handle for the loaded module  
     /// Makes no attempt to resolve the event loop - call [`Runtime::await_event_loop`] to
     /// resolve background tasks and async listeners
     ///
-    /// This will load 'module' as the main module, and the others as side-modules.
+    /// This will load 'module' as the main module, and the others as side-modules.  
     /// Only one main module can be loaded per runtime
     ///
     /// See [`Runtime::load_modules`] for an example
@@ -917,6 +928,7 @@ impl Runtime {
     }
 
     /// Executes the entrypoint function of a module within the Deno runtime.
+    ///
     /// Blocks until:
     /// - The event loop is resolved, and
     /// - If the value is a promise, the promise is resolved
@@ -925,12 +937,12 @@ impl Runtime {
     /// * `module_context` - A handle returned by loading a module into the runtime
     ///
     /// # Returns
-    /// A `Result` containing the deserialized result of the entrypoint execution (`T`)
+    /// A `Result` containing the deserialized result of the entrypoint execution (`T`)  
     /// if successful, or an error (`Error`) if the entrypoint is missing, the execution fails,
     /// or the result cannot be deserialized.
     ///
     /// # Errors
-    /// Can fail if the module cannot be loaded, if the entrypoint is missing, if the execution fails,
+    /// Can fail if the module cannot be loaded, if the entrypoint is missing, if the execution fails,  
     /// Or if the result cannot be deserialized into the requested type
     ///
     /// # Example
@@ -962,6 +974,7 @@ impl Runtime {
     }
 
     /// Executes the entrypoint function of a module within the Deno runtime.
+    ///
     /// Returns a future that resolves when:
     /// - The event loop is resolved, and
     /// - If the value is a promise, the promise is resolved
@@ -974,12 +987,12 @@ impl Runtime {
     /// * `module_context` - A handle returned by loading a module into the runtime
     ///
     /// # Returns
-    /// A `Result` containing the deserialized result of the entrypoint execution (`T`)
+    /// A `Result` containing the deserialized result of the entrypoint execution (`T`)  
     /// if successful, or an error (`Error`) if the entrypoint is missing, the execution fails,
     /// or the result cannot be deserialized.
     ///
     /// # Errors
-    /// Can fail if the module cannot be loaded, if the entrypoint is missing, if the execution fails,
+    /// Can fail if the module cannot be loaded, if the entrypoint is missing, if the execution fails,  
     /// Or if the result cannot be deserialized into the requested type
     pub async fn call_entrypoint_async<T>(
         &mut self,
@@ -1001,8 +1014,9 @@ impl Runtime {
     }
 
     /// Executes the entrypoint function of a module within the Deno runtime.
-    /// Will not attempt to resolve promises, or run the event loop
-    /// Promises can be returned by specifying the return type as [`crate::js_value::Promise`]
+    ///
+    /// Will not attempt to resolve promises, or run the event loop  
+    /// Promises can be returned by specifying the return type as [`crate::js_value::Promise`]  
     /// The event loop should be run using [`Runtime::await_event_loop`]
     ///
     /// # Arguments
@@ -1062,12 +1076,12 @@ impl Runtime {
     /// * `entrypoint_args` - Arguments to pass to the entrypoint function
     ///
     /// # Returns
-    /// A `Result` containing the deserialized result of the entrypoint execution (`T`)
+    /// A `Result` containing the deserialized result of the entrypoint execution (`T`)  
     /// if successful, or an error (`Error`) if the entrypoint is missing, the execution fails,
     /// or the result cannot be deserialized.
     ///
     /// # Errors
-    /// Can fail if the module cannot be loaded, if the entrypoint is missing, if the execution fails,
+    /// Can fail if the module cannot be loaded, if the entrypoint is missing, if the execution fails,  
     /// Or if the result cannot be deserialized into the requested type
     ///
     /// # Example
@@ -1122,14 +1136,6 @@ mod test_runtime {
             ..Default::default()
         })
         .expect("Could not create runtime with extensions");
-    }
-
-    #[test]
-    #[allow(deprecated)]
-    fn test_into_arg() {
-        assert_eq!(2, Runtime::into_arg(2));
-        assert_eq!("test", Runtime::into_arg("test"));
-        assert_ne!("test", Runtime::into_arg(2));
     }
 
     #[test]

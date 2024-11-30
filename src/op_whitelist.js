@@ -2,15 +2,21 @@
 // This file is a whitelist of ops provided by the deno runtime
 // This whitelist is used in tests to confirm that extensions
 // marked as sandboxed are in-fact safe.
+// 
+// It is not auto-generated, and is maintained manually.
 //
 
 export const whitelist = {
     //
+    // Known dangerous ops
+    // Default ops that break sandbox - all of these have been disabled by default
+    //
+    "op_panic": "Core - BREAKING - Stubbed out in rustyscript",
+
+    //
     // Core ops
     // All core ops MUST preserve the sandbox
     //
-
-    "op_panic": "BREAKING - Stubbed out in rustyscript",
 
     "op_import_sync": "Harmless",
     "op_get_extras_binding_object": "Harmless",

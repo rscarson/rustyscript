@@ -2,11 +2,11 @@
 /// This example is meant to demonstrate sending and receiving custom types
 /// between JS and rust
 ///
-use rustyscript::{module, Error, ModuleWrapper, StaticModule};
+use rustyscript::{module, Error, Module, ModuleWrapper};
 use serde::{Deserialize, Serialize};
 
 // Modules can be defined statically using this macro!
-static MY_MODULE: StaticModule = module!(
+static MY_MODULE: Module = module!(
     "custom_types.js",
     "
     // Mapping the enum types over like this isn't strictly needed
@@ -61,7 +61,7 @@ struct BridgeCrossingAttempt {
 fn main() -> Result<(), Error> {
     // We only have one source file, so it is simpler here to just use this wrapper type
     // As opposed to building a complete runtime.
-    let mut module = ModuleWrapper::new_from_module(&MY_MODULE.to_module(), Default::default())?;
+    let mut module = ModuleWrapper::new_from_module(&MY_MODULE, Default::default())?;
 
     // Although we can use json_args!() to call a function with primitives as arguments
     // More complicated types must use `Runtime::arg`

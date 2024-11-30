@@ -1,24 +1,38 @@
 use serde::{Deserialize, Serialize};
+use std::borrow::Cow;
 use std::ffi::OsStr;
 use std::fmt::Display;
 use std::fs::{read_dir, read_to_string};
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
-/// A static representation of a module
-/// use `.to_module()` to get a module instance to use with a runtime
-pub struct StaticModule(&'static str, &'static str);
-impl StaticModule {
-    /// Create a new `StaticModule`
-    /// use the module!(filename, contents) macro instead!
-    #[must_use]
-    pub const fn new(filename: &'static str, contents: &'static str) -> Self {
-        Self(filename, contents)
+/// Small wrapper around a path to allow for static strings
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+enum MaybePath {
+    Path(Cow<'static, Path>),
+    Str(Cow<'static, str>),
+}
+impl MaybePath {
+    /// Create a new `MaybePath` from a path
+    pub fn from_path(path: impl AsRef<Path>) -> Self {
+        Self::Path(Cow::Owned(path.as_ref().to_path_buf()))
     }
 
-    /// Get an instance of this `StaticModule` that can be used with a runtime
-    #[must_use]
-    pub fn to_module(&self) -> Module {
-        Module::new(Path::new(self.0), self.1)
+    /// Create a new `MaybePath` from a static string
+    pub const fn from_static(path: &'static str) -> Self {
+        Self::Str(Cow::Borrowed(path))
+    }
+}
+impl Default for MaybePath {
+    fn default() -> Self {
+        Self::Str(Cow::Borrowed(""))
+    }
+}
+impl AsRef<Path> for MaybePath {
+    fn as_ref(&self) -> &Path {
+        match self {
+            Self::Path(path) => path.as_ref(),
+            Self::Str(path) => Path::new(path.as_ref()),
+        }
     }
 }
 
@@ -31,19 +45,17 @@ impl StaticModule {
 /// # Example
 ///
 /// ```rust
-/// use rustyscript::{ module, StaticModule };
+/// use rustyscript::{ module, Module };
 ///
-/// const MY_SCRIPT: StaticModule = module!(
+/// const MY_SCRIPT: Module = module!(
 ///     "filename.js",
 ///     "export const myValue = 42;"
 /// );
-///
-/// let module_instance = MY_SCRIPT.to_module();
 /// ```
 #[macro_export]
 macro_rules! module {
     ($filename:literal, $contents:literal) => {
-        StaticModule::new($filename, $contents)
+        $crate::Module::new_static($filename, $contents)
     };
 }
 
@@ -56,15 +68,15 @@ macro_rules! module {
 #[macro_export]
 macro_rules! include_module {
     ($filename:literal) => {
-        StaticModule::new($filename, include_str!($filename))
+        Module::new_static($filename, include_str!($filename))
     };
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize, Default)]
 /// Represents a pice of javascript for execution.
 pub struct Module {
-    filename: PathBuf,
-    contents: String,
+    filename: MaybePath,
+    contents: Cow<'static, str>,
 }
 
 impl Display for Module {
@@ -75,6 +87,7 @@ impl Display for Module {
 
 impl Module {
     /// Creates a new `Module` instance with the given filename and contents.
+    ///
     /// If filename is relative it will be resolved to the current working dir at runtime
     ///
     /// # Arguments
@@ -92,10 +105,37 @@ impl Module {
     /// let module = Module::new("module.js", "console.log('Hello, World!');");
     /// ```
     #[must_use]
-    pub fn new(filename: impl AsRef<Path>, contents: &str) -> Self {
+    pub fn new(filename: impl AsRef<Path>, contents: impl ToString) -> Self {
+        let filename = MaybePath::from_path(filename);
+        let contents = Cow::Owned(contents.to_string());
+
+        Self { filename, contents }
+    }
+
+    /// Creates a new `Module` instance with the given filename and contents.  
+    /// The function is const, and the filename and contents are static strings.
+    ///
+    /// If filename is relative it will be resolved to the current working dir at runtime
+    ///
+    /// # Arguments
+    /// * `filename` - A string representing the filename of the module.
+    /// * `contents` - A string containing the contents of the module.
+    ///
+    /// # Returns
+    /// A new `Module` instance.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use rustyscript::Module;
+    ///
+    /// let module = Module::new("module.js", "console.log('Hello, World!');");
+    /// ```
+    #[must_use]
+    pub const fn new_static(filename: &'static str, contents: &'static str) -> Self {
         Self {
-            filename: filename.as_ref().to_path_buf(),
-            contents: contents.to_string(),
+            filename: MaybePath::from_static(filename),
+            contents: Cow::Borrowed(contents),
         }
     }
 
@@ -127,6 +167,7 @@ impl Module {
     }
 
     /// Attempt to load all `.js`/`.ts` files in a given directory
+    ///
     /// Fails if any of the files cannot be loaded
     ///
     /// # Arguments
@@ -185,7 +226,7 @@ impl Module {
     /// ```
     #[must_use]
     pub fn filename(&self) -> &Path {
-        &self.filename
+        self.filename.as_ref()
     }
 
     /// Returns the contents of the module.

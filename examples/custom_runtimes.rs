@@ -11,7 +11,7 @@
 /// Extensions consist of a set of #[op2] functions, an extension! macro,
 /// and one or more optional JS modules.
 ///
-use rustyscript::{module, Error, Module, ModuleHandle, Runtime, RuntimeOptions, StaticModule};
+use rustyscript::{module, Error, Module, ModuleHandle, Runtime, RuntimeOptions};
 use std::time::Duration;
 
 // See example_extension for a demonstration
@@ -19,7 +19,7 @@ use std::time::Duration;
 mod example_extension;
 
 // A module that will always be loaded into the custom runtime
-const MY_MODULE: StaticModule = module!(
+const MY_MODULE: Module = module!(
     "my_module.js",
     "export function importantFunction() {
         return 42;
@@ -37,7 +37,7 @@ impl MyRuntime {
             timeout: Duration::from_millis(500),
             ..Default::default()
         })?);
-        runtime.load_module(&MY_MODULE.to_module())?;
+        runtime.load_module(&MY_MODULE)?;
 
         Ok(runtime)
     }

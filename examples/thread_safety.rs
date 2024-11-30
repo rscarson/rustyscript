@@ -6,7 +6,7 @@
 /// See `examples/default_threaded_worker` and `examples/custom_threaded_worker`
 /// for a more flexible way to run rustyscript in a threaded environment
 ///
-use rustyscript::{module, static_runtime, Error, RuntimeOptions, StaticModule};
+use rustyscript::{module, static_runtime, Error, Module, RuntimeOptions};
 use std::time::Duration;
 
 static_runtime!(RUNTIME, {
@@ -17,7 +17,7 @@ static_runtime!(RUNTIME, {
 });
 
 // Modules can be defined statically using this macro!
-static MY_MODULE: StaticModule = module!(
+static MY_MODULE: Module = module!(
     "custom_types.js",
     "
     export const my_function = () => 'test';
@@ -26,7 +26,7 @@ static MY_MODULE: StaticModule = module!(
 
 fn main() -> Result<(), Error> {
     let value: String = RUNTIME::with(|runtime| {
-        let module_context = runtime.load_module(&MY_MODULE.to_module())?;
+        let module_context = runtime.load_module(&MY_MODULE)?;
         runtime.call_function(Some(&module_context), "my_function", &())
     })?;
 

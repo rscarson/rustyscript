@@ -4,7 +4,7 @@ authors = ["@rscarson"]
 description = "Effortless JS Integration for Rust"
 edition = "2021"
 license = "MIT OR Apache-2.0"
-version = "0.10.0"
+version = "0.10.1"
 repository = "https://github.com/rscarson/rustyscript"
 
 keywords = ["rust", "javascript", "deno", "runtime", "embedding"]
@@ -146,11 +146,6 @@ snapshot_builder = []
 # Enables the threaded worker API
 worker = []
 
-# Only used for the update_deno binary
-# Turns on all dependencies and features required for the dependency manager
-# So we can get a full list of updated deno
-__dependency_manager = ["toml", "node_experimental"]
-
 #
 # End of feature definitions
 #
@@ -159,6 +154,9 @@ __dependency_manager = ["toml", "node_experimental"]
 thiserror = "1.0.65"
 serde = "1.0.215"
 
+# CLI argument parsing and dependency management
+clap = { version = "4.5.21", features = ["derive"], optional = true }
+toml = { version = "0.8.19", optional = true }
 
 # Used for NodeJS compatibility and other features
 async-trait = "0.1.83"
@@ -186,8 +184,6 @@ reqwest = { version = "=0.12.8", optional = true, default-features = false, feat
 http = { version = "1.1.0", optional = true }
 deno_permissions = { version = "0.39.0", optional = true }
 
-# For dependency management only
-toml = { version = "0.8.19", optional = true }
 
 #
 # Dependencies for the various extension features
@@ -288,7 +284,3 @@ required-features = ["web"]
 [[bench]]
 name = "runtime"
 harness = false
-
-[[bin]]
-name = "update_deno"
-required-features = ["__dependency_manager"]
