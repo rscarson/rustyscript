@@ -157,7 +157,7 @@ thiserror = "2.0.4"
 serde = "1.0.215"
 
 # CLI argument parsing and dependency management
-clap = { version = "4.5.21", features = ["derive"], optional = true }
+clap = { version = "4.5.22", features = ["derive"], optional = true }
 toml = { version = "0.8.19", optional = true }
 
 # Used for NodeJS compatibility and other features
