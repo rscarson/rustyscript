@@ -5450,7 +5450,7 @@ dependencies = [
  "deno_permissions",
  "deno_resolver",
  "deno_runtime",
- "deno_semver 0.5.16",
+ "deno_semver 0.6.0",
  "deno_telemetry",
  "deno_terminal 0.2.0",
  "deno_tls",
