@@ -1169,7 +1169,7 @@ dependencies = [
  "anyhow",
  "deno_package_json",
  "deno_path_util",
- "deno_semver",
+ "deno_semver 0.5.16",
  "glob",
  "ignore",
  "import_map",
@@ -1286,6 +1286,27 @@ dependencies = [
  "tokio",
  "uuid",
  "x25519-dalek",
+]
+
+[[package]]
+name = "deno_error"
+version = "0.5.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "199c66ffd17ee1a948904d33f3d3f364573951c1f9fb3f859bfe7770bf33862a"
+dependencies = [
+ "deno_error_macro",
+ "libc",
+]
+
+[[package]]
+name = "deno_error_macro"
+version = "0.5.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3cd99df6ae75443907e1f959fc42ec6dcea67a7bd083e76cf23a117102c9a2ce"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.87",
 ]
 
 [[package]]
@@ -1467,14 +1488,14 @@ dependencies = [
 
 [[package]]
 name = "deno_lockfile"
-version = "0.23.1"
+version = "0.23.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "579117d5815aa9bae0212637d6f4d5f45f9649bb2c8988dca434077545535039"
+checksum = "559c19feb00af0c34f0bd4a20e56e12463fafd5c5069d6005f3ce33008027eea"
 dependencies = [
- "deno_semver",
+ "deno_semver 0.6.0",
  "serde",
  "serde_json",
- "thiserror 1.0.66",
+ "thiserror 2.0.4",
 ]
 
 [[package]]
@@ -1632,20 +1653,20 @@ dependencies = [
 
 [[package]]
 name = "deno_npm"
-version = "0.25.4"
+version = "0.26.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e6b4dc4a9f1cff63d5638e7d93042f24f46300d1cc77b86f3caaa699a7ddccf7"
+checksum = "f2f125a5dba7839c46394a0a9c835da9fe60f5f412587ab4956a76492a1cc6a8"
 dependencies = [
  "anyhow",
  "async-trait",
  "deno_lockfile",
- "deno_semver",
+ "deno_semver 0.6.0",
  "futures",
  "log",
  "monch",
  "serde",
  "serde_json",
- "thiserror 1.0.66",
+ "thiserror 2.0.4",
  "url",
 ]
 
@@ -1671,7 +1692,7 @@ version = "0.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6cbc4c4d3eb0960b58e8f43f9fc2d3f620fcac9a03cd85203e08db5b04e83c1f"
 dependencies = [
- "deno_semver",
+ "deno_semver 0.5.16",
  "indexmap 2.6.0",
  "serde",
  "serde_json",
@@ -1724,7 +1745,7 @@ dependencies = [
  "deno_media_type",
  "deno_package_json",
  "deno_path_util",
- "deno_semver",
+ "deno_semver 0.5.16",
  "node_resolver",
  "thiserror 1.0.66",
  "url",
@@ -1810,6 +1831,20 @@ dependencies = [
  "once_cell",
  "serde",
  "thiserror 1.0.66",
+ "url",
+]
+
+[[package]]
+name = "deno_semver"
+version = "0.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4756be7351289726087408984db18b9eb5e0186907673f39f858d119d0162071"
+dependencies = [
+ "deno_error",
+ "monch",
+ "once_cell",
+ "serde",
+ "thiserror 2.0.4",
  "url",
 ]
 
@@ -5415,7 +5450,7 @@ dependencies = [
  "deno_permissions",
  "deno_resolver",
  "deno_runtime",
- "deno_semver",
+ "deno_semver 0.5.16",
  "deno_telemetry",
  "deno_terminal 0.2.0",
  "deno_tls",
