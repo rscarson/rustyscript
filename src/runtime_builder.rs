@@ -130,6 +130,7 @@ impl RuntimeBuilder {
     /// Set the initial seed for the crypto extension
     #[cfg(feature = "crypto")]
     #[cfg_attr(docsrs, doc(cfg(feature = "crypto")))]
+    #[must_use]
     pub fn with_cryto_seed(mut self, seed: u64) -> Self {
         self.0.extension_options.crypto_seed = Some(seed);
         self
@@ -186,6 +187,7 @@ impl RuntimeBuilder {
     /// Set the options for the node extension
     #[cfg(feature = "node_experimental")]
     #[cfg_attr(docsrs, doc(cfg(feature = "node_experimental")))]
+    #[must_use]
     pub fn with_node_resolver(mut self, resolver: std::sync::Arc<crate::RustyResolver>) -> Self {
         self.0.extension_options.node_resolver = resolver;
         self
