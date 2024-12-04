@@ -255,7 +255,7 @@ impl RuntimeBuilder {
     #[cfg_attr(docsrs, doc(cfg(feature = "web")))]
     #[must_use]
     pub fn with_web_unsafely_ignored_certificate_errors(mut self, domain: impl ToString) -> Self {
-        match self
+        match &mut self
             .0
             .extension_options
             .web
