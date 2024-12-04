@@ -16,8 +16,12 @@ fn main() -> Result<(), Error> {
         "globalThis.sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));",
     )?;
 
+    // Can be run as blocking
+    runtime.eval::<u32>("sleep(1000).then(() => 1)")?;
+
+    // Or as async
     let future = async {
-        let result: Promise<u32> = runtime.eval("sleep(1000).then(() => 2)")?;
+        let result: Promise<u32> = runtime.eval_immediate("sleep(1000).then(() => 2)")?;
         result.into_future(&mut runtime).await?;
 
         Ok::<(), Error>(())

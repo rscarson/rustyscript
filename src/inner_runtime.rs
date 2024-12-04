@@ -957,21 +957,20 @@ mod test_inner_runtime {
 
         let v = runtime.eval("2 + 2").expect("failed to eval");
         assert_v8!(v, 4, usize, runtime);
+        let result = runtime
+            .eval(
+                "
+            let sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+            sleep(500).then(() => 2);
+        ",
+            )
+            .expect("failed to eval");
+
+        let result: Promise<u32> = runtime
+            .decode_value(result)
+            .expect("Could not decode promise");
 
         run_async_task(|| async move {
-            let result = runtime
-                .eval(
-                    "
-                let sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-                sleep(500).then(() => 2);
-            ",
-                )
-                .expect("failed to eval");
-
-            let result: Promise<u32> = runtime
-                .decode_value(result)
-                .expect("Could not decode promise");
-
             let result: u32 = result.resolve(runtime.deno_runtime()).await?;
             assert_eq!(result, 2);
             Ok(())
