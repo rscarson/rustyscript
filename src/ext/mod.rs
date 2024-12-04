@@ -78,6 +78,9 @@ pub mod kv;
 #[cfg(feature = "cron")]
 pub mod cron;
 
+#[cfg(feature = "telemetry")]
+pub mod telemetry;
+
 #[cfg(feature = "node_experimental")]
 pub mod napi;
 #[cfg(feature = "node_experimental")]
@@ -91,36 +94,42 @@ pub struct ExtensionOptions {
     ///
     /// Requires the `web` feature to be enabled
     #[cfg(feature = "web")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "web")))]
     pub web: web::WebOptions,
 
     /// Optional seed for the `deno_crypto` extension
     ///
     /// Requires the `crypto` feature to be enabled
     #[cfg(feature = "crypto")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "crypto")))]
     pub crypto_seed: Option<u64>,
 
     /// Configures the stdin/out/err pipes for the `deno_io` extension
     ///
     /// Requires the `io` feature to be enabled
     #[cfg(feature = "io")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "io")))]
     pub io_pipes: Option<deno_io::Stdio>,
 
     /// Optional path to the directory where the webstorage extension will store its data
     ///
     /// Requires the `webstorage` feature to be enabled
     #[cfg(feature = "webstorage")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "webstorage")))]
     pub webstorage_origin_storage_dir: Option<std::path::PathBuf>,
 
     /// Optional cache configuration for the `deno_cache` extension
     ///
     /// Requires the `cache` feature to be enabled
     #[cfg(feature = "cache")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "cache")))]
     pub cache: Option<deno_cache::CreateCache<cache::CacheBackend>>,
 
     /// Filesystem implementation for the `deno_fs` extension
     ///
     /// Requires the `fs` feature to be enabled
     #[cfg(feature = "fs")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "fs")))]
     pub filesystem: deno_fs::FileSystemRc,
 
     /// Shared in-memory broadcast channel for the `deno_broadcast_channel` extension
@@ -128,13 +137,20 @@ pub struct ExtensionOptions {
     ///
     /// Requires the `broadcast_channel` feature to be enabled
     #[cfg(feature = "broadcast_channel")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "broadcast_channel")))]
     pub broadcast_channel: deno_broadcast_channel::InMemoryBroadcastChannel,
 
     /// Key-value store for the `deno_kv` extension
     ///
     /// Requires the `kv` feature to be enabled
     #[cfg(feature = "kv")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "kv")))]
     pub kv_store: kv::KvStore,
+
+    /// OpenTelemetry configuration for the `deno_telemetry` extension
+    #[cfg(feature = "telemetry")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "telemetry")))]
+    pub telemetry_config: deno_telemetry::OtelConfig,
 
     /// Package resolver for the `deno_node` extension
     /// `RustyResolver` allows you to select the base dir for modules
@@ -142,6 +158,7 @@ pub struct ExtensionOptions {
     ///
     /// Requires the `node_experimental` feature to be enabled
     #[cfg(feature = "node_experimental")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "node_experimental")))]
     pub node_resolver: std::sync::Arc<node::RustyResolver>,
 }
 
@@ -171,6 +188,9 @@ impl Default for ExtensionOptions {
 
             #[cfg(feature = "kv")]
             kv_store: kv::KvStore::default(),
+
+            #[cfg(feature = "telemetry")]
+            telemetry_config: deno_telemetry::OtelConfig::default(),
 
             #[cfg(feature = "node_experimental")]
             node_resolver: std::sync::Arc::new(node::RustyResolver::default()),
@@ -242,6 +262,9 @@ pub(crate) fn all_extensions(
 
     #[cfg(feature = "cron")]
     extensions.extend(cron::extensions(is_snapshot));
+
+    #[cfg(feature = "telemetry")]
+    extensions.extend(telemetry::extensions(is_snapshot));
 
     #[cfg(feature = "node_experimental")]
     {

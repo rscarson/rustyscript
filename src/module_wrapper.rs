@@ -2,6 +2,7 @@ use crate::{js_value::Function, Error, Module, ModuleHandle, Runtime, RuntimeOpt
 use deno_core::{serde_json, v8::GetPropertyNamesArgs};
 
 /// A wrapper type representing a runtime instance loaded with a single module
+///
 /// Exactly equivalent to [`Runtime::new`] followed by [`Runtime::load_module`]
 ///
 /// Can also be created using the [`crate::import`] function
@@ -59,6 +60,7 @@ impl ModuleWrapper {
     }
 
     /// Retrieves a value from the module by name and deserializes it.
+    ///
     /// See [`Runtime::get_value`]
     ///
     /// # Arguments
@@ -77,6 +79,7 @@ impl ModuleWrapper {
     }
 
     /// Retrieves a future resolving to a value from the module by name and deserializes it.
+    ///
     /// See [`Runtime::get_value_async`]
     ///
     /// # Arguments
@@ -97,7 +100,9 @@ impl ModuleWrapper {
     }
 
     /// Retrieves a value from the module by name and deserializes it.
+    ///
     /// Does not await promises or the event loop.
+    ///
     /// See [`Runtime::get_value_immediate`]
     ///
     /// # Arguments
@@ -129,6 +134,7 @@ impl ModuleWrapper {
     }
 
     /// Calls a function in the module with the given name and arguments and deserializes the result.
+    ///
     /// See [`Runtime::call_function`]
     ///
     /// # Arguments
@@ -150,6 +156,7 @@ impl ModuleWrapper {
     }
 
     /// Calls a function in the module with the given name and arguments and deserializes the result.
+    ///
     /// See [`Runtime::call_function_async`]
     ///
     /// # Arguments
@@ -172,8 +179,9 @@ impl ModuleWrapper {
             .await
     }
 
-    /// Calls a function in the module with the given name and arguments and deserializes the result.
+    /// Calls a function in the module with the given name and arguments and deserializes the result.  
     /// Does not await promises or the event loop.
+    ///
     /// See [`Runtime::call_function_immediate`]
     ///
     /// # Arguments
@@ -196,6 +204,7 @@ impl ModuleWrapper {
     }
 
     /// Calls a function using the module's runtime that was previously stored as a Function object
+    ///
     /// See [`Runtime::call_stored_function`]
     ///
     /// # Arguments
@@ -221,6 +230,7 @@ impl ModuleWrapper {
     }
 
     /// Calls a function using the module's runtime that was previously stored as a Function object
+    ///
     /// See [`Runtime::call_stored_function_async`]
     ///
     /// # Arguments
@@ -244,7 +254,9 @@ impl ModuleWrapper {
     }
 
     /// Calls a function using the module's runtime that was previously stored as a Function object
+    ///
     /// Does not await promises or the event loop.
+    ///
     /// See [`Runtime::call_stored_function_immediate`]
     ///
     /// # Arguments
@@ -266,7 +278,7 @@ impl ModuleWrapper {
             .call_stored_function_immediate(Some(&self.module_context), function, args)
     }
 
-    /// Retrieves the names of the module's exports.
+    /// Retrieves the names of the module's exports.  
     /// (Keys that are not valid UTF-8, may not work as intended due to encoding issues)
     ///
     /// # Returns

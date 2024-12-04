@@ -1,46 +1,21 @@
+use maybe_path::MaybePathBuf;
 use serde::{Deserialize, Serialize};
 use std::borrow::Cow;
 use std::ffi::OsStr;
 use std::fmt::Display;
 use std::fs::{read_dir, read_to_string};
-use std::path::Path;
-
-/// Small wrapper around a path to allow for static strings
-#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
-enum MaybePath {
-    Path(Cow<'static, Path>),
-    Str(Cow<'static, str>),
-}
-impl MaybePath {
-    /// Create a new `MaybePath` from a path
-    pub fn from_path(path: impl AsRef<Path>) -> Self {
-        Self::Path(Cow::Owned(path.as_ref().to_path_buf()))
-    }
-
-    /// Create a new `MaybePath` from a static string
-    pub const fn from_static(path: &'static str) -> Self {
-        Self::Str(Cow::Borrowed(path))
-    }
-}
-impl Default for MaybePath {
-    fn default() -> Self {
-        Self::Str(Cow::Borrowed(""))
-    }
-}
-impl AsRef<Path> for MaybePath {
-    fn as_ref(&self) -> &Path {
-        match self {
-            Self::Path(path) => path.as_ref(),
-            Self::Str(path) => Path::new(path.as_ref()),
-        }
-    }
-}
+use std::path::{Path, PathBuf};
 
 /// Creates a static module
+///
+/// This is just a macro around [`Module::new_static`]
 ///
 /// # Arguments
 /// * `filename` - A string representing the filename of the module.
 /// * `contents` - A string containing the contents of the module.
+///
+/// Note that the contents argument is optional;
+/// if not provided, the macro will attempt to include the file at the given path.
 ///
 /// # Example
 ///
@@ -57,6 +32,10 @@ macro_rules! module {
     ($filename:literal, $contents:literal) => {
         $crate::Module::new_static($filename, $contents)
     };
+
+    ($filename:literal) => {
+        Module::new_static($filename, include_str!($filename))
+    };
 }
 
 /// Creates a static module based on a statically included file
@@ -72,11 +51,31 @@ macro_rules! include_module {
     };
 }
 
-#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize, Default)]
-/// Represents a pice of javascript for execution.
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Default)]
+/// Represents a piece of javascript for execution.
+///
+/// Can be loaded from data at runtime, with `Module::new`, or from a file with `Module::load`.
+///
+/// It can also be loaded statically with `Module::new_static` or `module!`
 pub struct Module {
-    filename: MaybePath,
+    filename: MaybePathBuf<'static>,
     contents: Cow<'static, str>,
+}
+
+impl<'de> Deserialize<'de> for Module {
+    fn deserialize<D>(deserializer: D) -> Result<Module, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        #[derive(Deserialize)]
+        struct OwnedModule {
+            filename: PathBuf,
+            contents: String,
+        }
+
+        let OwnedModule { filename, contents } = OwnedModule::deserialize(deserializer)?;
+        Ok(Module::new(filename, contents))
+    }
 }
 
 impl Display for Module {
@@ -106,7 +105,7 @@ impl Module {
     /// ```
     #[must_use]
     pub fn new(filename: impl AsRef<Path>, contents: impl ToString) -> Self {
-        let filename = MaybePath::from_path(filename);
+        let filename = MaybePathBuf::Owned(filename.as_ref().to_path_buf());
         let contents = Cow::Owned(contents.to_string());
 
         Self { filename, contents }
@@ -134,7 +133,7 @@ impl Module {
     #[must_use]
     pub const fn new_static(filename: &'static str, contents: &'static str) -> Self {
         Self {
-            filename: MaybePath::from_static(filename),
+            filename: MaybePathBuf::new_str(filename),
             contents: Cow::Borrowed(contents),
         }
     }

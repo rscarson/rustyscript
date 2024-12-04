@@ -331,7 +331,10 @@ impl NpmProcessStateProvider for RustyResolver {
 #[derive(Debug)]
 struct RequireLoader(Arc<dyn FileSystem + Send + Sync>);
 impl NodeRequireLoader for RequireLoader {
-    fn load_text_file_lossy(&self, path: &Path) -> Result<String, deno_core::error::AnyError> {
+    fn load_text_file_lossy(
+        &self,
+        path: &Path,
+    ) -> Result<Cow<'static, str>, deno_core::error::AnyError> {
         let media_type = MediaType::from_path(path);
         let text = self.0.read_text_file_lossy_sync(path, None)?;
         Ok(text)
@@ -381,7 +384,7 @@ impl DenoResolverFs for ResolverFs {
         self.0.exists_sync(path)
     }
 
-    fn read_to_string_lossy(&self, path: &Path) -> std::io::Result<String> {
+    fn read_to_string_lossy(&self, path: &Path) -> std::io::Result<Cow<'static, str>> {
         self.0
             .read_text_file_lossy_sync(path, None)
             .map_err(deno_io::fs::FsError::into_io_error)

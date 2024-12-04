@@ -136,23 +136,27 @@ pub struct RuntimeOptions {
     pub import_provider: Option<Box<dyn crate::module_loader::ImportProvider>>,
 
     /// Optional snapshot to load into the runtime
-    /// This will reduce load times, but requires the same extensions to be loaded
-    /// as when the snapshot was created
+    ///
+    /// This will reduce load times, but requires the same extensions to be loaded as when the snapshot was created  
     /// If provided, user-supplied extensions must be instantiated with `init_ops` instead of `init_ops_and_esm`
     ///
     /// WARNING: Snapshots MUST be used on the same system they were created on
     pub startup_snapshot: Option<&'static [u8]>,
 
     /// Optional configuration parameters for building the underlying v8 isolate
+    ///
     /// This can be used to alter the behavior of the runtime.
+    ///
     /// See the `rusty_v8` documentation for more information
     pub isolate_params: Option<v8::CreateParams>,
 
-    /// Optional shared array buffer store to use for the runtime
+    /// Optional shared array buffer store to use for the runtime.
+    ///
     /// Allows data-sharing between runtimes across threads
     pub shared_array_buffer_store: Option<deno_core::SharedArrayBufferStore>,
 
     /// A whitelist of custom schema prefixes that are allowed to be loaded from javascript
+    ///
     /// By default only `http`/`https` (`url_import` crate feature), and `file` (`fs_import` crate feature) are allowed
     pub schema_whlist: HashSet<String>,
 }
@@ -207,6 +211,9 @@ impl<RT: RuntimeTrait> InnerRuntime<RT> {
             ..Default::default()
         }));
 
+        #[cfg(feature = "telemetry")]
+        let otel_conf = options.extension_options.telemetry_config.clone();
+
         // If a snapshot is provided, do not reload ESM for extensions
         let is_snapshot = options.startup_snapshot.is_some();
         let extensions = ext::all_extensions(
@@ -234,6 +241,10 @@ impl<RT: RuntimeTrait> InnerRuntime<RT> {
                 }
             }
         };
+
+        // Init otel
+        #[cfg(feature = "telemetry")]
+        deno_telemetry::init(otel_conf)?;
 
         let mut feature_checker = FeatureChecker::default();
         feature_checker.set_exit_cb(Box::new(|_, _| {}));

@@ -26,8 +26,10 @@ impl ModuleHandle {
     }
 
     /// Create a new module handle from raw parts
+    ///
     /// # Safety
     /// This function is unsafe because it allows using potentially invalid `ModuleIds`.
+    ///
     /// Use of an unloaded module ID will result in a panic.
     #[must_use]
     pub unsafe fn from_raw(

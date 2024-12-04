@@ -283,13 +283,16 @@
 //!
 #![warn(missing_docs)]
 #![warn(clippy::pedantic)]
-#![allow(clippy::module_name_repetitions)] //    Does not account for crate-level re-exports
-#![allow(clippy::inline_always)] //              Does not account for deno_core's use of inline(always) on op2
-#![allow(clippy::needless_pass_by_value)] //     Disabling some features can trigger this
+#![allow(clippy::module_name_repetitions)] //   Does not account for crate-level re-exports
+#![allow(clippy::inline_always)] //             Does not account for deno_core's use of inline(always) on op2
+#![allow(clippy::needless_pass_by_value)] //    Disabling some features can trigger this
+#![cfg_attr(docsrs, feature(doc_cfg))]
 
 #[cfg(feature = "snapshot_builder")]
 mod snapshot_builder;
+
 #[cfg(feature = "snapshot_builder")]
+#[cfg_attr(docsrs, doc(cfg(feature = "snapshot_builder")))]
 pub use snapshot_builder::SnapshotBuilder;
 
 mod runtime_builder;
@@ -312,6 +315,7 @@ mod transpiler;
 mod utilities;
 
 #[cfg(feature = "worker")]
+#[cfg_attr(docsrs, doc(cfg(feature = "worker")))]
 pub mod worker;
 
 // Expose a few dependencies that could be useful
@@ -322,48 +326,80 @@ pub use tokio;
 /// Re-exports of the deno extension crates used by this library
 pub mod extensions {
     #[cfg(feature = "broadcast_channel")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "broadcast_channel")))]
     pub use deno_broadcast_channel;
+
     #[cfg(feature = "cache")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "cache")))]
     pub use deno_cache;
+
     #[cfg(feature = "console")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "console")))]
     pub use deno_console;
+
     #[cfg(feature = "cron")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "cron")))]
     pub use deno_cron;
+
     #[cfg(feature = "crypto")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "crypto")))]
     pub use deno_crypto;
+
     #[cfg(feature = "ffi")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "ffi")))]
     pub use deno_ffi;
+
     #[cfg(feature = "fs")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "fs")))]
     pub use deno_fs;
+
     #[cfg(feature = "http")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "http")))]
     pub use deno_http;
+
     #[cfg(feature = "io")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "io")))]
     pub use deno_io;
+
     #[cfg(feature = "kv")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "kv")))]
     pub use deno_kv;
+
     #[cfg(feature = "url")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "url")))]
     pub use deno_url;
+
     #[cfg(feature = "webgpu")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "webgpu")))]
     pub use deno_webgpu;
+
     #[cfg(feature = "websocket")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "websocket")))]
     pub use deno_websocket;
+
     #[cfg(feature = "webstorage")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "webstorage")))]
     pub use deno_webstorage;
+
+    #[cfg(feature = "web")]
+    #[cfg_attr(docsrs, doc(cfg(feature = "webstorage")))]
+    pub use deno_tls;
 }
 
-#[cfg(feature = "web")]
-pub use deno_tls;
-
 #[cfg(feature = "kv")]
+#[cfg_attr(docsrs, doc(cfg(feature = "kv")))]
 pub use ext::kv::{KvConfig, KvStore};
 
 #[cfg(feature = "cache")]
+#[cfg_attr(docsrs, doc(cfg(feature = "cache")))]
 pub use ext::cache::CacheBackend;
 
 #[cfg(feature = "node_experimental")]
+#[cfg_attr(docsrs, doc(cfg(feature = "node_experimental")))]
 pub use ext::node::RustyResolver;
 
 #[cfg(feature = "web")]
+#[cfg_attr(docsrs, doc(cfg(feature = "web")))]
 pub use ext::web::{
     AllowlistWebPermissions, DefaultWebPermissions, PermissionDenied, SystemsPermissionKind,
     WebOptions, WebPermissions,
@@ -380,9 +416,11 @@ pub use runtime::{Runtime, RuntimeOptions, Undefined};
 pub use utilities::{evaluate, import, init_platform, resolve_path, validate};
 
 #[cfg(feature = "broadcast_channel")]
+#[cfg_attr(docsrs, doc(cfg(feature = "broadcast_channel")))]
 pub use ext::broadcast_channel::BroadcastChannelWrapper;
 
 #[cfg(feature = "web")]
+#[cfg_attr(docsrs, doc(cfg(feature = "web")))]
 pub use hyper_util;
 
 #[cfg(test)]

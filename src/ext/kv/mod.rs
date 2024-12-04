@@ -44,6 +44,7 @@ enum KvStoreBuilder {
 }
 
 /// Configuration for the key-value store
+///
 /// Needed due to limitations in the deno implementation
 #[derive(Clone, Copy)]
 #[allow(clippy::struct_field_names)]
@@ -117,11 +118,13 @@ impl Default for KvConfig {
 }
 
 /// Bi-modal key-value store for deno
+///
 /// Wraps the deno sqlite (local) and remote implementations
 #[derive(Clone)]
 pub struct KvStore(KvStoreBuilder, KvConfig);
 impl KvStore {
     /// Create a new local key-value store
+    ///
     /// Sqlite backend
     #[must_use]
     pub fn new_local(path: Option<PathBuf>, rng_seed: Option<u64>, config: KvConfig) -> Self {
@@ -129,6 +132,7 @@ impl KvStore {
     }
 
     /// Create a new remote key-value store
+    ///
     /// Remote backend
     #[must_use]
     pub fn new_remote(http_options: deno_kv::remote::HttpOptions, config: KvConfig) -> Self {
@@ -136,6 +140,7 @@ impl KvStore {
     }
 
     /// Get the handler for the key-value store
+    ///
     /// This is used to create the extension
     #[must_use]
     pub fn handler(&self) -> MultiBackendDbHandler {
@@ -153,7 +158,9 @@ impl KvStore {
     }
 
     /// Get the configuration for the key-value store
+    ///
     /// Converts the local configuration to the deno configuration
+    ///
     /// Since that one lacks public fields, or clone
     #[must_use]
     pub fn config(&self) -> deno_kv::KvConfig {

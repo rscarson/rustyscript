@@ -6,7 +6,8 @@ use std::{
     sync::{Arc, RwLock},
 };
 
-/// Wrapper error for deno permissions checks
+/// Wrapper error for deno permissions checks.
+///
 /// This will resolve to `PermissionCheckError::PermissionDeniedError`
 pub struct PermissionDenied {
     /// The resource being accessed
@@ -44,6 +45,7 @@ impl From<PermissionDenied> for PermissionCheckError {
 }
 
 /// The default permissions manager for the web related extensions
+///
 /// Allows all operations
 #[derive(Debug, Clone, Copy, Default)]
 pub struct DefaultWebPermissions;
@@ -162,7 +164,9 @@ struct AllowlistWebPermissionsSet {
 }
 
 /// Permissions manager for the web related extensions
+///
 /// Allows only operations that are explicitly enabled
+///
 /// Uses interior mutability to allow changing the permissions at runtime
 #[derive(Clone, Default, Debug)]
 pub struct AllowlistWebPermissions(Arc<RwLock<AllowlistWebPermissionsSet>>);
@@ -182,31 +186,36 @@ impl AllowlistWebPermissions {
     }
 
     /// Set the `hrtime` permission
+    ///
     /// If true, timers will be allowed to use high resolution time
     pub fn set_hrtime(&self, value: bool) {
         self.borrow_mut().hrtime = value;
     }
 
     /// Set the `exec` permission
+    ///
     /// If true, FFI execution will be allowed
     pub fn set_exec(&self, value: bool) {
         self.borrow_mut().exec = value;
     }
 
     /// Set the `read_all` permission
+    ///
     /// If false all reads will be denied
     pub fn set_read_all(&self, value: bool) {
         self.borrow_mut().read_all = value;
     }
 
     /// Set the `write_all` permission
+    ///
     /// If false all writes will be denied
     pub fn set_write_all(&self, value: bool) {
         self.borrow_mut().write_all = value;
     }
 
     /// Whitelist a path for opening
-    /// If `read` is true, the path will be allowed to be opened for reading
+    ///
+    /// If `read` is true, the path will be allowed to be opened for reading  
     /// If `write` is true, the path will be allowed to be opened for writing
     pub fn allow_open(&self, path: &str, read: bool, write: bool) {
         if read {
@@ -425,9 +434,11 @@ impl WebPermissions for AllowlistWebPermissions {
 }
 
 /// Trait managing the permissions for the web related extensions
+///
 /// See [`DefaultWebPermissions`] for a default implementation that allows-all
 pub trait WebPermissions: std::fmt::Debug + Send + Sync {
     /// Check if `hrtime` is allowed
+    ///
     /// If true, timers will be allowed to use high resolution time
     fn allow_hrtime(&self) -> bool;
 
@@ -438,6 +449,7 @@ pub trait WebPermissions: std::fmt::Debug + Send + Sync {
     fn check_url(&self, url: &deno_core::url::Url, api_name: &str) -> Result<(), PermissionDenied>;
 
     /// Check if a path is allowed to be opened by fs
+    ///
     /// If the path is allowed, the returned path will be used instead
     fn check_open<'a>(
         &self,
@@ -459,6 +471,7 @@ pub trait WebPermissions: std::fmt::Debug + Send + Sync {
     ) -> Result<Cow<'a, Path>, PermissionDenied>;
 
     /// Check if all paths are allowed to be read by fs
+    ///
     /// Used by `deno_fs` for `op_fs_symlink`
     ///
     /// # Errors
@@ -487,6 +500,7 @@ pub trait WebPermissions: std::fmt::Debug + Send + Sync {
     ) -> Result<Cow<'a, Path>, PermissionDenied>;
 
     /// Check if all paths are allowed to be written to by fs
+    ///
     /// Used by `deno_fs` for `op_fs_symlink`
     ///
     /// # Errors
@@ -536,6 +550,7 @@ pub trait WebPermissions: std::fmt::Debug + Send + Sync {
     ) -> Result<(), PermissionDenied>;
 
     /// Check if an environment variable is allowed to be accessed
+    ///
     /// Used by remote KV store (`deno_kv`)
     ///
     /// # Errors
@@ -554,7 +569,7 @@ macro_rules! impl_sys_permission_kinds {
         /// Knows systems permission checks performed by deno
         ///
         /// This list is updated manually using:
-        /// <https://github.com/search?q=repo%3Adenoland%2Fdeno%20check_sys&type=code>
+        /// <https://github.com/search?q=repo%3Adenoland%2Fdeno+check_sys%28%22&type=code>
         #[derive(Debug, Clone, PartialEq, Eq, Hash)]
         pub enum SystemsPermissionKind {
             $(

@@ -28,7 +28,7 @@ use deno_node::NodeResolver;
 #[cfg(feature = "node_experimental")]
 use node_resolver::InNpmPackageChecker;
 #[cfg(feature = "node_experimental")]
-use node_resolver::{NodeModuleKind, NodeResolutionMode};
+use node_resolver::{NodeResolutionKind, ResolutionMode};
 
 use super::ImportProvider;
 
@@ -171,10 +171,10 @@ impl InnerRustyLoader {
                 let url = self.node.node_resolver.package_imports_resolve(
                     specifier,
                     Some(&referrer),
-                    NodeModuleKind::Esm,
+                    ResolutionMode::Import,
                     Some(&package),
                     node_resolver::REQUIRE_CONDITIONS,
-                    NodeResolutionMode::Execution,
+                    NodeResolutionKind::Execution,
                 )?;
                 return Ok(url);
             }
@@ -246,8 +246,8 @@ impl InnerRustyLoader {
                 let url = self.node.node_resolver.resolve(
                     &specifier,
                     &referrer,
-                    NodeModuleKind::Esm,
-                    NodeResolutionMode::Execution,
+                    ResolutionMode::Import,
+                    NodeResolutionKind::Execution,
                 )?;
 
                 return Ok(url.into_url());

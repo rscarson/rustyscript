@@ -105,13 +105,6 @@ impl ExtensionTrait<()> for deno_signal {
     }
 }
 
-use deno_runtime::ops::otel::deno_otel;
-impl ExtensionTrait<()> for deno_otel {
-    fn init((): ()) -> Extension {
-        deno_otel::init_ops_and_esm()
-    }
-}
-
 use deno_runtime::ops::os::deno_os;
 impl ExtensionTrait<()> for deno_os {
     fn init((): ()) -> Extension {
