@@ -168,7 +168,7 @@ paste = "1.0.15"
 
 # The deno runtime itself, and the webidl extension for the web APIs
 deno_core = "0.323.0"
-deno_unsync = "0.4.1"
+deno_unsync = "0.4.2"
 
 # For transpiling typescript
 deno_ast = { version = "=0.43.3", features = ["transpiling", "cjs"] }
