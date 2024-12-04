@@ -30,7 +30,7 @@ impl RuntimeBuilder {
     ///
     /// If the extension is for use with a snapshot, create the extension with `init_ops` instead of `init_ops_and_esm`
     #[must_use]
-    pub fn with_extension(&mut self, extension: deno_core::Extension) -> &mut Self {
+    pub fn with_extension(mut self, extension: deno_core::Extension) -> Self {
         self.0.extensions.push(extension);
         self
     }
@@ -41,7 +41,7 @@ impl RuntimeBuilder {
     ///
     /// If the extension is for use with a snapshot, create the extension with `init_ops` instead of `init_ops_and_esm`
     #[must_use]
-    pub fn with_extensions(&mut self, extensions: Vec<deno_core::Extension>) -> &mut Self {
+    pub fn with_extensions(mut self, extensions: Vec<deno_core::Extension>) -> Self {
         self.0.extensions.extend(extensions);
         self
     }
@@ -50,7 +50,7 @@ impl RuntimeBuilder {
     ///
     /// This is the function to use as entrypoint if a module does not provide one
     #[must_use]
-    pub fn with_default_entrypoint(&mut self, entrypoint: String) -> &mut Self {
+    pub fn with_default_entrypoint(mut self, entrypoint: String) -> Self {
         self.0.default_entrypoint = Some(entrypoint);
         self
     }
@@ -59,21 +59,21 @@ impl RuntimeBuilder {
     ///
     /// This is the maximum time a script can run before it is terminated
     #[must_use]
-    pub fn with_timeout(&mut self, timeout: std::time::Duration) -> &mut Self {
+    pub fn with_timeout(mut self, timeout: std::time::Duration) -> Self {
         self.0.timeout = timeout;
         self
     }
 
     /// Optional maximum heap size for the runtime
     #[must_use]
-    pub fn with_max_heap_size(&mut self, max_heap_size: usize) -> &mut Self {
+    pub fn with_max_heap_size(mut self, max_heap_size: usize) -> Self {
         self.0.max_heap_size = Some(max_heap_size);
         self
     }
 
     /// Optional import provider for the module loader
     #[must_use]
-    pub fn with_import_provider(&mut self, import_provider: Box<dyn ImportProvider>) -> &mut Self {
+    pub fn with_import_provider(mut self, import_provider: Box<dyn ImportProvider>) -> Self {
         self.0.import_provider = Some(import_provider);
         self
     }
@@ -86,7 +86,7 @@ impl RuntimeBuilder {
     ///
     /// WARNING: Snapshots MUST be used on the same system they were created on
     #[must_use]
-    pub fn with_startup_snapshot(&mut self, snapshot: &'static [u8]) -> &mut Self {
+    pub fn with_startup_snapshot(mut self, snapshot: &'static [u8]) -> Self {
         self.0.startup_snapshot = Some(snapshot);
         self
     }
@@ -97,7 +97,7 @@ impl RuntimeBuilder {
     ///
     /// See the `rusty_v8` documentation for more information
     #[must_use]
-    pub fn with_isolate_params(&mut self, params: deno_core::v8::CreateParams) -> &mut Self {
+    pub fn with_isolate_params(mut self, params: deno_core::v8::CreateParams) -> Self {
         self.0.isolate_params = Some(params);
         self
     }
@@ -107,9 +107,9 @@ impl RuntimeBuilder {
     /// Allows data-sharing between runtimes across threads
     #[must_use]
     pub fn with_shared_array_buffer_store(
-        &mut self,
+        mut self,
         store: deno_core::SharedArrayBufferStore,
-    ) -> &mut Self {
+    ) -> Self {
         self.0.shared_array_buffer_store = Some(store);
         self
     }
@@ -118,7 +118,7 @@ impl RuntimeBuilder {
     ///
     /// By default only http/https (`url_import` crate feature), and file (`fs_import` crate feature) are allowed
     #[must_use]
-    pub fn with_schema(&mut self, schema: impl ToString) -> &mut Self {
+    pub fn with_schema(mut self, schema: impl ToString) -> Self {
         self.0.schema_whlist.insert(schema.to_string());
         self
     }
@@ -130,7 +130,7 @@ impl RuntimeBuilder {
     /// Set the initial seed for the crypto extension
     #[cfg(feature = "crypto")]
     #[cfg_attr(docsrs, doc(cfg(feature = "crypto")))]
-    pub fn with_cryto_seed(&mut self, seed: u64) -> &mut Self {
+    pub fn with_cryto_seed(mut self, seed: u64) -> Self {
         self.0.extension_options.crypto_seed = Some(seed);
         self
     }
@@ -139,7 +139,7 @@ impl RuntimeBuilder {
     #[cfg(feature = "io")]
     #[cfg_attr(docsrs, doc(cfg(feature = "io")))]
     #[must_use]
-    pub fn with_io_pipes(&mut self, pipes: deno_io::Stdio) -> &mut Self {
+    pub fn with_io_pipes(mut self, pipes: deno_io::Stdio) -> Self {
         self.0.extension_options.io_pipes = Some(pipes);
         self
     }
@@ -148,7 +148,7 @@ impl RuntimeBuilder {
     #[cfg(feature = "webstorage")]
     #[cfg_attr(docsrs, doc(cfg(feature = "webstorage")))]
     #[must_use]
-    pub fn with_webstorage_origin_storage_dir(&mut self, dir: std::path::PathBuf) -> &mut Self {
+    pub fn with_webstorage_origin_storage_dir(mut self, dir: std::path::PathBuf) -> Self {
         self.0.extension_options.webstorage_origin_storage_dir = Some(dir);
         self
     }
@@ -157,7 +157,7 @@ impl RuntimeBuilder {
     #[cfg(feature = "cache")]
     #[cfg_attr(docsrs, doc(cfg(feature = "cache")))]
     #[must_use]
-    pub fn with_cache(&mut self, cache: deno_cache::CreateCache<crate::CacheBackend>) -> &mut Self {
+    pub fn with_cache(mut self, cache: deno_cache::CreateCache<crate::CacheBackend>) -> Self {
         self.0.extension_options.cache = Some(cache);
         self
     }
@@ -167,9 +167,9 @@ impl RuntimeBuilder {
     #[cfg_attr(docsrs, doc(cfg(feature = "broadcast_channel")))]
     #[must_use]
     pub fn with_broadcast_channel(
-        &mut self,
+        mut self,
         channel: deno_broadcast_channel::InMemoryBroadcastChannel,
-    ) -> &mut Self {
+    ) -> Self {
         self.0.extension_options.broadcast_channel = channel;
         self
     }
@@ -178,7 +178,7 @@ impl RuntimeBuilder {
     #[cfg(feature = "kv")]
     #[cfg_attr(docsrs, doc(cfg(feature = "kv")))]
     #[must_use]
-    pub fn with_kv_store(&mut self, kv_store: crate::KvStore) -> &mut Self {
+    pub fn with_kv_store(mut self, kv_store: crate::KvStore) -> Self {
         self.0.extension_options.kv_store = kv_store;
         self
     }
@@ -186,10 +186,7 @@ impl RuntimeBuilder {
     /// Set the options for the node extension
     #[cfg(feature = "node_experimental")]
     #[cfg_attr(docsrs, doc(cfg(feature = "node_experimental")))]
-    pub fn with_node_resolver(
-        &mut self,
-        resolver: std::sync::Arc<crate::RustyResolver>,
-    ) -> &mut Self {
+    pub fn with_node_resolver(mut self, resolver: std::sync::Arc<crate::RustyResolver>) -> Self {
         self.0.extension_options.node_resolver = resolver;
         self
     }
@@ -202,7 +199,7 @@ impl RuntimeBuilder {
     #[cfg(feature = "web")]
     #[cfg_attr(docsrs, doc(cfg(feature = "web")))]
     #[must_use]
-    pub fn with_web_base_url(&mut self, base_url: deno_core::ModuleSpecifier) -> &mut Self {
+    pub fn with_web_base_url(mut self, base_url: deno_core::ModuleSpecifier) -> Self {
         self.0.extension_options.web.base_url = Some(base_url);
         self
     }
@@ -211,7 +208,7 @@ impl RuntimeBuilder {
     #[cfg(feature = "web")]
     #[cfg_attr(docsrs, doc(cfg(feature = "web")))]
     #[must_use]
-    pub fn with_web_user_agent(&mut self, user_agent: String) -> &mut Self {
+    pub fn with_web_user_agent(mut self, user_agent: String) -> Self {
         self.0.extension_options.web.user_agent = user_agent;
         self
     }
@@ -221,9 +218,9 @@ impl RuntimeBuilder {
     #[cfg_attr(docsrs, doc(cfg(feature = "web")))]
     #[must_use]
     pub fn with_web_root_cert_store_provider(
-        &mut self,
+        mut self,
         root_cert_store_provider: std::sync::Arc<dyn deno_tls::RootCertStoreProvider>,
-    ) -> &mut Self {
+    ) -> Self {
         self.0.extension_options.web.root_cert_store_provider = Some(root_cert_store_provider);
         self
     }
@@ -232,7 +229,7 @@ impl RuntimeBuilder {
     #[cfg(feature = "web")]
     #[cfg_attr(docsrs, doc(cfg(feature = "web")))]
     #[must_use]
-    pub fn with_web_proxy(&mut self, proxy: deno_tls::Proxy) -> &mut Self {
+    pub fn with_web_proxy(mut self, proxy: deno_tls::Proxy) -> Self {
         self.0.extension_options.web.proxy = Some(proxy);
         self
     }
@@ -242,9 +239,9 @@ impl RuntimeBuilder {
     #[cfg_attr(docsrs, doc(cfg(feature = "web")))]
     #[must_use]
     pub fn with_web_request_builder_hook(
-        &mut self,
+        mut self,
         hook: fn(&mut http::Request<deno_fetch::ReqBody>) -> Result<(), deno_core::error::AnyError>,
-    ) -> &mut Self {
+    ) -> Self {
         self.0.extension_options.web.request_builder_hook = Some(hook);
         self
     }
@@ -255,11 +252,8 @@ impl RuntimeBuilder {
     #[cfg(feature = "web")]
     #[cfg_attr(docsrs, doc(cfg(feature = "web")))]
     #[must_use]
-    pub fn with_web_unsafely_ignored_certificate_errors(
-        &mut self,
-        domain: impl ToString,
-    ) -> &mut Self {
-        match &mut self
+    pub fn with_web_unsafely_ignored_certificate_errors(mut self, domain: impl ToString) -> Self {
+        match self
             .0
             .extension_options
             .web
@@ -281,7 +275,7 @@ impl RuntimeBuilder {
     #[cfg(feature = "web")]
     #[cfg_attr(docsrs, doc(cfg(feature = "web")))]
     #[must_use]
-    pub fn with_web_client_cert_chain_and_key(&mut self, keys: deno_tls::TlsKeys) -> &mut Self {
+    pub fn with_web_client_cert_chain_and_key(mut self, keys: deno_tls::TlsKeys) -> Self {
         self.0.extension_options.web.client_cert_chain_and_key = keys;
         self
     }
@@ -291,9 +285,9 @@ impl RuntimeBuilder {
     #[cfg_attr(docsrs, doc(cfg(feature = "web")))]
     #[must_use]
     pub fn with_web_file_fetch_handler(
-        &mut self,
+        mut self,
         handler: std::rc::Rc<dyn deno_fetch::FetchHandler>,
-    ) -> &mut Self {
+    ) -> Self {
         self.0.extension_options.web.file_fetch_handler = handler;
         self
     }
@@ -303,9 +297,9 @@ impl RuntimeBuilder {
     #[cfg_attr(docsrs, doc(cfg(feature = "web")))]
     #[must_use]
     pub fn with_web_permissions(
-        &mut self,
+        mut self,
         permissions: std::sync::Arc<dyn crate::ext::web::WebPermissions>,
-    ) -> &mut Self {
+    ) -> Self {
         self.0.extension_options.web.permissions = permissions;
         self
     }
@@ -314,10 +308,7 @@ impl RuntimeBuilder {
     #[cfg(feature = "web")]
     #[cfg_attr(docsrs, doc(cfg(feature = "web")))]
     #[must_use]
-    pub fn with_web_blob_store(
-        &mut self,
-        blob_store: std::sync::Arc<deno_web::BlobStore>,
-    ) -> &mut Self {
+    pub fn with_web_blob_store(mut self, blob_store: std::sync::Arc<deno_web::BlobStore>) -> Self {
         self.0.extension_options.web.blob_store = blob_store;
         self
     }
@@ -329,11 +320,11 @@ impl RuntimeBuilder {
     #[cfg_attr(docsrs, doc(cfg(feature = "web")))]
     #[must_use]
     pub fn with_web_client_builder_hook(
-        &mut self,
+        mut self,
         hook: Option<
             fn(hyper_util::client::legacy::Builder) -> hyper_util::client::legacy::Builder,
         >,
-    ) -> &mut Self {
+    ) -> Self {
         self.0.extension_options.web.client_builder_hook = hook;
         self
     }
@@ -342,7 +333,7 @@ impl RuntimeBuilder {
     #[cfg(feature = "web")]
     #[cfg_attr(docsrs, doc(cfg(feature = "web")))]
     #[must_use]
-    pub fn with_web_resolver(&mut self, resolver: deno_fetch::dns::Resolver) -> &mut Self {
+    pub fn with_web_resolver(mut self, resolver: deno_fetch::dns::Resolver) -> Self {
         self.0.extension_options.web.resolver = resolver;
         self
     }
