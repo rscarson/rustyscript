@@ -4,7 +4,7 @@ authors = ["@rscarson"]
 description = "Effortless JS Integration for Rust"
 edition = "2021"
 license = "MIT OR Apache-2.0"
-version = "0.10.1"
+version = "0.11.0"
 repository = "https://github.com/rscarson/rustyscript"
 
 keywords = ["rust", "javascript", "deno", "runtime", "embedding"]
@@ -155,8 +155,6 @@ worker = []
 maybe_path = "0.1.0"
 thiserror = "2.0.4"
 serde = "1.0.215"
-
-syn = "=2.0.87"
 
 # CLI argument parsing and dependency management
 clap = { version = "4.5.21", features = ["derive"], optional = true }

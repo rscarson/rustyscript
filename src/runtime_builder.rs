@@ -270,7 +270,7 @@ impl RuntimeBuilder {
                 self.0
                     .extension_options
                     .web
-                    .unsafely_ignore_certificate_errors = Some(vec![domain.to_string()])
+                    .unsafely_ignore_certificate_errors = Some(vec![domain.to_string()]);
             }
         }
 

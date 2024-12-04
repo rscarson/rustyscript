@@ -254,15 +254,16 @@ impl SnapshotBuilder {
         self.inner.put(value)
     }
 
-    /// Evaluate a piece of non-ECMAScript-module JavaScript code
+    /// Evaluate a piece of non-ECMAScript-module JavaScript code  
     /// The expression is evaluated in the global context, so changes persist
+    ///
+    /// Blocks on promise resolution, and runs the event loop to completion
     ///
     /// Asynchronous code is supported, partially
     /// - Top-level await is not supported
     /// - The event loop will be run to completion after the expression is evaluated
-    /// - Eval must be run inside a tokio runtime for some async operations
     ///
-    /// For proper async support, use one of:
+    /// For top-level await support, use one of:
     /// - `call_function_async`
     /// - `call_stored_function_async`
     /// - `load_module_async`
@@ -274,7 +275,43 @@ impl SnapshotBuilder {
     /// * `expr` - A string representing the JavaScript expression to evaluate
     ///
     /// # Returns
-    /// A `Result` containing the deserialized result of the expression (`T`)
+    /// A `Result` containing the deserialized result of the expression (`T`)  
+    /// or an error (`Error`) if the expression cannot be evaluated or if the
+    /// result cannot be deserialized.
+    ///
+    /// # Errors
+    /// Can fail if the expression cannot be evaluated, or if the result cannot be deserialized into the requested type
+    ///
+    /// See [`crate::Runtime::eval`] for an example
+    pub fn eval<T>(&mut self, expr: impl ToString) -> Result<T, Error>
+    where
+        T: serde::de::DeserializeOwned,
+    {
+        self.block_on(|runtime| async move { runtime.eval_async(expr).await })
+    }
+
+    /// Evaluate a piece of non-ECMAScript-module JavaScript code  
+    /// The expression is evaluated in the global context, so changes persist
+    ///
+    /// Awaits promise resolution, and runs the event loop to completion
+    ///
+    /// Asynchronous code is supported, partially
+    /// - Top-level await is not supported
+    /// - The event loop will be run to completion after the expression is evaluated
+    ///
+    /// For top-level await support, use one of:
+    /// - `call_function_async`
+    /// - `call_stored_function_async`
+    /// - `load_module_async`
+    /// - `load_modules_async`
+    ///
+    /// Or any of the `_immmediate` variants, paired with [`crate::js_value::Promise`]
+    ///
+    /// # Arguments
+    /// * `expr` - A string representing the JavaScript expression to evaluate
+    ///
+    /// # Returns
+    /// A `Result` containing the deserialized result of the expression (`T`)  
     /// or an error (`Error`) if the expression cannot be evaluated or if the
     /// result cannot be deserialized.
     ///
@@ -282,22 +319,53 @@ impl SnapshotBuilder {
     /// Can fail if the expression cannot be evaluated, or if the result cannot be deserialized into the requested type
     ///
     /// # Example
-    /// ```rust
-    /// use rustyscript::{ Runtime, Error };
-    ///
-    /// # fn main() -> Result<(), Error> {
-    /// let mut runtime = Runtime::new(Default::default())?;
-    /// let value:
-    ///    usize = runtime.eval("2 + 2")?;
-    /// assert_eq!(4, value);
-    /// # Ok(())
-    /// # }
-    /// ```
-    pub fn eval<T>(&mut self, expr: &str) -> Result<T, Error>
+    /// For an example, see [`crate::Runtime::eval`]
+    pub async fn eval_async<T>(&mut self, expr: impl ToString) -> Result<T, Error>
     where
         T: serde::de::DeserializeOwned,
     {
-        self.inner.eval(expr)
+        let result = self.inner.eval(expr.to_string())?;
+        let result = self.inner.resolve_with_event_loop(result).await?;
+        self.inner.decode_value(result)
+    }
+
+    /// Evaluate a piece of non-ECMAScript-module JavaScript code  
+    /// The expression is evaluated in the global context, so changes persist
+    ///
+    /// Does not await promise resolution, or run the event loop  
+    /// Promises can be returned by specifying the return type as [`crate::js_value::Promise`]  
+    /// The event loop should be run using [`crate::Runtime::await_event_loop`]
+    ///
+    /// Asynchronous code is supported, partially
+    /// - Top-level await is not supported
+    ///
+    /// For top-level await support, use one of:
+    /// - `call_function_async`
+    /// - `call_stored_function_async`
+    /// - `load_module_async`
+    /// - `load_modules_async`
+    ///
+    /// Or any of the `_immmediate` variants, paired with [`crate::js_value::Promise`]
+    ///
+    /// # Arguments
+    /// * `expr` - A string representing the JavaScript expression to evaluate
+    ///
+    /// # Returns
+    /// A `Result` containing the deserialized result of the expression (`T`)  
+    /// or an error (`Error`) if the expression cannot be evaluated or if the
+    /// result cannot be deserialized.
+    ///
+    /// # Errors
+    /// Can fail if the expression cannot be evaluated, or if the result cannot be deserialized into the requested type
+    ///
+    /// # Example
+    /// For an example, see [`crate::Runtime::eval`]
+    pub fn eval_immediate<T>(&mut self, expr: impl ToString) -> Result<T, Error>
+    where
+        T: serde::de::DeserializeOwned,
+    {
+        let result = self.inner.eval(expr.to_string())?;
+        self.inner.decode_value(result)
     }
 
     /// Calls a javascript function within the Deno runtime by its name and deserializes its return value.

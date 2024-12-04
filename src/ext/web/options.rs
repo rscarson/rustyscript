@@ -20,6 +20,7 @@ pub struct WebOptions {
     pub proxy: Option<deno_tls::Proxy>,
 
     /// Request builder hook for fetch
+    #[allow(clippy::type_complexity)]
     pub request_builder_hook:
         Option<fn(&mut http::Request<deno_fetch::ReqBody>) -> Result<(), AnyError>>,
 

@@ -181,9 +181,6 @@ impl Default for ExtensionOptions {
             #[cfg(feature = "kv")]
             kv_store: kv::KvStore::default(),
 
-            #[cfg(feature = "web")]
-            telemetry_config: deno_telemetry::OtelConfig::default(),
-
             #[cfg(feature = "node_experimental")]
             node_resolver: std::sync::Arc::new(node::RustyResolver::default()),
         }

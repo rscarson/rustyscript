@@ -5423,7 +5423,7 @@ dependencies = [
 
 [[package]]
 name = "rustyscript"
-version = "0.10.1"
+version = "0.11.0"
 dependencies = [
  "async-trait",
  "base64-simd 0.8.0",
@@ -5472,7 +5472,6 @@ dependencies = [
  "reqwest",
  "rustyline 15.0.0",
  "serde",
- "syn 2.0.87",
  "thiserror 2.0.4",
  "tokio",
  "tokio-util",

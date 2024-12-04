@@ -135,7 +135,6 @@ pub fn extensions(
         deno_fs_events::build((), is_snapshot),
         deno_bootstrap::build((), is_snapshot),
         deno_os::build((), is_snapshot),
-        deno_otel::build((), is_snapshot),
         deno_signal::build((), is_snapshot),
         deno_process::build(options.node_resolver.clone(), is_snapshot),
         deno_web_worker::build((), is_snapshot),
