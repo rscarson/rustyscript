@@ -7,7 +7,6 @@ import * as prompt from 'ext:runtime/41_prompt.js';
 import * as scope from 'ext:runtime/98_global_scope_shared.js';
 import * as scopeWorker from 'ext:runtime/98_global_scope_worker.js';
 import * as scopeWindow from 'ext:runtime/98_global_scope_window.js';
-import * as telemetry from "ext:runtime/telemetry.ts";
 
 import * as errors from "ext:runtime/01_errors.js";
 import * as version from "ext:runtime/01_version.ts";
@@ -39,8 +38,6 @@ applyToDeno({
             os.setExitCode(value);
         },
     },
-
-    telemetry: nonEnumerable(telemetry.telemetry),
     
     Process: nonEnumerable(process.Process),
     run: nonEnumerable(process.run),
