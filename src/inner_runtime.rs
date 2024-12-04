@@ -211,8 +211,12 @@ impl<RT: RuntimeTrait> InnerRuntime<RT> {
             ..Default::default()
         }));
 
-        #[cfg(feature = "telemetry")]
-        let otel_conf = options.extension_options.telemetry_config.clone();
+        // Init otel
+        #[cfg(feature = "web")]
+        {
+            let otel_conf = options.extension_options.telemetry_config.clone();
+            deno_telemetry::init(otel_conf)?;
+        }
 
         // If a snapshot is provided, do not reload ESM for extensions
         let is_snapshot = options.startup_snapshot.is_some();
@@ -241,10 +245,6 @@ impl<RT: RuntimeTrait> InnerRuntime<RT> {
                 }
             }
         };
-
-        // Init otel
-        #[cfg(feature = "telemetry")]
-        deno_telemetry::init(otel_conf)?;
 
         let mut feature_checker = FeatureChecker::default();
         feature_checker.set_exit_cb(Box::new(|_, _| {}));

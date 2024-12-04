@@ -43,7 +43,7 @@ network_extensions = ["web", "webstorage", "websocket", "http", "url", "crypto",
 # Extensions that provide access to the filesystem. Also enables file imports from JS
 # These extensions are not safe to use in a sandboxed environment without additional restrictions
 # (See [FsPermissions]
-io_extensions = ["web", "webstorage", "fs", "io", "cache", "console", "ffi", "webgpu", "kv", "telemetry", "cron", "fs_import"]
+io_extensions = ["web", "webstorage", "fs", "io", "cache", "console", "ffi", "webgpu", "kv", "cron", "fs_import"]
 
 #
 # Additional features that are not part of the core runtime
@@ -107,18 +107,15 @@ web_stub = ["webidl", "base64-simd"]
     # Provides IO primitives for other Deno extensions (stdio streams, etc)
     io = ["deno_io", "web", "rustyline", "winapi", "nix", "libc", "once_cell"]
 
-    # Implements telemetry for Deno using OpenTelemetry.
-    telemetry = ["web", "deno_telemetry"]
-
     # [https://url.spec.whatwg.org/]
     # [https://wicg.github.io/urlpattern/]
     url = ["deno_url", "webidl"]
 
-    # Timers, events, text encoder/decoder, 
+    # Timers, events, text encoder/decoder, telemetry
     # [https://w3c.github.io/FileAPI]
     # [https://fetch.spec.whatwg.org/]
     web = [
-        "deno_web", "deno_tls", "deno_fetch", "deno_net", "dep:http", "deno_permissions", 
+        "deno_web", "deno_tls", "deno_fetch", "deno_net", "dep:http", "deno_permissions", "deno_telemetry",
         "webidl", "console", "url", "crypto", "url_import", "fs_import",
         "hyper-util"
     ]

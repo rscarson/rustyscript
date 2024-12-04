@@ -78,9 +78,6 @@ pub mod kv;
 #[cfg(feature = "cron")]
 pub mod cron;
 
-#[cfg(feature = "telemetry")]
-pub mod telemetry;
-
 #[cfg(feature = "node_experimental")]
 pub mod napi;
 #[cfg(feature = "node_experimental")]
@@ -147,11 +144,6 @@ pub struct ExtensionOptions {
     #[cfg_attr(docsrs, doc(cfg(feature = "kv")))]
     pub kv_store: kv::KvStore,
 
-    /// OpenTelemetry configuration for the `deno_telemetry` extension
-    #[cfg(feature = "telemetry")]
-    #[cfg_attr(docsrs, doc(cfg(feature = "telemetry")))]
-    pub telemetry_config: deno_telemetry::OtelConfig,
-
     /// Package resolver for the `deno_node` extension
     /// `RustyResolver` allows you to select the base dir for modules
     /// as well as the filesystem implementation to use
@@ -189,7 +181,7 @@ impl Default for ExtensionOptions {
             #[cfg(feature = "kv")]
             kv_store: kv::KvStore::default(),
 
-            #[cfg(feature = "telemetry")]
+            #[cfg(feature = "web")]
             telemetry_config: deno_telemetry::OtelConfig::default(),
 
             #[cfg(feature = "node_experimental")]
@@ -262,9 +254,6 @@ pub(crate) fn all_extensions(
 
     #[cfg(feature = "cron")]
     extensions.extend(cron::extensions(is_snapshot));
-
-    #[cfg(feature = "telemetry")]
-    extensions.extend(telemetry::extensions(is_snapshot));
 
     #[cfg(feature = "node_experimental")]
     {

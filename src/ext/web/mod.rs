@@ -62,6 +62,24 @@ impl ExtensionTrait<WebOptions> for deno_net::deno_net {
 }
 
 extension!(
+    init_telemetry,
+    deps = [rustyscript],
+    esm_entry_point = "ext:init_telemetry/init_telemetry.js",
+    esm = [ dir "src/ext/telemetry", "init_telemetry.js" ],
+);
+impl ExtensionTrait<()> for init_telemetry {
+    fn init((): ()) -> Extension {
+        init_telemetry::init_ops_and_esm()
+    }
+}
+
+impl ExtensionTrait<()> for deno_telemetry::deno_telemetry {
+    fn init((): ()) -> Extension {
+        deno_telemetry::deno_telemetry::init_ops_and_esm()
+    }
+}
+
+extension!(
     init_web,
     deps = [rustyscript],
     esm_entry_point = "ext:init_web/init_web.js",
@@ -95,10 +113,12 @@ impl ExtensionTrait<()> for deno_tls::deno_tls {
 pub fn extensions(options: WebOptions, is_snapshot: bool) -> Vec<Extension> {
     vec![
         deno_web::deno_web::build(options.clone(), is_snapshot),
+        deno_telemetry::deno_telemetry::build((), is_snapshot),
         deno_net::deno_net::build(options.clone(), is_snapshot),
         deno_fetch::deno_fetch::build(options.clone(), is_snapshot),
         deno_tls::deno_tls::build((), is_snapshot),
         init_web::build(options.clone(), is_snapshot),
+        init_telemetry::build((), is_snapshot),
         init_net::build(options.clone(), is_snapshot),
         init_fetch::build(options, is_snapshot),
     ]

@@ -47,6 +47,9 @@ pub struct WebOptions {
 
     /// Resolver for DNS resolution
     pub resolver: Resolver,
+
+    /// OpenTelemetry configuration for the `deno_telemetry` extension
+    pub telemetry_config: deno_telemetry::OtelConfig,
 }
 
 impl Default for WebOptions {
@@ -64,6 +67,7 @@ impl Default for WebOptions {
             blob_store: Arc::new(deno_web::BlobStore::default()),
             client_builder_hook: None,
             resolver: Resolver::default(),
+            telemetry_config: deno_telemetry::OtelConfig::default(),
         }
     }
 }
