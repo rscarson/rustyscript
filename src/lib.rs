@@ -442,6 +442,7 @@ mod test {
     }
 
     #[test]
+    #[cfg(not(feature = "web"))]
     fn check_op_whitelist() {
         let inner = || -> Result<(), Error> {
             let mut runtime = Runtime::new(RuntimeOptions::default())?;
