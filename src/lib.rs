@@ -6,6 +6,8 @@
 //! [![Static Badge](https://img.shields.io/badge/mdbook-user%20guide-blue)](https://rscarson.github.io/rustyscript-book/)
 //! [![License](https://img.shields.io/badge/license-MIT-blue.svg)](https://raw.githubusercontent.com/rscarson/rustyscript/master/LICENSE)
 //!
+//! ## Rustyscript - Effortless JS Integration for Rust
+//!
 //! rustyscript provides a quick and simple way to integrate a runtime javascript or typescript component from within Rust.
 //!
 //! It uses the v8 engine through the `deno_core` crate, and aims to be as simple as possible to use without sacrificing flexibility or performance.  

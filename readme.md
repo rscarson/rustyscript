@@ -1,6 +1,3 @@
-# Rustyscript
-## Effortless JS Integration for Rust
-
 <!-- cargo-rdme start -->
 
 ![Rustyscript - Effortless JS Integration for Rust](https://raw.githubusercontent.com/rscarson/rustyscript/refs/heads/master/.github/rustyscript-logo-wide.png)
