@@ -65,6 +65,7 @@ impl AsyncBridge {
 
 pub trait AsyncBridgeExt {
     fn bridge(&self) -> &AsyncBridge;
+
     fn block_on<'a, Out, F, Fut>(&'a mut self, f: F) -> Result<Out, Error>
     where
         Fut: std::future::Future<Output = Result<Out, Error>>,
@@ -73,6 +74,7 @@ pub trait AsyncBridgeExt {
         let timeout = self.bridge().timeout();
         let rt = self.bridge().tokio_runtime();
         let heap_exhausted_token = self.bridge().heap_exhausted_token();
+
         rt.block_on(async move {
             tokio::select! {
                 result = tokio::time::timeout(timeout, f(self)) => result?,
