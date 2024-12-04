@@ -214,7 +214,7 @@ impl<RT: RuntimeTrait> InnerRuntime<RT> {
         // Init otel
         #[cfg(feature = "web")]
         {
-            let otel_conf = options.extension_options.telemetry_config.clone();
+            let otel_conf = options.extension_options.web.telemetry_config.clone();
             deno_telemetry::init(otel_conf)?;
         }
 
