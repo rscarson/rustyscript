@@ -8,6 +8,8 @@
 [![Static Badge](https://img.shields.io/badge/mdbook-user%20guide-blue)](https://rscarson.github.io/rustyscript-book/)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](https://raw.githubusercontent.com/rscarson/rustyscript/master/LICENSE)
 
+## Rustyscript - Effortless JS Integration for Rust
+
 rustyscript provides a quick and simple way to integrate a runtime javascript or typescript component from within Rust.
 
 It uses the v8 engine through the `deno_core` crate, and aims to be as simple as possible to use without sacrificing flexibility or performance.  
@@ -207,7 +209,7 @@ fn main() -> Result<(), Error> {
 
 ----
 
-#### Utility Functions
+## Utility Functions
 These functions provide simple one-liner access to common features of this crate:
 - `evaluate`; Evaluate a single JS expression and return the resulting value
 - `import`; Get a handle to a JS module from which you can get exported values and functions
@@ -223,7 +225,7 @@ Commonly used features have been grouped into the following feature-sets:
 - **`extra_features`** - Enables the `worker` feature (enabled by default), and the `snapshot_builder` feature
 - **`node_experimental`** - HIGHLY EXPERIMENTAL nodeJS support that enables all available Deno extensions
 
-#### Crate features
+## Crate features
 The table below lists the available features for this crate. Features marked at `Preserves Sandbox: NO` break isolation between loaded JS modules and the host system.
 Use with caution.
 
