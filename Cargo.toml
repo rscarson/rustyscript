@@ -242,7 +242,7 @@ deno_runtime  = { version = "0.189.0", optional = true, features = ["exclude_run
 deno_terminal = { version = "0.2.0", optional = true }
 deno_semver   = { version = "0.5.16", optional = true }
 deno_napi     = { version = "0.111.0", optional = true }
-deno_npm      = { version = "0.25.4", optional = true }
+deno_npm      = { version = "0.26.0", optional = true }
 checksum      = { version = "0.2.1", optional = true }
 
 [dev-dependencies]
