@@ -21,7 +21,7 @@ fn main() -> Result<(), Error> {
 
     // Or as async
     let future = async {
-        let result: Promise<u32> = runtime.eval_immediate("sleep(1000).then(() => 2)")?;
+        let result: Promise<u32> = runtime.eval_immediate("sleep(1000).then(() => 2)").await?;
         result.into_future(&mut runtime).await?;
 
         Ok::<(), Error>(())

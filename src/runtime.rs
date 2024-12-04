@@ -380,7 +380,7 @@ impl Runtime {
     where
         T: serde::de::DeserializeOwned,
     {
-        let result = self.inner.eval(expr.to_string())?;
+        let result = self.inner.eval(expr.to_string()).await?;
         let result = self.inner.resolve_with_event_loop(result).await?;
         self.inner.decode_value(result)
     }
@@ -391,6 +391,8 @@ impl Runtime {
     /// Does not await promise resolution, or run the event loop  
     /// Promises can be returned by specifying the return type as [`crate::js_value::Promise`]  
     /// The event loop should be run using [`Runtime::await_event_loop`]
+    ///
+    /// Note that this function needs to be async because calls to `setTimeout` must be evaluated from within an async runtime.
     ///
     /// Asynchronous code is supported, partially
     /// - Top-level await is not supported
@@ -416,11 +418,11 @@ impl Runtime {
     ///
     /// # Example
     /// For an example, see [`Runtime::eval`]
-    pub fn eval_immediate<T>(&mut self, expr: impl ToString) -> Result<T, Error>
+    pub async fn eval_immediate<T>(&mut self, expr: impl ToString) -> Result<T, Error>
     where
         T: serde::de::DeserializeOwned,
     {
-        let result = self.inner.eval(expr.to_string())?;
+        let result = self.inner.eval(expr.to_string()).await?;
         self.inner.decode_value(result)
     }
 
