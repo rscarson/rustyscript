@@ -65,7 +65,7 @@ extension!(
     init_telemetry,
     deps = [rustyscript],
     esm_entry_point = "ext:init_telemetry/init_telemetry.js",
-    esm = [ dir "src/ext/telemetry", "init_telemetry.js" ],
+    esm = [ dir "src/ext/web", "init_telemetry.js" ],
 );
 impl ExtensionTrait<()> for init_telemetry {
     fn init((): ()) -> Extension {
