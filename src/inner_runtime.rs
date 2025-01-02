@@ -18,6 +18,7 @@ use std::{
     task::Poll,
     time::Duration,
 };
+use std::sync::Arc;
 use tokio_util::sync::CancellationToken;
 
 /// Wrapper trait to make the `InnerRuntime` generic over the runtime types
@@ -745,7 +746,8 @@ impl<RT: RuntimeTrait> InnerRuntime<RT> {
                 .translate_cjs(&module_specifier, &code)
                 .await?;
 
-            let fast_code = deno_core::FastString::from(code.clone());
+            let arc_code = Arc::new(code);
+            let fast_code = deno_core::FastString::from(arc_code.clone());
 
             let s_modid = self
                 .deno_runtime()
@@ -755,7 +757,7 @@ impl<RT: RuntimeTrait> InnerRuntime<RT> {
             // Update source map cache
             self.module_loader.insert_source_map(
                 module_specifier.as_str(),
-                code,
+                arc_code.clone().to_string(),
                 sourcemap.map(|s| s.to_vec()),
             );
 
@@ -777,7 +779,8 @@ impl<RT: RuntimeTrait> InnerRuntime<RT> {
                 .translate_cjs(&module_specifier, &code)
                 .await?;
 
-            let fast_code = deno_core::FastString::from(code.clone());
+            let arc_code = Arc::new(code);
+            let fast_code = deno_core::FastString::from(arc_code.clone());
 
             let module_id = self
                 .deno_runtime()
@@ -787,7 +790,7 @@ impl<RT: RuntimeTrait> InnerRuntime<RT> {
             // Update source map cache
             self.module_loader.insert_source_map(
                 module_specifier.as_str(),
-                code,
+                arc_code.to_string(),
                 sourcemap.map(|s| s.to_vec()),
             );
 
