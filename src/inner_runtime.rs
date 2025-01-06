@@ -746,7 +746,7 @@ impl<RT: RuntimeTrait> InnerRuntime<RT> {
                 .translate_cjs(&module_specifier, &code)
                 .await?;
 
-            let arc_code = Arc::new(code);
+            let arc_code:Arc<str> = Arc::from(code);
             let fast_code = deno_core::FastString::from(arc_code.clone());
 
             let s_modid = self
@@ -757,7 +757,7 @@ impl<RT: RuntimeTrait> InnerRuntime<RT> {
             // Update source map cache
             self.module_loader.insert_source_map(
                 module_specifier.as_str(),
-                arc_code.clone().to_string(),
+                arc_code.to_string(),
                 sourcemap.map(|s| s.to_vec()),
             );
 
@@ -779,7 +779,7 @@ impl<RT: RuntimeTrait> InnerRuntime<RT> {
                 .translate_cjs(&module_specifier, &code)
                 .await?;
 
-            let arc_code = Arc::new(code);
+            let arc_code:Arc<str> = Arc::from(code);
             let fast_code = deno_core::FastString::from(arc_code.clone());
 
             let module_id = self
