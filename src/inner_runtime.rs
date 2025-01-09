@@ -10,6 +10,7 @@ use deno_core::{
     JsRuntimeForSnapshot, PollEventLoopOptions,
 };
 use serde::de::DeserializeOwned;
+use std::sync::Arc;
 use std::{
     collections::{HashMap, HashSet},
     path::{Path, PathBuf},
@@ -18,7 +19,6 @@ use std::{
     task::Poll,
     time::Duration,
 };
-use std::sync::Arc;
 use tokio_util::sync::CancellationToken;
 
 /// Wrapper trait to make the `InnerRuntime` generic over the runtime types
@@ -746,7 +746,7 @@ impl<RT: RuntimeTrait> InnerRuntime<RT> {
                 .translate_cjs(&module_specifier, &code)
                 .await?;
 
-            let arc_code:Arc<str> = Arc::from(code);
+            let arc_code: Arc<str> = Arc::from(code);
             let fast_code = deno_core::FastString::from(arc_code.clone());
 
             let s_modid = self
@@ -779,7 +779,7 @@ impl<RT: RuntimeTrait> InnerRuntime<RT> {
                 .translate_cjs(&module_specifier, &code)
                 .await?;
 
-            let arc_code:Arc<str> = Arc::from(code);
+            let arc_code: Arc<str> = Arc::from(code);
             let fast_code = deno_core::FastString::from(arc_code.clone());
 
             let module_id = self
