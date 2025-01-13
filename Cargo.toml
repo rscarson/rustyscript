@@ -157,7 +157,7 @@ thiserror = "2.0.4"
 serde = "1.0.215"
 
 # Used for NodeJS compatibility and other features
-async-trait = "0.1.83"
+async-trait = "0.1.85"
 
 # Used to generate identifiers for callbacks
 paste = "1.0.15"
