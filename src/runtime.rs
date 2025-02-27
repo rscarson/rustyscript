@@ -1423,4 +1423,17 @@ mod test_runtime {
             .load_modules(&module, vec![])
             .expect_err("Did not detect heap exhaustion");
     }
+
+    #[test]
+    fn test_await_then_throw() {
+        let mut runtime =
+            Runtime::new(RuntimeOptions::default()).expect("Could not create the runtime");
+        let module = Module::new(
+            "test.js",
+            "await new Promise(r => setTimeout(r)); throw 'this does not throw'",
+        );
+        runtime
+            .load_module(&module)
+            .expect_err("Did not throw after awaiting Promise");
+    }
 }

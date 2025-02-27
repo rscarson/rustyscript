@@ -648,20 +648,31 @@ impl<RT: RuntimeTrait> InnerRuntime<RT> {
         // Manually implement tokio::select
         std::future::poll_fn(|cx| {
             if let Poll::Ready(t) = fut.poll_unpin(cx) {
-                return if let Poll::Ready(Err(e)) =
-                    self.deno_runtime().poll_event_loop(cx, poll_options)
-                {
-                    // Run one more tick to check for errors
-                    Poll::Ready(Err(e.into()))
-                } else {
-                    // No errors - continue
-                    Poll::Ready(t.map_err(Into::into))
-                };
-            }
-
-            if let Poll::Ready(Err(e)) = self.deno_runtime().poll_event_loop(cx, poll_options) {
-                // Event loop failed
-                return Poll::Ready(Err(e.into()));
+                let mut iterations = 0;
+                // Drain the event loop until there's no immediate work.
+                // 100 is an arbitrary limit to prevent infinite loops.
+                while iterations < 100 {
+                    iterations += 1;
+                    match self.deno_runtime().poll_event_loop(cx, poll_options) {
+                        Poll::Ready(Err(e)) => {
+                            // If the event loop fails, return the error.
+                            return Poll::Ready(Err(e.into()));
+                        }
+                        Poll::Ready(Ok(())) => {
+                            // Continue polling if there's more work.
+                            continue;
+                        }
+                        Poll::Pending => {
+                            // No more work—break out.
+                            break;
+                        }
+                    }
+                }
+                if iterations >= 100 {
+                    // Hit iteration limit—warn and continue.
+                    println!("Warning: exceeded event loop iteration limit");
+                }
+                return Poll::Ready(t.map_err(Into::into));
             }
 
             if self
@@ -1375,6 +1386,32 @@ mod test_inner_runtime {
                 .expect("could not call function");
             assert_v8!(value, 4, usize, runtime);
 
+            Ok(())
+        });
+    }
+
+    #[cfg(any(feature = "web", feature = "web_stub"))]
+    #[test]
+    fn test_await_then_throw() {
+        let module = Module::new(
+            "test.js",
+            "
+            await new Promise(r => setTimeout(r));
+            throw 'this does not throw';
+            ",
+        );
+
+        let mut runtime =
+            InnerRuntime::<JsRuntime>::new(RuntimeOptions::default(), CancellationToken::new())
+                .expect("Could not load runtime");
+
+        let rt = &mut runtime;
+        run_async_task(|| async move {
+            let result = rt.load_modules(Some(&module), vec![]).await;
+            assert!(
+                result.is_err(),
+                "Expected error from throw after await, but got success"
+            );
             Ok(())
         });
     }
