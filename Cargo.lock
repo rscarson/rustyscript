@@ -1624,7 +1624,7 @@ dependencies = [
  "filetime",
  "junction",
  "libc",
- "nix 0.27.1",
+ "nix",
  "rand 0.8.5",
  "rayon",
  "serde",
@@ -2056,7 +2056,7 @@ dependencies = [
  "libc",
  "log",
  "memchr",
- "nix 0.27.1",
+ "nix",
  "pin-project-lite",
  "rand 0.8.5",
  "serde",
@@ -2150,12 +2150,12 @@ dependencies = [
  "hyper-util",
  "libc",
  "log",
- "nix 0.27.1",
+ "nix",
  "node_resolver",
  "notify",
  "ntapi",
  "once_cell",
- "rustyline 13.0.0",
+ "rustyline",
  "same-file",
  "serde",
  "sys_traits",
@@ -4515,18 +4515,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "nix"
-version = "0.29.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "71e2746dc3a24dd78b3cfcb7be93368c6de9963d30f43a6a73998a9cf4b17b46"
-dependencies = [
- "bitflags 2.9.0",
- "cfg-if",
- "cfg_aliases",
- "libc",
-]
-
-[[package]]
 name = "node_resolver"
 version = "0.32.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5866,34 +5854,12 @@ dependencies = [
  "libc",
  "log",
  "memchr",
- "nix 0.27.1",
+ "nix",
  "radix_trie",
  "unicode-segmentation",
  "unicode-width 0.1.13",
  "utf8parse",
  "winapi",
-]
-
-[[package]]
-name = "rustyline"
-version = "15.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2ee1e066dc922e513bda599c6ccb5f3bb2b0ea5870a579448f2622993f0a9a2f"
-dependencies = [
- "bitflags 2.9.0",
- "cfg-if",
- "clipboard-win",
- "fd-lock",
- "home",
- "libc",
- "log",
- "memchr",
- "nix 0.29.0",
- "radix_trie",
- "unicode-segmentation",
- "unicode-width 0.2.0",
- "utf8parse",
- "windows-sys 0.59.0",
 ]
 
 [[package]]
@@ -5942,12 +5908,12 @@ dependencies = [
  "hyper-util",
  "libc",
  "maybe_path",
- "nix 0.27.1",
+ "nix",
  "node_resolver",
  "once_cell",
  "paste",
  "reqwest",
- "rustyline 15.0.0",
+ "rustyline",
  "serde",
  "sys_traits",
  "thiserror 2.0.4",
