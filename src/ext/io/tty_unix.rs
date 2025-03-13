@@ -1,3 +1,9 @@
+#![allow(clippy::match_same_arms)]
+#![allow(clippy::cast_lossless)]
+#![allow(clippy::borrow_as_ptr)]
+#![allow(clippy::single_match_else)]
+#![allow(clippy::items_after_statements)]
+#![allow(dead_code)]
 // Copyright 2018-2025 the Deno authors. MIT license.
 
 use deno_core::op2;
