@@ -5942,7 +5942,7 @@ dependencies = [
  "hyper-util",
  "libc",
  "maybe_path",
- "nix 0.29.0",
+ "nix 0.27.1",
  "node_resolver",
  "once_cell",
  "paste",
