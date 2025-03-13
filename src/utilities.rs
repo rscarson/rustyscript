@@ -123,6 +123,13 @@ pub fn init_platform(thread_pool_size: u32, idle_task_support: bool) {
     deno_core::JsRuntime::init_platform(Some(platform.into()), true);
 }
 
+pub fn to_io_err<E>(e: E) -> std::io::Error
+where
+    E: Into<Box<dyn std::error::Error + Send + Sync>>,
+{
+    std::io::Error::new(std::io::ErrorKind::Other, e)
+}
+
 #[macro_use]
 mod runtime_macros {
     /// Map a series of values into a form which javascript functions can understand

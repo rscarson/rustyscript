@@ -6,7 +6,7 @@
 //! - `static:`: This scheme will allow for static modules to be imported by their specifier
 //! - `redirect:`: This scheme will allow for modules to be redirected to a different specifier
 //!
-use deno_core::{anyhow::anyhow, ModuleSpecifier};
+use deno_core::{error::ModuleLoaderError, ModuleSpecifier};
 use rustyscript::{module_loader::ImportProvider, Module, Runtime, RuntimeOptions};
 use std::collections::HashMap;
 
@@ -42,7 +42,7 @@ impl ImportProvider for MyImportProvider {
         specifier: &ModuleSpecifier,
         _referrer: &str,
         _kind: deno_core::ResolutionKind,
-    ) -> Option<Result<ModuleSpecifier, deno_core::anyhow::Error>> {
+    ) -> Option<Result<ModuleSpecifier, ModuleLoaderError>> {
         match specifier.scheme() {
             //
             // static:*, use the static module set
@@ -52,7 +52,7 @@ impl ImportProvider for MyImportProvider {
                     Some(Ok(specifier.clone()))
                 } else {
                     // Not found - deny the import
-                    Some(Err(anyhow!("Static module not found: {}", specifier)))
+                    Some(Err(ModuleLoaderError::NotFound))
                 }
             }
 
@@ -64,7 +64,7 @@ impl ImportProvider for MyImportProvider {
                     Some(Ok(redirected_specifier.clone()))
                 } else {
                     // No redirect, deny the import
-                    Some(Err(anyhow!("Module redirect not found: {}", specifier)))
+                    Some(Err(ModuleLoaderError::NotFound))
                 }
             }
 
@@ -79,7 +79,7 @@ impl ImportProvider for MyImportProvider {
         _referrer: Option<&ModuleSpecifier>,
         _is_dyn_import: bool,
         _requested_module_type: deno_core::RequestedModuleType,
-    ) -> Option<Result<String, deno_core::anyhow::Error>> {
+    ) -> Option<Result<String, ModuleLoaderError>> {
         match specifier.scheme() {
             //
             // static:*, use the static module set
@@ -89,7 +89,7 @@ impl ImportProvider for MyImportProvider {
                     Some(Ok(source.clone()))
                 } else {
                     // Not found, deny the import
-                    Some(Err(anyhow!("Static module not found: {}", specifier)))
+                    Some(Err(ModuleLoaderError::NotFound))
                 }
             }
 

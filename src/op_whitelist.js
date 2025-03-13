@@ -186,6 +186,7 @@ export const whitelist = {
     "op_crypto_import_pkcs8_x448": "deno_crypto",
     "op_crypto_export_spki_x448": "deno_crypto",
     "op_crypto_export_pkcs8_x448": "deno_crypto",
+    "op_crypto_x25519_public_key": "deno_crypto",
 
     //
     // IO + TTY

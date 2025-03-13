@@ -120,7 +120,7 @@ pub struct ExtensionOptions {
     /// Requires the `cache` feature to be enabled
     #[cfg(feature = "cache")]
     #[cfg_attr(docsrs, doc(cfg(feature = "cache")))]
-    pub cache: Option<deno_cache::CreateCache<cache::CacheBackend>>,
+    pub cache: Option<deno_cache::CreateCache>,
 
     /// Filesystem implementation for the `deno_fs` extension
     ///
@@ -151,7 +151,7 @@ pub struct ExtensionOptions {
     /// Requires the `node_experimental` feature to be enabled
     #[cfg(feature = "node_experimental")]
     #[cfg_attr(docsrs, doc(cfg(feature = "node_experimental")))]
-    pub node_resolver: std::sync::Arc<node::RustyResolver>,
+    pub node_resolver: std::sync::Arc<node::resolvers::RustyResolver>,
 }
 
 impl Default for ExtensionOptions {
@@ -170,7 +170,7 @@ impl Default for ExtensionOptions {
             webstorage_origin_storage_dir: None,
 
             #[cfg(feature = "cache")]
-            cache: Some(cache::CacheBackend::new_memory()),
+            cache: None,
 
             #[cfg(feature = "fs")]
             filesystem: std::sync::Arc::new(deno_fs::RealFs),
@@ -182,7 +182,7 @@ impl Default for ExtensionOptions {
             kv_store: kv::KvStore::default(),
 
             #[cfg(feature = "node_experimental")]
-            node_resolver: std::sync::Arc::new(node::RustyResolver::default()),
+            node_resolver: std::sync::Arc::new(node::resolvers::RustyResolver::default()),
         }
     }
 }

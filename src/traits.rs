@@ -14,8 +14,11 @@ fn resolve_path(
 ) -> Result<ModuleSpecifier, deno_core::ModuleResolutionError> {
     let path = current_dir.join(path_str);
     let path = deno_core::normalize_path(path);
-    deno_core::url::Url::from_file_path(&path)
-        .map_err(|()| deno_core::ModuleResolutionError::InvalidPath(path))
+    deno_core::url::Url::from_file_path(&path).map_err(|()| {
+        deno_core::ModuleResolutionError::InvalidUrl(
+            deno_core::url::ParseError::RelativeUrlWithoutBase,
+        )
+    })
 }
 
 pub trait ToModuleSpecifier {

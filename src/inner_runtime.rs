@@ -211,13 +211,6 @@ impl<RT: RuntimeTrait> InnerRuntime<RT> {
             ..Default::default()
         }));
 
-        // Init otel
-        #[cfg(feature = "web")]
-        {
-            let otel_conf = options.extension_options.web.telemetry_config.clone();
-            deno_telemetry::init(otel_conf)?;
-        }
-
         // If a snapshot is provided, do not reload ESM for extensions
         let is_snapshot = options.startup_snapshot.is_some();
         let extensions = ext::all_extensions(

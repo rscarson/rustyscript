@@ -1,6 +1,5 @@
 use super::ExtensionTrait;
 use deno_core::{extension, Extension};
-use deno_http::DefaultHttpPropertyExtractor;
 
 mod http_runtime;
 use http_runtime::deno_http_runtime;
@@ -23,7 +22,7 @@ impl ExtensionTrait<()> for init_http {
 }
 impl ExtensionTrait<()> for deno_http::deno_http {
     fn init((): ()) -> Extension {
-        deno_http::deno_http::init_ops_and_esm::<DefaultHttpPropertyExtractor>(deno_http::Options {
+        deno_http::deno_http::init_ops_and_esm(deno_http::Options {
             http2_builder_hook: None,
             http1_builder_hook: None,
         })

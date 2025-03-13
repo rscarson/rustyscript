@@ -1,8 +1,8 @@
 import * as util from 'ext:runtime/06_util.js';
 import * as permissions from 'ext:runtime/10_permissions.js';
 import * as workers from 'ext:runtime/11_workers.js';
-import * as os from 'ext:runtime/30_os.js';
-import * as process from 'ext:runtime/40_process.js';
+import * as os from 'ext:deno_os/30_os.js';
+import * as process from 'ext:deno_process/40_process.js';
 import * as prompt from 'ext:runtime/41_prompt.js';
 import * as scope from 'ext:runtime/98_global_scope_shared.js';
 import * as scopeWorker from 'ext:runtime/98_global_scope_worker.js';
@@ -10,7 +10,7 @@ import * as scopeWindow from 'ext:runtime/98_global_scope_window.js';
 
 import * as errors from "ext:runtime/01_errors.js";
 import * as version from "ext:runtime/01_version.ts";
-import * as signals from "ext:runtime/40_signals.js";
+import * as signals from "ext:deno_os/40_signals.js";
 import * as tty from "ext:runtime/40_tty.js";
 
 const opArgs = scopeWindow.memoizeLazy(() => core.ops.op_bootstrap_args());

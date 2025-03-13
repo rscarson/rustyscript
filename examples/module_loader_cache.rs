@@ -2,7 +2,7 @@
 //! This example will demonstrate usage of the `ImportProvider` trait to implement a cache for module loading.
 //! This one will be a simple in-memory cache
 //!
-use deno_core::{anyhow::Error, ModuleSource, ModuleSpecifier};
+use deno_core::{error::ModuleLoaderError, ModuleSource, ModuleSpecifier};
 use rustyscript::{module_loader::ImportProvider, Module, Runtime, RuntimeOptions};
 use std::collections::HashMap;
 
@@ -33,7 +33,7 @@ impl ImportProvider for MemoryCache {
         specifier: &ModuleSpecifier,
         _referrer: &str,
         _kind: deno_core::ResolutionKind,
-    ) -> Option<Result<ModuleSpecifier, Error>> {
+    ) -> Option<Result<ModuleSpecifier, ModuleLoaderError>> {
         // Tell the loader to allow the import if the module is in the cache
         self.get(specifier).map(|_| Ok(specifier.clone()))
     }
@@ -44,7 +44,7 @@ impl ImportProvider for MemoryCache {
         _referrer: Option<&ModuleSpecifier>,
         _is_dyn_import: bool,
         _requested_module_type: deno_core::RequestedModuleType,
-    ) -> Option<Result<String, Error>> {
+    ) -> Option<Result<String, ModuleLoaderError>> {
         // Return the source code if the module is in the cache
         self.get(specifier).map(Ok)
     }
@@ -53,7 +53,7 @@ impl ImportProvider for MemoryCache {
         &mut self,
         specifier: &ModuleSpecifier,
         source: ModuleSource,
-    ) -> Result<ModuleSource, Error> {
+    ) -> Result<ModuleSource, ModuleLoaderError> {
         // Cache the source code
         if !self.has(specifier) {
             match &source.code {

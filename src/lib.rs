@@ -392,18 +392,18 @@ pub mod extensions {
 #[cfg_attr(docsrs, doc(cfg(feature = "kv")))]
 pub use ext::kv::{KvConfig, KvStore};
 
-#[cfg(feature = "cache")]
-#[cfg_attr(docsrs, doc(cfg(feature = "cache")))]
-pub use ext::cache::CacheBackend;
+//#[cfg(feature = "cache")]
+//#[cfg_attr(docsrs, doc(cfg(feature = "cache")))]
+//pub use ext::cache::CacheBackend;
 
 #[cfg(feature = "node_experimental")]
 #[cfg_attr(docsrs, doc(cfg(feature = "node_experimental")))]
-pub use ext::node::RustyResolver;
+pub use ext::node::resolvers::RustyResolver;
 
 #[cfg(feature = "web")]
 #[cfg_attr(docsrs, doc(cfg(feature = "web")))]
 pub use ext::web::{
-    AllowlistWebPermissions, DefaultWebPermissions, PermissionDenied, SystemsPermissionKind,
+    AllowlistWebPermissions, DefaultWebPermissions, PermissionDeniedError, SystemsPermissionKind,
     WebOptions, WebPermissions,
 };
 pub use ext::ExtensionOptions;
@@ -459,8 +459,8 @@ mod test {
             let unsafe_ops: Vec<String> = runtime.get_value(Some(&hnd), "unsafe_ops")?;
 
             if !unsafe_ops.is_empty() {
-                println!("Found unsafe ops: {unsafe_ops:?}.\nOnce confirmed safe, add them to `src/op_whitelist.js`");
-                std::process::exit(1);
+                eprintln!("Found unsafe ops: {unsafe_ops:?}.\nOnce confirmed safe, add them to `src/op_whitelist.js`");
+                panic!("Whitelist test failed");
             }
 
             Ok(())

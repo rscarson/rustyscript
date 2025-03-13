@@ -54,7 +54,7 @@ fn next_command() -> String {
         }
     }
 
-    return input.trim().to_string();
+    input.trim().to_string()
 }
 
 #[derive(serde::Deserialize, serde::Serialize)]

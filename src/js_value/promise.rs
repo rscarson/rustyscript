@@ -24,7 +24,7 @@ impl<T> Promise<T>
 where
     T: serde::de::DeserializeOwned,
 {
-    pub(crate) async fn resolve<'a>(
+    pub(crate) async fn resolve(
         self,
         runtime: &mut deno_core::JsRuntime,
     ) -> Result<T, crate::Error> {
@@ -42,7 +42,7 @@ where
     /// # Errors
     /// Will return an error if the promise cannot be resolved into the given type,
     /// or if a runtime error occurs
-    pub async fn into_future<'a>(self, runtime: &mut crate::Runtime) -> Result<T, crate::Error> {
+    pub async fn into_future(self, runtime: &mut crate::Runtime) -> Result<T, crate::Error> {
         self.resolve(runtime.deno_runtime()).await
     }
 

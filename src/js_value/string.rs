@@ -1,5 +1,5 @@
 use super::V8Value;
-use deno_core::v8::{self, HandleScope, WriteOptions};
+use deno_core::v8::{self, HandleScope, WriteFlags};
 use serde::Deserialize;
 
 /// A Deserializable javascript UTF-16 string, that can be stored and used later
@@ -51,7 +51,7 @@ impl String {
         let u16_len = local.length();
         let mut buffer = vec![0; u16_len];
 
-        local.write(scope, &mut buffer, 0, WriteOptions::NO_NULL_TERMINATION);
+        local.write_v2(scope, 0, &mut buffer, WriteFlags::empty());
         buffer
     }
 
@@ -60,7 +60,7 @@ impl String {
         let u8_len = local.utf8_length(scope);
         let mut buffer = vec![0; u8_len];
 
-        local.write_utf8(scope, &mut buffer, None, WriteOptions::NO_NULL_TERMINATION);
+        local.write_utf8_v2(scope, &mut buffer, WriteFlags::empty());
         buffer
     }
 }

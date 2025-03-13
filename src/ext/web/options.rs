@@ -1,5 +1,4 @@
 use super::{DefaultWebPermissions, WebPermissions};
-use deno_core::error::AnyError;
 use deno_fetch::dns::Resolver;
 use hyper_util::client::legacy::Builder;
 use std::sync::Arc;
@@ -22,7 +21,7 @@ pub struct WebOptions {
     /// Request builder hook for fetch
     #[allow(clippy::type_complexity)]
     pub request_builder_hook:
-        Option<fn(&mut http::Request<deno_fetch::ReqBody>) -> Result<(), AnyError>>,
+        Option<fn(&mut http::Request<deno_fetch::ReqBody>) -> Result<(), deno_error::JsErrorBox>>,
 
     /// List of domain names or IP addresses for which fetches and network OPs will ignore SSL errors
     ///

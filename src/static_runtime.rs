@@ -42,7 +42,7 @@ use std::cell::{OnceCell, RefCell, RefMut};
 pub struct StaticRuntimeLock<'a> {
     lock: RefMut<'a, Result<Runtime, Error>>,
 }
-impl<'a> StaticRuntimeLock<'a> {
+impl StaticRuntimeLock<'_> {
     /// Get a mutable reference to the runtime instance the lock is holding
     pub fn runtime(&mut self) -> &mut Runtime {
         match self.lock.as_mut() {

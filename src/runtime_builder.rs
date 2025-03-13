@@ -158,7 +158,7 @@ impl RuntimeBuilder {
     #[cfg(feature = "cache")]
     #[cfg_attr(docsrs, doc(cfg(feature = "cache")))]
     #[must_use]
-    pub fn with_cache(mut self, cache: deno_cache::CreateCache<crate::CacheBackend>) -> Self {
+    pub fn with_cache(mut self, cache: deno_cache::CreateCache) -> Self {
         self.0.extension_options.cache = Some(cache);
         self
     }
@@ -242,7 +242,7 @@ impl RuntimeBuilder {
     #[must_use]
     pub fn with_web_request_builder_hook(
         mut self,
-        hook: fn(&mut http::Request<deno_fetch::ReqBody>) -> Result<(), deno_core::error::AnyError>,
+        hook: fn(&mut http::Request<deno_fetch::ReqBody>) -> Result<(), deno_error::JsErrorBox>,
     ) -> Self {
         self.0.extension_options.web.request_builder_hook = Some(hook);
         self

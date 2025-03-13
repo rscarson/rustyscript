@@ -5,12 +5,14 @@ use super::{
 use deno_core::{extension, Extension};
 use deno_node::NodePermissions;
 use deno_permissions::PermissionCheckError;
+use deno_resolver::npm::DenoInNpmPackageChecker;
+use resolvers::{RustyNpmPackageFolderResolver, RustyResolver};
 use std::{path::Path, sync::Arc};
+use sys_traits::impls::RealSys;
 
 mod cjs_translator;
-mod resolvers;
+pub mod resolvers;
 pub use cjs_translator::NodeCodeTranslator;
-pub use resolvers::RustyResolver;
 
 extension!(
     init_node,
@@ -25,10 +27,12 @@ impl ExtensionTrait<()> for init_node {
 }
 impl ExtensionTrait<Arc<RustyResolver>> for deno_node::deno_node {
     fn init(resolver: Arc<RustyResolver>) -> Extension {
-        deno_node::deno_node::init_ops_and_esm::<PermissionsContainer>(
-            Some(resolver.init_services()),
-            resolver.filesystem(),
-        )
+        deno_node::deno_node::init_ops_and_esm::<
+            PermissionsContainer,
+            DenoInNpmPackageChecker,
+            RustyNpmPackageFolderResolver,
+            RealSys,
+        >(Some(resolver.init_services()), resolver.filesystem())
     }
 }
 

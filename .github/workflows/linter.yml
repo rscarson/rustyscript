@@ -35,3 +35,13 @@ jobs:
     # Test documentation generation
     - name: Test documentation
       run: cargo doc --features snapshot_builder
+
+    #
+    # Run examples
+    #
+
+    - name: custom_types
+      run: cargo run --example custom_types
+
+    - name: start_here
+      run: cargo run --example start_here

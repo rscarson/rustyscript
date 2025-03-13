@@ -1,22 +1,22 @@
-use super::node::RustyResolver;
+use super::node::resolvers::RustyResolver;
 use super::web::PermissionsContainer;
 use super::{ExtensionOptions, ExtensionTrait};
 use crate::module_loader::{LoaderOptions, RustyLoader};
 use ::deno_permissions::Permissions;
 use deno_core::v8::{BackingStore, SharedRef};
 use deno_core::{extension, CrossIsolateStore, Extension, FeatureChecker};
-use deno_fs::RealFs;
 use deno_runtime::permissions::RuntimePermissionDescriptorParser;
+use deno_telemetry::OtelConfig;
 use std::collections::HashSet;
 use std::rc::Rc;
 use std::sync::Arc;
+use sys_traits::impls::RealSys;
 
 fn build_permissions(
     permissions_container: &PermissionsContainer,
 ) -> ::deno_permissions::PermissionsContainer {
-    let fs = Arc::new(RealFs);
-    let permission_desc_parser = Arc::new(RuntimePermissionDescriptorParser::new(fs.clone()));
-    ::deno_permissions::PermissionsContainer::new(permission_desc_parser, Permissions::allow_all())
+    let parser = Arc::new(RuntimePermissionDescriptorParser::<RealSys>::new(RealSys));
+    ::deno_permissions::PermissionsContainer::new(parser, Permissions::allow_all())
 }
 
 // Some of the polyfills reference the denoland/deno runtime directly
@@ -91,21 +91,14 @@ impl ExtensionTrait<()> for deno_web_worker {
     }
 }
 
-use deno_runtime::ops::process::deno_process;
+use deno_process::deno_process;
 impl ExtensionTrait<Arc<RustyResolver>> for deno_process {
     fn init(resolver: Arc<RustyResolver>) -> Extension {
         deno_process::init_ops_and_esm(Some(resolver))
     }
 }
 
-use deno_runtime::ops::signal::deno_signal;
-impl ExtensionTrait<()> for deno_signal {
-    fn init((): ()) -> Extension {
-        deno_signal::init_ops_and_esm()
-    }
-}
-
-use deno_runtime::ops::os::deno_os;
+use deno_runtime::deno_os::{deno_os, ExitCode};
 impl ExtensionTrait<()> for deno_os {
     fn init((): ()) -> Extension {
         deno_os::init_ops_and_esm(ExitCode::default())
@@ -135,7 +128,6 @@ pub fn extensions(
         deno_fs_events::build((), is_snapshot),
         deno_bootstrap::build((), is_snapshot),
         deno_os::build((), is_snapshot),
-        deno_signal::build((), is_snapshot),
         deno_process::build(options.node_resolver.clone(), is_snapshot),
         deno_web_worker::build((), is_snapshot),
         deno_worker_host::build((options, shared_array_buffer_store), is_snapshot),
@@ -147,7 +139,6 @@ pub fn extensions(
 }
 
 use deno_runtime::web_worker::{WebWorker, WebWorkerOptions, WebWorkerServiceOptions};
-use deno_runtime::worker::ExitCode;
 use deno_runtime::{colors, BootstrapOptions, WorkerExecutionMode, WorkerLogLevel};
 #[derive(Clone)]
 pub struct WebWorkerCallbackOptions {
@@ -241,7 +232,8 @@ fn create_web_worker_callback(options: WebWorkerCallbackOptions) -> Arc<CreateWe
                 mode: WorkerExecutionMode::Worker,
                 serve_port: None,
                 serve_host: None,
-                otel_config: None,
+                otel_config: OtelConfig::default(),
+                close_on_idle: false,
             },
             extensions: vec![],
             startup_snapshot: None,
@@ -250,7 +242,6 @@ fn create_web_worker_callback(options: WebWorkerCallbackOptions) -> Arc<CreateWe
             create_web_worker_cb,
             format_js_error_fn: Some(Arc::new(format_js_error)),
             worker_type: args.worker_type,
-            get_error_class_fn: Some(&get_error_class_name),
             stdio: options.stdio.clone(),
             cache_storage_dir: None,
             strace_ops: None,
@@ -261,17 +252,4 @@ fn create_web_worker_callback(options: WebWorkerCallbackOptions) -> Arc<CreateWe
         };
         WebWorker::bootstrap_from_options(services, options)
     })
-}
-
-pub fn get_error_class_name(e: &deno_core::error::AnyError) -> &'static str {
-    deno_runtime::errors::get_error_class_name(e)
-        .or_else(|| {
-            e.downcast_ref::<deno_ast::ParseDiagnostic>()
-                .map(|_| "SyntaxError")
-        })
-        .or_else(|| {
-            e.downcast_ref::<std::num::TryFromIntError>()
-                .map(|_| "TypeError")
-        })
-        .unwrap_or("Error")
 }

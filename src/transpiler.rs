@@ -5,13 +5,14 @@
 //! It will only transpile, not typecheck (like Deno's `--no-check` flag).
 
 use deno_ast::MediaType;
+use deno_ast::ParseDiagnosticsError;
 use deno_ast::ParseParams;
 use deno_ast::SourceTextInfo;
-use deno_core::anyhow::Error;
-use deno_core::error::AnyError;
+use deno_ast::TranspileError;
 use deno_core::FastString;
 use deno_core::ModuleSpecifier;
 use deno_core::SourceMapData;
+use deno_error::JsErrorBox;
 use std::borrow::Cow;
 use std::rc::Rc;
 
@@ -33,7 +34,10 @@ fn should_transpile(media_type: MediaType) -> bool {
 
 ///
 /// Transpiles source code from TS to JS without typechecking
-pub fn transpile(module_specifier: &ModuleSpecifier, code: &str) -> Result<ModuleContents, Error> {
+pub fn transpile(
+    module_specifier: &ModuleSpecifier,
+    code: &str,
+) -> Result<ModuleContents, TranspileError> {
     let mut media_type = MediaType::from_specifier(module_specifier);
 
     if media_type == MediaType::Unknown && module_specifier.as_str().contains("/node:") {
@@ -52,7 +56,8 @@ pub fn transpile(module_specifier: &ModuleSpecifier, code: &str) -> Result<Modul
             capture_tokens: false,
             scope_analysis: false,
             maybe_syntax: None,
-        })?;
+        })
+        .map_err(|e| TranspileError::ParseErrors(ParseDiagnosticsError(vec![e])))?;
 
         let transpile_options = deno_ast::TranspileOptions {
             ..Default::default()
@@ -90,12 +95,13 @@ pub fn transpile(module_specifier: &ModuleSpecifier, code: &str) -> Result<Modul
 pub fn transpile_extension(
     specifier: &ModuleSpecifier,
     code: &str,
-) -> Result<(FastString, Option<Cow<'static, [u8]>>), AnyError> {
-    let (code, source_map) = transpile(specifier, code)?;
+) -> Result<(FastString, Option<Cow<'static, [u8]>>), JsErrorBox> {
+    let (code, source_map) = transpile(specifier, code).map_err(JsErrorBox::from_err)?;
     let code = FastString::from(code);
     Ok((code, source_map))
 }
 
-pub type ExtensionTranspiler =
-    Rc<dyn Fn(FastString, FastString) -> Result<(FastString, Option<Cow<'static, [u8]>>), Error>>;
+pub type ExtensionTranspiler = Rc<
+    dyn Fn(FastString, FastString) -> Result<(FastString, Option<Cow<'static, [u8]>>), JsErrorBox>,
+>;
 pub type ExtensionTranspilation = (FastString, Option<Cow<'static, [u8]>>);

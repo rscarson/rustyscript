@@ -1,21 +1,28 @@
 // Copyright 2018-2024 the Deno authors. All rights reserved. MIT license.
 use deno_core::{op2, v8, ByteString, ToJsBuffer};
 
-#[derive(Debug, thiserror::Error)]
+#[derive(Debug, thiserror::Error, deno_error::JsError)]
 #[allow(dead_code)]
 pub enum WebError {
+    #[class(generic)]
     #[error("Failed to decode base64")]
     Base64Decode,
+    #[class(generic)]
     #[error("The encoding label provided ('{0}') is invalid.")]
     InvalidEncodingLabel(String),
+    #[class(generic)]
     #[error("buffer exceeds maximum length")]
     BufferTooLong,
+    #[class(generic)]
     #[error("Value too large to decode")]
     ValueTooLarge,
+    #[class(generic)]
     #[error("Provided buffer too small")]
     BufferTooSmall,
+    #[class(generic)]
     #[error("The encoded data is not valid")]
     DataInvalid,
+    #[class(generic)]
     #[error(transparent)]
     DataError(#[from] v8::DataError),
 }
