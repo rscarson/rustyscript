@@ -2,9 +2,11 @@
 //! And some associated utilities
 use crate::Module;
 use deno_core::error::CoreError;
+use std::path::PathBuf;
 use thiserror::Error;
 
 /// Options for [`Error::as_highlighted`]
+#[allow(clippy::struct_excessive_bools)]
 #[derive(Debug, Clone)]
 pub struct ErrorFormattingOptions {
     /// Include the filename in the output
@@ -23,7 +25,7 @@ pub struct ErrorFormattingOptions {
     pub hide_current_directory: bool,
 
     /// Used to set the directory to remove, in cases where the runtime and system CWD differ
-    pub current_directory: Option<String>,
+    pub current_directory: Option<PathBuf>,
 }
 impl Default for ErrorFormattingOptions {
     fn default() -> Self {
@@ -180,7 +182,7 @@ impl Error {
             let position_part = format!("{line_number_part}{col_number_part}");
             let position_part = match filename {
                 None if position_part.is_empty() => String::new(),
-                Some(f) if options.include_filename => format!("{f}:{position_part}\n"),
+                Some(f) if options.include_filename => format!("At {f}:{position_part}\n"),
                 _ => format!("At {position_part}\n"),
             };
 
@@ -193,11 +195,11 @@ impl Error {
         //
         // Hide directory
         if options.hide_current_directory {
-            if let Some(dir) = options.current_directory.as_deref() {
-                e = e.replace(dir, "");
-            } else if let Ok(dir) = std::env::current_dir() {
-                let dir: &str = &dir.to_string_lossy();
-                e = e.replace(dir, "");
+            let dir = options.current_directory.or(std::env::current_dir().ok());
+            if let Some(dir) = dir {
+                let dir = dir.to_string_lossy().replace('\\', "/");
+                e = e.replace(&dir, "");
+                e = e.replace("file:////", "file:///");
             }
         }
 
@@ -298,7 +300,7 @@ mod test {
             ..Default::default()
         });
         assert_eq!(e, concat!(
-            "At test.js:2:4:\n",
+            "At file:///test.js:2:4:\n",
             "| 1 + x\n",
             "|     ^\n",
             "= Uncaught (in promise) ReferenceError: x is not defined"
