@@ -16,7 +16,7 @@ all-features = true
 rustdoc-args = ["--cfg", "docsrs"]
 
 [features]
-default = ["worker", "safe_extensions", "node_experimental"]
+default = ["worker", "safe_extensions"]
 
 #
 # Feature groups
