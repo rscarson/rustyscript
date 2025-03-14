@@ -5,7 +5,7 @@ use deno_core::error::CoreError;
 use thiserror::Error;
 
 /// Options for [`Error::as_highlighted`]
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub struct ErrorFormattingOptions {
     /// Include the filename in the output
     /// Appears on the first line
@@ -18,6 +18,12 @@ pub struct ErrorFormattingOptions {
     /// Include the column number in the output
     /// Appears on the first line
     pub include_column_number: bool,
+
+    /// Hide the current directory in the output
+    pub hide_current_directory: bool,
+
+    /// Used to set the directory to remove, in cases where the runtime and system CWD differ
+    pub current_directory: Option<String>,
 }
 impl Default for ErrorFormattingOptions {
     fn default() -> Self {
@@ -25,6 +31,9 @@ impl Default for ErrorFormattingOptions {
             include_filename: true,
             include_line_number: true,
             include_column_number: true,
+
+            hide_current_directory: false,
+            current_directory: None,
         }
     }
 }
@@ -101,7 +110,7 @@ impl Error {
     /// Otherwise, it will just display the error message normally
     #[must_use]
     pub fn as_highlighted(&self, options: ErrorFormattingOptions) -> String {
-        if let Error::JsError(e) = self {
+        let mut e = if let Error::JsError(e) = self {
             // Extract basic information about position
             let (filename, row, col) = match e.frames.first() {
                 Some(f) => (
@@ -179,7 +188,20 @@ impl Error {
             format!("{position_part}{source_line_part}{msg_part}",)
         } else {
             self.to_string()
+        };
+
+        //
+        // Hide directory
+        if options.hide_current_directory {
+            if let Some(dir) = options.current_directory.as_deref() {
+                e = e.replace(dir, "");
+            } else if let Ok(dir) = std::env::current_dir() {
+                let dir: &str = &dir.to_string_lossy();
+                e = e.replace(dir, "");
+            }
         }
+
+        e
     }
 }
 
@@ -265,6 +287,18 @@ mod test {
         });
         assert_eq!(e, concat!(
             "At 2:4:\n",
+            "| 1 + x\n",
+            "|     ^\n",
+            "= Uncaught (in promise) ReferenceError: x is not defined"
+        ));
+
+        let module = Module::new("test.js", "1+1;\n1 + x");
+        let e = runtime.load_module(&module).unwrap_err().as_highlighted(ErrorFormattingOptions {
+            hide_current_directory: true,
+            ..Default::default()
+        });
+        assert_eq!(e, concat!(
+            "At test.js:2:4:\n",
             "| 1 + x\n",
             "|     ^\n",
             "= Uncaught (in promise) ReferenceError: x is not defined"

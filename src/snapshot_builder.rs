@@ -1,5 +1,5 @@
 use crate::{
-    async_bridge::{AsyncBridge, AsyncBridgeExt},
+    async_bridge::{AsyncBridge, AsyncBridgeExt, TokioRuntime},
     inner_runtime::{InnerRuntime, RuntimeOptions},
     Error, Module, ModuleHandle,
 };
@@ -109,6 +109,20 @@ impl SnapshotBuilder {
         Ok(Self { inner, tokio })
     }
 
+    /// Creates a new instance of the runtime with the provided options and a borrowed tokio runtime handle.  
+    /// See [`Runtime::new`] for more information.
+    ///
+    /// # Errors
+    /// Can fail if the deno runtime initialization fails (usually issues with extensions)
+    pub fn with_tokio_runtime_handle(
+        options: RuntimeOptions,
+        handle: tokio::runtime::Handle,
+    ) -> Result<Self, Error> {
+        let tokio = AsyncBridge::with_runtime_handle(options.timeout, handle);
+        let inner = InnerRuntime::new(options, tokio.heap_exhausted_token())?;
+        Ok(Self { inner, tokio })
+    }
+
     /// Access the underlying deno runtime instance directly
     pub fn deno_runtime(&mut self) -> &mut deno_core::JsRuntime {
         self.inner.deno_runtime()
@@ -116,7 +130,7 @@ impl SnapshotBuilder {
 
     /// Access the underlying tokio runtime used for blocking operations
     #[must_use]
-    pub fn tokio_runtime(&self) -> std::rc::Rc<tokio::runtime::Runtime> {
+    pub fn tokio_runtime(&self) -> TokioRuntime {
         self.tokio.tokio_runtime()
     }
 
@@ -136,7 +150,7 @@ impl SnapshotBuilder {
     /// Destroy the v8 runtime, releasing all resources
     /// Then the internal tokio runtime will be returned
     #[must_use]
-    pub fn into_tokio_runtime(self) -> Rc<tokio::runtime::Runtime> {
+    pub fn into_tokio_runtime(self) -> TokioRuntime {
         self.tokio.into_tokio_runtime()
     }
 
