@@ -18,7 +18,7 @@ fn run() -> Result<(), Error> {
         "test.js",
         r#"
             // From the node standard library (Deno polyfills)
-            import os from "node:os";
+            import os from "os";
 
             // From npm
             import chalk from "npm:chalk@5";

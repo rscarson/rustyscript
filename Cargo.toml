@@ -16,7 +16,7 @@ all-features = true
 rustdoc-args = ["--cfg", "docsrs"]
 
 [features]
-default = ["worker", "safe_extensions"]
+default = ["worker", "safe_extensions", "node_experimental"]
 
 #
 # Feature groups
@@ -94,7 +94,7 @@ web_stub = ["webidl", "base64-simd"]
     crypto = ["deno_crypto", "webidl"]
 
     # Dynamic library ffi
-    ffi = ["deno_ffi"]
+    ffi = ["deno_ffi", "web"]
 
     # Provides ops for interacting with the file system.
     fs = ["deno_fs", "web",  "io"]

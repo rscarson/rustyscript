@@ -409,6 +409,7 @@ pub use ext::web::{
 pub use ext::ExtensionOptions;
 
 // Expose some important stuff from us
+pub use async_bridge::TokioRuntime;
 pub use error::Error;
 pub use inner_runtime::{RsAsyncFunction, RsFunction};
 pub use module::Module;

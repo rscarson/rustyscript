@@ -171,6 +171,13 @@ impl InnerRustyLoader {
             return Ok(alias);
         }
 
+        //
+        // Handle built-in node modules
+        #[cfg(feature = "node_experimental")]
+        if is_builtin_node_module(specifier) {
+            return self.load_npm(specifier, referrer);
+        }
+
         // Resolve the module specifier to an absolute URL
         let url = deno_core::resolve_import(specifier, referrer)?;
 
@@ -406,19 +413,13 @@ impl InnerRustyLoader {
         };
 
         // Strip the scheme from the specifier
-        let specifier_ = &specifier[specifier.find(':').unwrap()..];
-        let specifier = if specifier.len() == 1 {
-            let err = deno_core::anyhow::anyhow!("invalid node specifier: {specifier}");
-            return Err(to_io_err(err))?;
-        } else {
-            specifier_[1..].to_string()
-        };
+        let (_, specifier) = specifier.split_once(':').unwrap_or(("", specifier));
 
         let resolution = self
             .node
             .node_resolver
             .resolve(
-                &specifier,
+                specifier,
                 &referrer,
                 ResolutionMode::Import,
                 NodeResolutionKind::Execution,
@@ -535,4 +536,10 @@ impl InnerRustyLoader {
         self.source_map_cache
             .insert(filename.to_string(), (source, source_map));
     }
+}
+
+#[cfg(feature = "node_experimental")]
+fn is_builtin_node_module(specifier: &str) -> bool {
+    use node_resolver::IsBuiltInNodeModuleChecker;
+    node_resolver::DenoIsBuiltInNodeModuleChecker.is_builtin_node_module(specifier)
 }
