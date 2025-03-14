@@ -13,7 +13,7 @@ fn main() -> Result<(), Error> {
     );
 
     let mut runtime = Runtime::new(RuntimeOptions {
-        max_heap_size: Some(1 * 1024 * 1024),
+        max_heap_size: Some(5 * 1024 * 1024),
         ..Default::default()
     })?;
 

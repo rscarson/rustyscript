@@ -126,6 +126,11 @@ pub struct RuntimeOptions {
     pub timeout: Duration,
 
     /// Optional maximum heap size for the runtime
+    ///
+    /// If the heap size is exceeded, the runtime will return a `HeapExhausted` error.
+    ///
+    /// **WARNING** this is not a minimum heap size; the underlying V8 isolate will still crash if this number is too small for startup
+    /// (~5mb with default features)
     pub max_heap_size: Option<usize>,
 
     /// Optional cache provider for the module loader
