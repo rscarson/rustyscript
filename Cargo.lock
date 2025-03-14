@@ -1421,6 +1421,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "deno_console"
+version = "0.195.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e82f9dcc71871f81e6d835a215ca7784ace7b4f50a68b15e2dfd735b5b98d550"
+dependencies = [
+ "deno_core",
+]
+
+[[package]]
 name = "deno_core"
 version = "0.340.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2114,7 +2123,7 @@ dependencies = [
  "deno_broadcast_channel",
  "deno_cache",
  "deno_canvas",
- "deno_console",
+ "deno_console 0.194.0",
  "deno_core",
  "deno_cron",
  "deno_crypto",
@@ -5873,7 +5882,7 @@ dependencies = [
  "deno_ast",
  "deno_broadcast_channel",
  "deno_cache",
- "deno_console",
+ "deno_console 0.195.0",
  "deno_core",
  "deno_cron",
  "deno_crypto",
