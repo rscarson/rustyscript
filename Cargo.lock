@@ -2139,7 +2139,7 @@ dependencies = [
  "deno_url",
  "deno_web",
  "deno_webgpu",
- "deno_webidl",
+ "deno_webidl 0.194.0",
  "deno_websocket",
  "deno_webstorage",
  "encoding_rs",
@@ -2322,6 +2322,15 @@ name = "deno_webidl"
 version = "0.194.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b59c05afdc635ca2a2854d780564b277ddc823738c4ead16dbead2172e1aa8f7"
+dependencies = [
+ "deno_core",
+]
+
+[[package]]
+name = "deno_webidl"
+version = "0.195.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "873330acea8f0498a6c748575bd51a69ba639d90a3edb18ec72f560ea61b3a04"
 dependencies = [
  "deno_core",
 ]
@@ -5901,7 +5910,7 @@ dependencies = [
  "deno_url",
  "deno_web",
  "deno_webgpu",
- "deno_webidl",
+ "deno_webidl 0.195.0",
  "deno_websocket",
  "deno_webstorage",
  "http 1.1.0",
