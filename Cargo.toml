@@ -254,6 +254,10 @@ name = "default_threaded_worker"
 required-features = ["worker"]
 
 [[example]]
+name = "web_features"
+required-features = ["web"]
+
+[[example]]
 name = "worker_pool"
 required-features = ["worker"]
 
