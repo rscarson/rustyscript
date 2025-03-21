@@ -164,6 +164,10 @@ impl InnerRustyLoader {
         referrer: &str,
         kind: deno_core::ResolutionKind,
     ) -> Result<ModuleSpecifier, ModuleLoaderError> {
+        let referrer_specifier = referrer
+            .to_module_specifier(&self.cwd)
+            .map_err(|e| JsErrorBox::from_err(to_io_err(e)))?;
+
         //
         // Handle import aliasing for node imports
         #[cfg(feature = "node_experimental")]
@@ -175,6 +179,15 @@ impl InnerRustyLoader {
         // Handle built-in node modules
         #[cfg(feature = "node_experimental")]
         if is_builtin_node_module(specifier) {
+            return self.load_npm(specifier, referrer);
+        }
+
+        //
+        // Use node resolution if we're in an npm package
+        #[cfg(feature = "node_experimental")]
+        if referrer_specifier.scheme() == "file"
+            && self.node.rusty_resolver.in_npm_package(&referrer_specifier)
+        {
             return self.load_npm(specifier, referrer);
         }
 
