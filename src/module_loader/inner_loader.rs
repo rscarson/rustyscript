@@ -164,6 +164,7 @@ impl InnerRustyLoader {
         referrer: &str,
         kind: deno_core::ResolutionKind,
     ) -> Result<ModuleSpecifier, ModuleLoaderError> {
+        #[cfg(feature = "node_experimental")]
         let referrer_specifier = referrer
             .to_module_specifier(&self.cwd)
             .map_err(|e| JsErrorBox::from_err(to_io_err(e)))?;
