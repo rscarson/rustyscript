@@ -17,11 +17,15 @@ fn run() -> Result<(), Error> {
     let module = Module::new(
         "test.js",
         r#"
-            // From npm package which in turn also uses npm packages
-            import * as emoji from "npm:node-emoji";
+            // From the node standard library (Deno polyfills)
+            import os from "os";
+
+            // From npm
+            import chalk from "npm:chalk@5";
 
             export function print_hostname() {
-                console.log(emoji.emojify(`:sauropod: :heart:  npm`));
+                console.log("Getting hostname from node:os:");
+                console.log(chalk.blue(os.hostname()));
             }
         "#,
     );
