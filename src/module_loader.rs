@@ -232,6 +232,7 @@ mod test {
     async fn test_import_provider() {
         let loader = RustyLoader::new(LoaderOptions {
             import_provider: Some(Box::new(TestImportProvider::new())),
+            cwd: std::env::current_dir().unwrap(),
             ..LoaderOptions::default()
         });
         let expected_responses = [
