@@ -106,7 +106,7 @@ web_stub = ["webidl", "base64-simd"]
     kv = ["deno_kv", "web", "console"]
 
     # Provides IO primitives for other Deno extensions (stdio streams, etc)
-    io = ["deno_io", "web", "rustyline", "winapi", "nix", "libc", "once_cell"]
+    io = ["deno_io", "deno_process", "web", "rustyline", "winapi", "nix", "libc", "once_cell"]
 
     # [https://url.spec.whatwg.org/]
     # [https://wicg.github.io/urlpattern/]
