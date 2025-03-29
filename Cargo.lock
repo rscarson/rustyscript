@@ -327,7 +327,7 @@ dependencies = [
  "axum-core",
  "bytes",
  "futures-util",
- "http 1.1.0",
+ "http 1.3.1",
  "http-body 1.0.1",
  "http-body-util",
  "itoa",
@@ -353,7 +353,7 @@ dependencies = [
  "async-trait",
  "bytes",
  "futures-util",
- "http 1.1.0",
+ "http 1.3.1",
  "http-body 1.0.1",
  "http-body-util",
  "mime",
@@ -1325,7 +1325,7 @@ dependencies = [
  "deno_core",
  "deno_error",
  "futures",
- "http 1.1.0",
+ "http 1.3.1",
  "http-body 1.0.1",
  "http-body-util",
  "hyper 1.6.0",
@@ -1356,7 +1356,7 @@ dependencies = [
  "deno_error",
  "deno_media_type",
  "deno_path_util",
- "http 1.1.0",
+ "http 1.3.1",
  "indexmap 2.6.0",
  "log",
  "once_cell",
@@ -1562,7 +1562,7 @@ dependencies = [
  "error_reporter",
  "h2 0.4.8",
  "hickory-resolver",
- "http 1.1.0",
+ "http 1.3.1",
  "http-body-util",
  "hyper 1.6.0",
  "hyper-rustls",
@@ -1652,7 +1652,7 @@ dependencies = [
  "deno_websocket",
  "flate2",
  "http 0.2.12",
- "http 1.1.0",
+ "http 1.3.1",
  "httparse",
  "hyper 0.14.31",
  "hyper 1.6.0",
@@ -1719,7 +1719,7 @@ dependencies = [
  "denokv_remote",
  "denokv_sqlite",
  "faster-hex",
- "http 1.1.0",
+ "http 1.3.1",
  "http-body-util",
  "log",
  "num-bigint",
@@ -1858,7 +1858,7 @@ dependencies = [
  "faster-hex",
  "h2 0.4.8",
  "hkdf",
- "http 1.1.0",
+ "http 1.3.1",
  "http-body-util",
  "hyper 1.6.0",
  "hyper-util",
@@ -2144,7 +2144,7 @@ dependencies = [
  "deno_webstorage",
  "encoding_rs",
  "fastwebsockets",
- "http 1.1.0",
+ "http 1.3.1",
  "http-body-util",
  "hyper 1.6.0",
  "hyper-util",
@@ -2340,7 +2340,7 @@ dependencies = [
  "deno_tls",
  "fastwebsockets",
  "h2 0.4.8",
- "http 1.1.0",
+ "http 1.3.1",
  "http-body-util",
  "hyper 1.6.0",
  "hyper-util",
@@ -2402,7 +2402,7 @@ dependencies = [
  "deno_error",
  "denokv_proto",
  "futures",
- "http 1.1.0",
+ "http 1.3.1",
  "log",
  "prost",
  "rand 0.8.5",
@@ -3271,7 +3271,7 @@ dependencies = [
  "fnv",
  "futures-core",
  "futures-sink",
- "http 1.1.0",
+ "http 1.3.1",
  "indexmap 2.6.0",
  "slab",
  "tokio",
@@ -3498,9 +3498,9 @@ dependencies = [
 
 [[package]]
 name = "http"
-version = "1.1.0"
+version = "1.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "21b9ddb458710bc376481b842f5da65cdf31522de232c1ca8146abce2a358258"
+checksum = "f4a85d31aea989eead29a3aaf9e1115a180df8282431156e533de47660892565"
 dependencies = [
  "bytes",
  "fnv",
@@ -3525,7 +3525,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1efedce1fb8e6913f23e0c92de8e62cd5b772a67e7b3946df930a62566c93184"
 dependencies = [
  "bytes",
- "http 1.1.0",
+ "http 1.3.1",
 ]
 
 [[package]]
@@ -3536,7 +3536,7 @@ checksum = "793429d76616a256bcb62c2a2ec2bed781c8307e797e2598c50010f2bee2544f"
 dependencies = [
  "bytes",
  "futures-util",
- "http 1.1.0",
+ "http 1.3.1",
  "http-body 1.0.1",
  "pin-project-lite",
 ]
@@ -3587,7 +3587,7 @@ dependencies = [
  "futures-channel",
  "futures-util",
  "h2 0.4.8",
- "http 1.1.0",
+ "http 1.3.1",
  "http-body 1.0.1",
  "httparse",
  "httpdate",
@@ -3605,7 +3605,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5ee4be2c948921a1a5320b629c4193916ed787a7f7f293fd3f7f5a6c9de74155"
 dependencies = [
  "futures-util",
- "http 1.1.0",
+ "http 1.3.1",
  "hyper 1.6.0",
  "hyper-util",
  "rustls",
@@ -3638,7 +3638,7 @@ dependencies = [
  "bytes",
  "futures-channel",
  "futures-util",
- "http 1.1.0",
+ "http 1.3.1",
  "http-body 1.0.1",
  "hyper 1.6.0",
  "pin-project-lite",
@@ -4748,7 +4748,7 @@ checksum = "10a8a7f5f6ba7c1b286c2fbca0454eaba116f63bbe69ed250b642d36fbb04d80"
 dependencies = [
  "async-trait",
  "bytes",
- "http 1.1.0",
+ "http 1.3.1",
  "opentelemetry",
 ]
 
@@ -4760,7 +4760,7 @@ checksum = "91cf61a1868dacc576bf2b2a1c3e9ab150af7272909e80085c3173384fe11f76"
 dependencies = [
  "async-trait",
  "futures-core",
- "http 1.1.0",
+ "http 1.3.1",
  "opentelemetry",
  "opentelemetry-http",
  "opentelemetry-proto",
@@ -5584,7 +5584,7 @@ dependencies = [
  "futures-channel",
  "futures-core",
  "futures-util",
- "http 1.1.0",
+ "http 1.3.1",
  "http-body 1.0.1",
  "http-body-util",
  "hyper 1.6.0",
@@ -5904,7 +5904,7 @@ dependencies = [
  "deno_webidl",
  "deno_websocket",
  "deno_webstorage",
- "http 1.1.0",
+ "http 1.3.1",
  "hyper-util",
  "libc",
  "maybe_path",
@@ -7271,7 +7271,7 @@ dependencies = [
  "base64 0.22.1",
  "bytes",
  "h2 0.4.8",
- "http 1.1.0",
+ "http 1.3.1",
  "http-body 1.0.1",
  "http-body-util",
  "hyper 1.6.0",
@@ -7334,7 +7334,7 @@ dependencies = [
  "bitflags 2.9.0",
  "bytes",
  "futures-core",
- "http 1.1.0",
+ "http 1.3.1",
  "http-body 1.0.1",
  "http-body-util",
  "pin-project-lite",
@@ -7852,7 +7852,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c564e589056437e3a73383f4e0903965879087c9ee0f715e562bbf4e47c08b75"
 dependencies = [
  "bytes",
- "http 1.1.0",
+ "http 1.3.1",
  "thiserror 2.0.4",
  "url",
 ]
