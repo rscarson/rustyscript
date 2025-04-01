@@ -12,6 +12,7 @@ use deno_resolver::npm::DenoInNpmPackageChecker;
 use deno_runtime::deno_fs;
 use node_resolver::analyze::CjsAnalysis as ExtNodeCjsAnalysis;
 use node_resolver::analyze::CjsAnalysisExports;
+use node_resolver::analyze::EsmAnalysisMode;
 use node_resolver::DenoIsBuiltInNodeModuleChecker;
 use serde::Deserialize;
 use serde::Serialize;
@@ -41,7 +42,7 @@ pub enum CjsAnalysis {
 impl From<ExtNodeCjsAnalysis<'_>> for CjsAnalysis {
     fn from(analysis: ExtNodeCjsAnalysis) -> Self {
         match analysis {
-            ExtNodeCjsAnalysis::Esm(_) => CjsAnalysis::Esm,
+            ExtNodeCjsAnalysis::Esm(..) => CjsAnalysis::Esm,
             ExtNodeCjsAnalysis::Cjs(analysis) => CjsAnalysis::Cjs {
                 exports: analysis.exports,
                 reexports: analysis.reexports,
@@ -123,7 +124,7 @@ impl RustyCjsCodeAnalyzer {
     ) -> Result<ExtNodeCjsAnalysis<'a>, JsErrorBox> {
         let analysis = self.inner_cjs_analysis(specifier, &source)?;
         match analysis {
-            CjsAnalysis::Esm => Ok(ExtNodeCjsAnalysis::Esm(source)),
+            CjsAnalysis::Esm { .. } => Ok(ExtNodeCjsAnalysis::Esm(source, None)),
             CjsAnalysis::Cjs { exports, reexports } => {
                 Ok(ExtNodeCjsAnalysis::Cjs(CjsAnalysisExports {
                     exports,
@@ -140,6 +141,7 @@ impl node_resolver::analyze::CjsCodeAnalyzer for RustyCjsCodeAnalyzer {
         &self,
         specifier: &ModuleSpecifier,
         source: Option<Cow<'a, str>>,
+        _esm_analysis_mode: EsmAnalysisMode,
     ) -> Result<ExtNodeCjsAnalysis<'a>, JsErrorBox> {
         let source = match source {
             Some(source) => source,

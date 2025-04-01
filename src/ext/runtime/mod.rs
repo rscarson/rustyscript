@@ -30,7 +30,6 @@ extension!(
     esm = [ dir "src/ext/runtime", "init_runtime.js" ],
     state = |state| {
         let options = BootstrapOptions {
-            no_color: false,
             args: vec![
                 "--colors".to_string(),
             ],
@@ -218,10 +217,8 @@ fn create_web_worker_callback(options: WebWorkerCallbackOptions) -> Arc<CreateWe
                 enable_testing_features: false,
                 locale: deno_core::v8::icu::get_language_tag(),
                 location: Some(args.main_module),
-                no_color: !colors::use_color(),
                 color_level: colors::get_color_level(),
-                is_stdout_tty: false,
-                is_stderr_tty: false,
+                no_legacy_abort: false,
                 unstable_features: vec![],
                 user_agent: concat!("rustyscript_", env!("CARGO_PKG_VERSION")).to_string(),
                 inspect: false,

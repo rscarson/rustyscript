@@ -60,7 +60,7 @@ impl String {
         let u8_len = local.utf8_length(scope);
         let mut buffer = vec![0; u8_len];
 
-        local.write_utf8_v2(scope, &mut buffer, WriteFlags::empty());
+        local.write_utf8_v2(scope, &mut buffer, WriteFlags::empty(), None);
         buffer
     }
 }
