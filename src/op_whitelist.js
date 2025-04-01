@@ -27,6 +27,7 @@ export const whitelist = {
     "op_leak_tracing_enable": "Harmless",
     "op_add": "Harmless",
     "op_add_async": "Harmless",
+    "op_get_ext_import_meta_proto": "Harmless",
 
     "op_close": "ResourceTable; Requires rust-side additions to be breaking",
     "op_try_close": "ResourceTable; Requires rust-side additions to be breaking",

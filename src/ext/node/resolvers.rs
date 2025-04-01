@@ -184,7 +184,9 @@ impl RustyResolver {
             | MediaType::Json
             | MediaType::Mts
             | MediaType::Mjs
-            | MediaType::Dmts => false,
+            | MediaType::Dmts
+            | MediaType::Sql
+            | MediaType::Html => false,
 
             MediaType::Cjs | MediaType::Cts | MediaType::Dcts => true,
 
