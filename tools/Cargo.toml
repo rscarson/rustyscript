@@ -1,0 +1,19 @@
+[package]
+name = "rustyscript-update"
+authors = ["@rscarson", "@utyfua"]
+description = "Rustyscript dependency update tool"
+edition = "2024"
+license = "MIT OR Apache-2.0"
+version = "0.0.0"
+repository = "https://github.com/rscarson/rustyscript"
+publish = false
+
+[[bin]]
+name = "update"
+path = "update.rs"
+
+[dependencies]
+toml_edit = "0.22.24"
+reqwest = { version = "0.12", features = ["json"] }
+tokio = { version = "1", features = ["full"] }
+serde = { version = "1.0", features = ["derive"] }

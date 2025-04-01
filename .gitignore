@@ -1,4 +1,5 @@
 /target
+/tools/target
 .vscode
 .idea
 snapshot.bin
