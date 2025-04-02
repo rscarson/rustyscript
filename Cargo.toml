@@ -232,7 +232,7 @@ base64-simd = {version = "0.8.0", optional = true}
 deno_resolver = { version = "0.25.0", optional = true }
 node_resolver = { version = "0.32.0", optional = true, features = ["sync"] }
 deno_runtime  = { version = "0.202.0", optional = true, features = ["exclude_runtime_main_js"] }
-deno_terminal = { version = "0.2.0", optional = true }
+deno_terminal = { version = "0.2.2", optional = true }
 deno_semver   = { version = "0.7.0", optional = true }
 deno_napi     = { version = "0.125.0", optional = true }
 deno_npm      = { version = "0.26.0", optional = true }
