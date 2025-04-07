@@ -160,7 +160,7 @@ impl Runtime {
     }
 
     /// Advance the JS event loop by a single tick  
-    /// See [`Runtime::await_event_loop`] for fully running the event loop
+    /// See [`Runtime::block_on_event_loop`] for fully running the event loop
     ///
     /// Returns true if the event loop has pending work, or false if it has completed
     ///
@@ -171,6 +171,24 @@ impl Runtime {
     /// Can fail if a runtime error occurs during the event loop's execution
     pub fn advance_event_loop(&mut self, options: PollEventLoopOptions) -> Result<bool, Error> {
         self.block_on(|runtime| async move { runtime.inner.advance_event_loop(options).await })
+    }
+
+    /// Advance the JS event loop by a single tick  
+    /// See [`Runtime::await_event_loop`] for fully running the event loop
+    ///
+    /// Returns a future that resolves true if the event loop has pending work, or false if it
+    /// has completed
+    ///
+    /// # Arguments
+    /// * `options` - Options for the event loop polling, see [`deno_core::PollEventLoopOptions`]
+    ///
+    /// # Errors
+    /// Can fail if a runtime error occurs during the event loop's execution
+    pub async fn advance_event_loop_async(
+        &mut self,
+        options: PollEventLoopOptions,
+    ) -> Result<bool, Error> {
+        self.inner.advance_event_loop(options).await
     }
 
     /// Run the JS event loop to completion, or until a timeout is reached  
