@@ -154,65 +154,65 @@ worker = []
 
 [dependencies]
 maybe_path = "0.1.3"
-thiserror = "2.0.4"
-serde = "1.0.219"
+thiserror = "^2.0.3"
+serde = "^1.0.149"
 
 # Used for NodeJS compatibility and other features
-async-trait = "0.1.87"
+async-trait = "^0.1.73"
 
 # Used to generate identifiers for callbacks
 paste = "1.0.15"
 
 # The deno runtime itself, and the webidl extension for the web APIs
-deno_core = "0.340.0"
-deno_error = "0.5.5"
+deno_core = "^0.340.0"
+deno_error = "=0.5.5"
 
 # For transpiling typescript
 deno_ast = { version = "=0.46.0", features = ["transpiling", "cjs"] }
-deno_media_type = "0.2.6"
+deno_media_type = "=0.2.6"
 
 # Runtime for async tasks
-tokio = "1.44.1"
-tokio-util = "0.7.14"
+tokio = "^1.36.0"
+tokio-util = "^0.7.4"
 
 # For web
-hyper-util = {version = "0.1.10", optional = true}
+hyper-util = {version = "^0.1.10", optional = true}
 
 # For URL imports
 # Pinned for now due to upstream issues
 reqwest = { version = "=0.12.8", optional = true, default-features = false, features = ["blocking", "rustls-tls"] }
-http = { version = "1.0", optional = true }
-deno_permissions = { version = "0.53.0", optional = true }
+http = { version = "^1.0", optional = true }
+deno_permissions = { version = "^0.53.0", optional = true }
 
 
 #
 # Dependencies for the various extension features
 #
 
-deno_broadcast_channel = { version = "0.188.0", optional = true }
+deno_broadcast_channel = { version = "^0.188.0", optional = true }
 
-deno_cache      = { version = "0.126.0", optional = true }
-deno_console    = { version = "0.194.0", optional = true }
-deno_cron       = { version = "0.74.0", optional = true }
-deno_crypto     = { version = "0.208.0", optional = true }
-deno_fetch      = { version = "0.218.0", optional = true }
-deno_ffi        = { version = "0.181.0", optional = true }
-deno_fs         = { version = "0.104.0", optional = true, features = ["sync_fs"] }
-deno_http       = { version = "0.192.0", optional = true }
-deno_kv         = { version = "0.102.0", optional = true }
-deno_net        = { version = "0.186.0", optional = true }
-deno_node       = { version = "0.132.0", optional = true }
-deno_tls        = { version = "0.181.0", optional = true }
-deno_url        = { version = "0.194.0", optional = true }
+deno_cache      = { version = "^0.126.0", optional = true }
+deno_console    = { version = "^0.194.0", optional = true }
+deno_cron       = { version = "^0.74.0", optional = true }
+deno_crypto     = { version = "^0.208.0", optional = true }
+deno_fetch      = { version = "^0.218.0", optional = true }
+deno_ffi        = { version = "^0.181.0", optional = true }
+deno_fs         = { version = "^0.104.0", optional = true, features = ["sync_fs"] }
+deno_http       = { version = "^0.192.0", optional = true }
+deno_kv         = { version = "^0.102.0", optional = true }
+deno_net        = { version = "^0.186.0", optional = true }
+deno_node       = { version = "^0.132.0", optional = true }
+deno_tls        = { version = "^0.181.0", optional = true }
+deno_url        = { version = "^0.194.0", optional = true }
 
-deno_web        = { version = "0.225.0", optional = true }
-deno_webidl     = { version = "0.194.0", optional = true }
-deno_webstorage = { version = "0.189.0", optional = true }
-deno_websocket  = { version = "0.199.0", optional = true }
-deno_webgpu     = { version = "0.161.0", optional = true }
+deno_web        = { version = "^0.225.0", optional = true }
+deno_webidl     = { version = "^0.194.0", optional = true }
+deno_webstorage = { version = "^0.189.0", optional = true }
+deno_websocket  = { version = "^0.199.0", optional = true }
+deno_webgpu     = { version = "^0.161.0", optional = true }
 
-deno_io = { version = "0.104.0", optional = true }
-deno_telemetry  = { version = "0.16.0", optional = true }
+deno_io = { version = "^0.104.0", optional = true }
+deno_telemetry  = { version = "^0.16.0", optional = true }
 
 # Dependencies for the IO feature
 rustyline = {version = "=13.0.0", optional = true}
@@ -222,24 +222,24 @@ winapi = {version = "=0.3.9", optional = true, features = [
     "wincon", "wincontypes", "consoleapi"
 ]}
 nix = {version = "=0.27.1", optional = true, features = ["term"]}
-libc = {version = "0.2.167", optional = true}
-once_cell = {version = "1.20.2", optional = true}
+libc = {version = "^0.2.168", optional = true}
+once_cell = {version = "^1.17.1", optional = true}
 
 # Dependencies for the web stub feature
 base64-simd = {version = "0.8.0", optional = true}
 
 # Dependencies for the node feature
-deno_resolver = { version = "0.25.0", optional = true }
-node_resolver = { version = "0.32.0", optional = true, features = ["sync"] }
-deno_runtime  = { version = "0.202.0", optional = true, features = ["exclude_runtime_main_js"] }
-deno_terminal = { version = "0.2.0", optional = true }
-deno_semver   = { version = "0.7.0", optional = true }
-deno_napi     = { version = "0.125.0", optional = true }
-deno_npm      = { version = "0.26.0", optional = true }
-deno_process  = { version = "0.9.0", optional = true }
-deno_package_json = { version = "0.5.0", optional = true }
+deno_resolver = { version = "^0.25.0", optional = true }
+node_resolver = { version = "^0.32.0", optional = true, features = ["sync"] }
+deno_runtime  = { version = "^0.202.0", optional = true, features = ["exclude_runtime_main_js"] }
+deno_terminal = { version = "^0.2.0", optional = true }
+deno_semver   = { version = "=0.7.1", optional = true }
+deno_napi     = { version = "^0.125.0", optional = true }
+deno_npm      = { version = "=0.27.2", optional = true }
+deno_process  = { version = "^0.9.0", optional = true }
+deno_package_json = { version = "=0.5.0", optional = true }
 checksum      = { version = "0.2.1", optional = true }
-sys_traits    = { version = "0.1.8", optional = true }
+sys_traits    = { version = "=0.1.8", optional = true }
 
 [dev-dependencies]
 version-sync = "0.9.5"
