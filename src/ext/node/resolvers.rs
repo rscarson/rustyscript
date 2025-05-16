@@ -10,6 +10,7 @@ use deno_resolver::npm::{
 };
 use deno_semver::package::PackageReq;
 use node_resolver::{
+    analyze::CjsModuleExportAnalyzer,
     cache::NodeResolutionSys,
     errors::{
         ClosestPkgJsonError, PackageFolderResolveError, PackageFolderResolveErrorKind,
@@ -31,6 +32,7 @@ use sys_traits::impls::RealSys;
 use super::cjs_translator::{NodeCodeTranslator, RustyCjsCodeAnalyzer};
 
 const NODE_MODULES_DIR: &str = "node_modules";
+const TYPESCRIPT_VERSION: &str = "5.8.3";
 
 /// Package resolver for the `deno_node` extension
 #[derive(Debug)]
@@ -73,14 +75,17 @@ impl RustyResolver {
         >,
     ) -> NodeCodeTranslator {
         let cjs = RustyCjsCodeAnalyzer::new(self.filesystem(), self.clone());
-        NodeCodeTranslator::new(
+
+        let module_export_analyzer = CjsModuleExportAnalyzer::new(
             cjs,
             self.in_pkg_checker.clone(),
             node_resolver,
             self.folder_resolver.clone(),
             self.package_json_resolver(),
             RealSys,
-        )
+        );
+
+        NodeCodeTranslator::new(module_export_analyzer.into())
     }
 
     /// Returns a node resolver for the resolver
@@ -94,7 +99,12 @@ impl RustyResolver {
             self.folder_resolver.clone(),
             self.folder_resolver.pjson_resolver(),
             NodeResolutionSys::new(RealSys, Some(self.folder_resolver.resolution_cache())),
-            ConditionsFromResolutionMode::default(),
+            node_resolver::NodeResolverOptions {
+                conditions_from_resolution_mode: ConditionsFromResolutionMode::default(),
+                typescript_version: Some(
+                    deno_semver::Version::parse_standard(TYPESCRIPT_VERSION).unwrap(),
+                ),
+            },
         )
         .into()
     }
@@ -184,6 +194,8 @@ impl RustyResolver {
             | MediaType::Json
             | MediaType::Mts
             | MediaType::Mjs
+            | MediaType::Html
+            | MediaType::Sql
             | MediaType::Dmts => false,
 
             MediaType::Cjs | MediaType::Cts | MediaType::Dcts => true,
@@ -515,7 +527,7 @@ impl NodeRequireLoader for RequireLoader {
             .all(|c| c.as_os_str().to_ascii_lowercase() != NODE_MODULES_DIR);
         if is_in_node_modules {
             permissions
-                .check_read_path(path)
+                .check_read_path(Cow::Borrowed(path))
                 .map_err(JsErrorBox::from_err)
         } else {
             Ok(Cow::Borrowed(path))

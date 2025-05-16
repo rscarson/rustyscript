@@ -6,9 +6,10 @@ use crate::{
     utilities, Error, ExtensionOptions, Module, ModuleHandle,
 };
 use deno_core::{
-    futures::FutureExt, serde_json, serde_v8::from_v8, v8, FeatureChecker, JsRuntime,
-    JsRuntimeForSnapshot, PollEventLoopOptions,
+    futures::FutureExt, serde_json, serde_v8::from_v8, v8, JsRuntime, JsRuntimeForSnapshot,
+    PollEventLoopOptions,
 };
+use deno_features::FeatureChecker;
 use serde::de::DeserializeOwned;
 use std::{
     collections::{HashMap, HashSet},
@@ -143,7 +144,6 @@ pub struct RuntimeOptions {
     /// Optional snapshot to load into the runtime
     ///
     /// This will reduce load times, but requires the same extensions to be loaded as when the snapshot was created  
-    /// If provided, user-supplied extensions must be instantiated with `init_ops` instead of `init_ops_and_esm`
     ///
     /// WARNING: Snapshots MUST be used on the same system they were created on
     pub startup_snapshot: Option<&'static [u8]>,
@@ -244,13 +244,8 @@ impl<RT: RuntimeTrait> InnerRuntime<RT> {
             }
         };
 
-        let mut feature_checker = FeatureChecker::default();
-        feature_checker.set_exit_cb(Box::new(|_, _| {}));
-
         let mut deno_runtime = RT::try_new(deno_core::RuntimeOptions {
             module_loader: Some(module_loader.clone()),
-
-            feature_checker: Some(feature_checker.into()),
 
             extension_transpiler: Some(module_loader.as_extension_transpiler()),
             create_params: isolate_params,
@@ -261,6 +256,14 @@ impl<RT: RuntimeTrait> InnerRuntime<RT> {
 
             ..Default::default()
         })?;
+
+        let mut feature_checker = FeatureChecker::default();
+        feature_checker.set_exit_cb(Box::new(|_, _| {}));
+        deno_runtime
+            .rt_mut()
+            .op_state()
+            .borrow_mut()
+            .put(feature_checker);
 
         // Add a callback to terminate the runtime if the max_heap_size limit is approached
         if options.max_heap_size.is_some() {

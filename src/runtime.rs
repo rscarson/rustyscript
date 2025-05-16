@@ -1148,7 +1148,7 @@ mod test_runtime {
 
         extension!(test_extension);
         Runtime::new(RuntimeOptions {
-            extensions: vec![test_extension::init_ops_and_esm()],
+            extensions: vec![test_extension::init()],
             ..Default::default()
         })
         .expect("Could not create runtime with extensions");

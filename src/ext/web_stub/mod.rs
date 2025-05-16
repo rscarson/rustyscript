@@ -19,7 +19,7 @@ extension!(
 );
 impl ExtensionTrait<()> for deno_web {
     fn init((): ()) -> Extension {
-        deno_web::init_ops_and_esm()
+        deno_web::init()
     }
 }
 

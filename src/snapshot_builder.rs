@@ -811,8 +811,7 @@ impl SnapshotBuilder {
     /// `include_bytes!`
     ///
     /// WARNING: In order to use the snapshot, make sure the runtime using it is
-    /// provided the same extensions and options as the original runtime. Any extensions
-    /// you provided must be loaded with `init_ops` instead of `init_ops_and_esm`.
+    /// provided the same extensions and options as the original runtime.
     #[must_use]
     pub fn finish(self) -> Box<[u8]> {
         let deno_rt: JsRuntimeForSnapshot = self.inner.into_inner();

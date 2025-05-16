@@ -70,7 +70,7 @@ extension!(
 );
 impl ExtensionTrait<()> for rustyscript {
     fn init(options: ()) -> Extension {
-        rustyscript::init_ops_and_esm()
+        rustyscript::init()
     }
 }
 
