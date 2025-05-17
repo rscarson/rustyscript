@@ -5,7 +5,7 @@ use deno_kv::{
     remote::{RemoteDbHandler, RemoteDbHandlerPermissions},
     sqlite::{SqliteDbHandler, SqliteDbHandlerPermissions},
 };
-use std::path::PathBuf;
+use std::{borrow::Cow, path::PathBuf};
 
 extension!(
     init_kv,
@@ -15,12 +15,12 @@ extension!(
 );
 impl ExtensionTrait<()> for init_kv {
     fn init((): ()) -> Extension {
-        init_kv::init_ops_and_esm()
+        init_kv::init()
     }
 }
 impl ExtensionTrait<KvStore> for deno_kv::deno_kv {
     fn init(store: KvStore) -> Extension {
-        deno_kv::deno_kv::init_ops_and_esm(store.handler(), store.config())
+        deno_kv::deno_kv::init(store.handler(), store.config())
     }
 }
 
@@ -179,13 +179,15 @@ impl SqliteDbHandlerPermissions for PermissionsContainer {
         p: &str,
         api_name: &str,
     ) -> Result<std::path::PathBuf, deno_permissions::PermissionCheckError> {
-        let p = self.0.check_read(std::path::Path::new(p), Some(api_name))?;
+        let p = self
+            .0
+            .check_read(Cow::Borrowed(std::path::Path::new(p)), Some(api_name))?;
         Ok(p.to_path_buf())
     }
 
     fn check_write<'a>(
         &mut self,
-        p: &'a std::path::Path,
+        p: Cow<'a, std::path::Path>,
         api_name: &str,
     ) -> Result<std::borrow::Cow<'a, std::path::Path>, deno_permissions::PermissionCheckError> {
         let p = self.0.check_write(p, Some(api_name))?;

@@ -39,18 +39,18 @@ impl WebPermissions for DefaultWebPermissions {
         resolved: bool,
         read: bool,
         write: bool,
-        path: &'a Path,
+        path: Cow<'a, Path>,
         api_name: &str,
     ) -> Option<std::borrow::Cow<'a, Path>> {
-        Some(Cow::Borrowed(path))
+        Some(path)
     }
 
     fn check_read<'a>(
         &self,
-        p: &'a Path,
+        p: Cow<'a, Path>,
         api_name: Option<&str>,
     ) -> Result<Cow<'a, Path>, PermissionDeniedError> {
-        Ok(Cow::Borrowed(p))
+        Ok(p)
     }
 
     fn check_read_all(&self, api_name: Option<&str>) -> Result<(), PermissionDeniedError> {
@@ -68,10 +68,10 @@ impl WebPermissions for DefaultWebPermissions {
 
     fn check_write<'a>(
         &self,
-        p: &'a Path,
+        p: Cow<'a, Path>,
         api_name: Option<&str>,
     ) -> Result<Cow<'a, Path>, PermissionDeniedError> {
-        Ok(Cow::Borrowed(p))
+        Ok(p)
     }
 
     fn check_write_all(&self, api_name: &str) -> Result<(), PermissionDeniedError> {
@@ -294,12 +294,12 @@ impl WebPermissions for AllowlistWebPermissions {
 
     fn check_read<'a>(
         &self,
-        p: &'a Path,
+        p: Cow<'a, Path>,
         api_name: Option<&str>,
     ) -> Result<Cow<'a, Path>, PermissionDeniedError> {
         let inst = self.borrow();
         if inst.read_all && inst.read_paths.contains(p.to_str().unwrap()) {
-            Ok(Cow::Borrowed(p))
+            Ok(p)
         } else {
             oops(p.display())?
         }
@@ -307,12 +307,12 @@ impl WebPermissions for AllowlistWebPermissions {
 
     fn check_write<'a>(
         &self,
-        p: &'a Path,
+        p: Cow<'a, Path>,
         api_name: Option<&str>,
     ) -> Result<Cow<'a, Path>, PermissionDeniedError> {
         let inst = self.borrow();
         if inst.write_all && inst.write_paths.contains(p.to_str().unwrap()) {
-            Ok(Cow::Borrowed(p))
+            Ok(p)
         } else {
             oops(p.display())?
         }
@@ -323,17 +323,17 @@ impl WebPermissions for AllowlistWebPermissions {
         resolved: bool,
         read: bool,
         write: bool,
-        path: &'a Path,
+        path: Cow<'a, Path>,
         api_name: &str,
     ) -> Option<std::borrow::Cow<'a, Path>> {
-        let path = path.to_str().unwrap();
-        if read && !self.borrow().openr_paths.contains(path) {
+        let path_str = path.to_str().unwrap();
+        if read && !self.borrow().openr_paths.contains(path_str) {
             return None;
         }
-        if write && !self.borrow().openw_paths.contains(path) {
+        if write && !self.borrow().openw_paths.contains(path_str) {
             return None;
         }
-        Some(Cow::Borrowed(path.as_ref()))
+        Some(path)
     }
 
     fn check_read_all(&self, api_name: Option<&str>) -> Result<(), PermissionDeniedError> {
@@ -353,7 +353,7 @@ impl WebPermissions for AllowlistWebPermissions {
         if !self.borrow().read_all {
             return oops("read_all")?;
         }
-        self.check_read(p, Some(api_name))?;
+        self.check_read(Cow::Borrowed(p), Some(api_name))?;
         Ok(())
     }
 
@@ -371,7 +371,7 @@ impl WebPermissions for AllowlistWebPermissions {
         display: &str,
         api_name: &str,
     ) -> Result<(), PermissionDeniedError> {
-        self.check_write(Path::new(path), Some(api_name))?;
+        self.check_write(Cow::Borrowed(path), Some(api_name))?;
         Ok(())
     }
 
@@ -380,7 +380,7 @@ impl WebPermissions for AllowlistWebPermissions {
         path: &str,
         api_name: &str,
     ) -> Result<std::path::PathBuf, PermissionDeniedError> {
-        let p = self.check_write(Path::new(path), Some(api_name))?;
+        let p = self.check_write(Cow::Borrowed(Path::new(path)), Some(api_name))?;
         Ok(p.into_owned())
     }
 
@@ -440,7 +440,7 @@ pub trait WebPermissions: std::fmt::Debug + Send + Sync {
         resolved: bool,
         read: bool,
         write: bool,
-        path: &'a Path,
+        path: Cow<'a, Path>,
         api_name: &str,
     ) -> Option<std::borrow::Cow<'a, Path>>;
 
@@ -450,7 +450,7 @@ pub trait WebPermissions: std::fmt::Debug + Send + Sync {
     /// If an error is returned, the operation will be denied with the error message as the reason
     fn check_read<'a>(
         &self,
-        p: &'a Path,
+        p: Cow<'a, Path>,
         api_name: Option<&str>,
     ) -> Result<Cow<'a, Path>, PermissionDeniedError>;
 
@@ -479,7 +479,7 @@ pub trait WebPermissions: std::fmt::Debug + Send + Sync {
     /// If an error is returned, the operation will be denied with the error message as the reason
     fn check_write<'a>(
         &self,
-        p: &'a Path,
+        p: Cow<'a, Path>,
         api_name: Option<&str>,
     ) -> Result<Cow<'a, Path>, PermissionDeniedError>;
 
@@ -624,12 +624,44 @@ impl deno_fetch::FetchPermissions for PermissionsContainer {
 
     fn check_read<'a>(
         &mut self,
-        resolved: bool,
-        p: &'a Path,
+        path: Cow<'a, Path>,
         api_name: &str,
-    ) -> Result<Cow<'a, Path>, FsError> {
-        let p = self.0.check_read(p, Some(api_name)).map_err(to_io_err)?;
-        Ok(p)
+        get_path: &'a dyn deno_fs::GetPath,
+    ) -> Result<deno_fs::CheckedPath<'a>, FsError> {
+        let (needs_canonicalize, normalized_path) = get_path.normalized(path)?;
+
+        let p = self
+            .0
+            .check_read(normalized_path, Some(api_name))
+            .map_err(to_io_err)?;
+
+        if needs_canonicalize {
+            let resolved = get_path.resolved(&p)?;
+            Ok(deno_fs::CheckedPath::Resolved(p))
+        } else {
+            Ok(deno_fs::CheckedPath::Unresolved(p))
+        }
+    }
+
+    fn check_write<'a>(
+        &mut self,
+        path: Cow<'a, Path>,
+        api_name: &str,
+        get_path: &'a dyn deno_fs::GetPath,
+    ) -> Result<deno_fs::CheckedPath<'a>, FsError> {
+        let (needs_canonicalize, normalized_path) = get_path.normalized(path)?;
+
+        let p = self
+            .0
+            .check_write(normalized_path, Some(api_name))
+            .map_err(to_io_err)?;
+
+        if needs_canonicalize {
+            let resolved = get_path.resolved(&p)?;
+            Ok(deno_fs::CheckedPath::Resolved(p))
+        } else {
+            Ok(deno_fs::CheckedPath::Unresolved(p))
+        }
     }
 }
 impl deno_net::NetPermissions for PermissionsContainer {
@@ -645,7 +677,7 @@ impl deno_net::NetPermissions for PermissionsContainer {
     fn check_read(&mut self, p: &str, api_name: &str) -> Result<PathBuf, PermissionCheckError> {
         let p = self
             .0
-            .check_read(Path::new(p), Some(api_name))
+            .check_read(Cow::Borrowed(Path::new(p)), Some(api_name))
             .map(std::borrow::Cow::into_owned)?;
         Ok(p)
     }
@@ -653,17 +685,28 @@ impl deno_net::NetPermissions for PermissionsContainer {
     fn check_write(&mut self, p: &str, api_name: &str) -> Result<PathBuf, PermissionCheckError> {
         let p = self
             .0
-            .check_write(Path::new(p), Some(api_name))
+            .check_write(Cow::Borrowed(Path::new(p)), Some(api_name))
             .map(std::borrow::Cow::into_owned)?;
         Ok(p)
     }
 
     fn check_write_path<'a>(
         &mut self,
-        p: &'a Path,
+        p: Cow<'a, Path>,
         api_name: &str,
     ) -> Result<Cow<'a, Path>, PermissionCheckError> {
         let p = self.0.check_write(p, Some(api_name))?;
         Ok(p)
+    }
+
+    fn check_vsock(
+        &mut self,
+        cid: u32,
+        _port: u32,
+        api_name: &str,
+    ) -> Result<(), PermissionCheckError> {
+        self.0
+            .check_host(&format!("vsock:{}", cid), None, api_name)?;
+        Ok(())
     }
 }

@@ -1,3 +1,5 @@
+use std::borrow::Cow;
+
 use super::{web::PermissionsContainer, ExtensionTrait};
 use deno_core::{extension, Extension};
 
@@ -9,12 +11,12 @@ extension!(
 );
 impl ExtensionTrait<()> for init_ffi {
     fn init((): ()) -> Extension {
-        init_ffi::init_ops_and_esm()
+        init_ffi::init()
     }
 }
 impl ExtensionTrait<()> for deno_ffi::deno_ffi {
     fn init((): ()) -> Extension {
-        deno_ffi::deno_ffi::init_ops_and_esm::<PermissionsContainer>()
+        deno_ffi::deno_ffi::init::<PermissionsContainer>(None)
     }
 }
 
@@ -36,7 +38,9 @@ impl deno_ffi::FfiPermissions for PermissionsContainer {
         path: &str,
     ) -> Result<std::path::PathBuf, deno_permissions::PermissionCheckError> {
         self.check_partial_no_path()?;
-        let p = self.0.check_read(std::path::Path::new(path), None)?;
+        let p = self
+            .0
+            .check_read(Cow::Borrowed(std::path::Path::new(path)), None)?;
         Ok(p.to_path_buf())
     }
 }

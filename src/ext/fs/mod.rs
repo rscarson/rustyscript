@@ -1,4 +1,4 @@
-use std::path::Path;
+use std::{borrow::Cow, path::Path};
 
 use super::{web::PermissionsContainer, ExtensionTrait};
 use deno_core::{extension, Extension};
@@ -14,12 +14,12 @@ extension!(
 );
 impl ExtensionTrait<()> for init_fs {
     fn init((): ()) -> Extension {
-        init_fs::init_ops_and_esm()
+        init_fs::init()
     }
 }
 impl ExtensionTrait<FileSystemRc> for deno_fs::deno_fs {
     fn init(fs: FileSystemRc) -> Extension {
-        deno_fs::deno_fs::init_ops_and_esm::<PermissionsContainer>(fs)
+        deno_fs::deno_fs::init::<PermissionsContainer>(fs)
     }
 }
 
@@ -33,15 +33,37 @@ pub fn extensions(fs: FileSystemRc, is_snapshot: bool) -> Vec<Extension> {
 impl deno_fs::FsPermissions for PermissionsContainer {
     fn check_open<'a>(
         &mut self,
-        resolved: bool,
         read: bool,
         write: bool,
-        path: &'a std::path::Path,
+        path: std::borrow::Cow<'a, Path>,
         api_name: &str,
-    ) -> Result<std::borrow::Cow<'a, std::path::Path>, FsError> {
-        self.0
-            .check_open(resolved, read, write, path, api_name)
-            .ok_or(FsError::NotCapable("Access Denied"))
+        get_path: &'a dyn deno_fs::GetPath,
+    ) -> Result<deno_fs::CheckedPath<'a>, FsError> {
+        let (needs_canonicalize, normalized_path_cow) = get_path.normalized(path)?;
+
+        if needs_canonicalize {
+            let resolved_path_buf = get_path.resolved(&normalized_path_cow)?;
+
+            let p = self
+                .0
+                .check_open(
+                    true,
+                    read,
+                    write,
+                    Cow::Borrowed(&resolved_path_buf),
+                    api_name,
+                )
+                .ok_or(FsError::NotCapable("Access Denied"))?;
+
+            Ok(deno_fs::CheckedPath::Resolved(Cow::Owned(p.into_owned())))
+        } else {
+            let p = self
+                .0
+                .check_open(false, read, write, normalized_path_cow, api_name)
+                .ok_or(FsError::NotCapable("Access Denied"))?;
+
+            Ok(deno_fs::CheckedPath::Unresolved(p))
+        }
     }
 
     fn check_read(
@@ -52,14 +74,14 @@ impl deno_fs::FsPermissions for PermissionsContainer {
         self.0.check_read_all(Some(api_name))?;
         let p = self
             .0
-            .check_read(Path::new(path), Some(api_name))
+            .check_read(Cow::Borrowed(Path::new(path)), Some(api_name))
             .map(std::borrow::Cow::into_owned)?;
         Ok(p)
     }
 
     fn check_read_path<'a>(
         &mut self,
-        path: &'a std::path::Path,
+        path: Cow<'a, std::path::Path>,
         api_name: &str,
     ) -> Result<std::borrow::Cow<'a, std::path::Path>, PermissionCheckError> {
         self.0.check_read_all(Some(api_name))?;
@@ -91,14 +113,14 @@ impl deno_fs::FsPermissions for PermissionsContainer {
         self.0.check_write_all(api_name)?;
         let p = self
             .0
-            .check_write(Path::new(path), Some(api_name))
+            .check_write(Cow::Borrowed(Path::new(path)), Some(api_name))
             .map(std::borrow::Cow::into_owned)?;
         Ok(p)
     }
 
     fn check_write_path<'a>(
         &mut self,
-        path: &'a std::path::Path,
+        path: Cow<'a, std::path::Path>,
         api_name: &str,
     ) -> Result<std::borrow::Cow<'a, std::path::Path>, PermissionCheckError> {
         self.0.check_write_all(api_name)?;

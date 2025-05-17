@@ -165,9 +165,13 @@ impl InnerRustyLoader {
         kind: deno_core::ResolutionKind,
     ) -> Result<ModuleSpecifier, ModuleLoaderError> {
         #[cfg(feature = "node_experimental")]
-        let referrer_specifier = referrer
-            .to_module_specifier(&self.cwd)
-            .map_err(|e| JsErrorBox::from_err(to_io_err(e)))?;
+        let referrer_specifier = if deno_core::specifier_has_uri_scheme(referrer) {
+            deno_core::resolve_url(referrer)?
+        } else {
+            referrer
+                .to_module_specifier(&self.cwd)
+                .map_err(|e| JsErrorBox::from_err(to_io_err(e)))?
+        };
 
         //
         // Handle import aliasing for node imports

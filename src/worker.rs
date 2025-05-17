@@ -632,7 +632,6 @@ pub struct DefaultWorkerOptions {
     /// Optional snapshot to load into the runtime
     /// This will reduce load times, but requires the same extensions to be loaded
     /// as when the snapshot was created
-    /// If provided, user-supplied extensions must be instantiated with `init_ops` instead of `init_ops_and_esm`
     pub startup_snapshot: Option<&'static [u8]>,
 
     /// Optional shared array buffer store to use for the runtime

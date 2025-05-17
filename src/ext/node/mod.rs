@@ -7,7 +7,7 @@ use deno_node::NodePermissions;
 use deno_permissions::PermissionCheckError;
 use deno_resolver::npm::DenoInNpmPackageChecker;
 use resolvers::{RustyNpmPackageFolderResolver, RustyResolver};
-use std::{path::Path, sync::Arc};
+use std::{borrow::Cow, path::Path, sync::Arc};
 use sys_traits::impls::RealSys;
 
 mod cjs_translator;
@@ -22,12 +22,12 @@ extension!(
 );
 impl ExtensionTrait<()> for init_node {
     fn init((): ()) -> Extension {
-        init_node::init_ops_and_esm()
+        init_node::init()
     }
 }
 impl ExtensionTrait<Arc<RustyResolver>> for deno_node::deno_node {
     fn init(resolver: Arc<RustyResolver>) -> Extension {
-        deno_node::deno_node::init_ops_and_esm::<
+        deno_node::deno_node::init::<
             PermissionsContainer,
             DenoInNpmPackageChecker,
             RustyNpmPackageFolderResolver,
@@ -54,7 +54,7 @@ impl NodePermissions for PermissionsContainer {
     }
 
     fn check_read(&mut self, path: &str) -> Result<std::path::PathBuf, PermissionCheckError> {
-        let p = self.0.check_read(Path::new(path), None)?;
+        let p = self.0.check_read(Cow::Borrowed(Path::new(path)), None)?;
         Ok(p.into_owned())
     }
 
@@ -74,14 +74,14 @@ impl NodePermissions for PermissionsContainer {
     ) -> Result<std::path::PathBuf, PermissionCheckError> {
         let p = self
             .0
-            .check_read(Path::new(path), api_name)
+            .check_read(Cow::Borrowed(Path::new(path)), api_name)
             .map(std::borrow::Cow::into_owned)?;
         Ok(p)
     }
 
     fn check_read_path<'a>(
         &mut self,
-        path: &'a std::path::Path,
+        path: Cow<'a, std::path::Path>,
     ) -> Result<std::borrow::Cow<'a, std::path::Path>, PermissionCheckError> {
         let p = self.0.check_read(path, None)?;
         Ok(p)
@@ -104,7 +104,7 @@ impl NodePermissions for PermissionsContainer {
     ) -> Result<std::path::PathBuf, PermissionCheckError> {
         let p = self
             .0
-            .check_write(Path::new(path), api_name)
+            .check_write(Cow::Borrowed(Path::new(path)), api_name)
             .map(std::borrow::Cow::into_owned)?;
         Ok(p)
     }
