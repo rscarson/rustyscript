@@ -78,6 +78,9 @@ pub mod kv;
 #[cfg(feature = "cron")]
 pub mod cron;
 
+#[cfg(feature = "os_exit")]
+pub mod os;
+
 #[cfg(feature = "node_experimental")]
 pub mod napi;
 #[cfg(feature = "node_experimental")]
@@ -120,7 +123,7 @@ pub struct ExtensionOptions {
     /// Requires the `cache` feature to be enabled
     #[cfg(feature = "cache")]
     #[cfg_attr(docsrs, doc(cfg(feature = "cache")))]
-    pub cache: Option<deno_cache::CreateCache<cache::CacheBackend>>,
+    pub cache: Option<deno_cache::CreateCache>,
 
     /// Filesystem implementation for the `deno_fs` extension
     ///
@@ -170,7 +173,7 @@ impl Default for ExtensionOptions {
             webstorage_origin_storage_dir: None,
 
             #[cfg(feature = "cache")]
-            cache: Some(cache::CacheBackend::new_memory()),
+            cache: Some(cache::temp_cache()),
 
             #[cfg(feature = "fs")]
             filesystem: std::sync::Arc::new(deno_fs::RealFs),
@@ -251,6 +254,9 @@ pub(crate) fn all_extensions(
 
     #[cfg(feature = "cron")]
     extensions.extend(cron::extensions(is_snapshot));
+
+    #[cfg(feature = "os_exit")]
+    extensions.extend(os::extensions(is_snapshot));
 
     #[cfg(feature = "node_experimental")]
     {

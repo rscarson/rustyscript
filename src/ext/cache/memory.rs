@@ -112,7 +112,6 @@ impl Default for InMemoryCache {
 impl Cache for InMemoryCache {
     type CacheMatchResourceType = MyResource;
 
-    #[must_use]
     fn storage_open<'life0, 'async_trait>(
         &'life0 self,
         cache_name: String,
@@ -136,7 +135,6 @@ impl Cache for InMemoryCache {
         })
     }
 
-    #[must_use]
     fn storage_has<'life0, 'async_trait>(
         &'life0 self,
         cache_name: String,
@@ -156,7 +154,6 @@ impl Cache for InMemoryCache {
         })
     }
 
-    #[must_use]
     fn storage_delete<'life0, 'async_trait>(
         &'life0 self,
         cache_name: String,
@@ -182,7 +179,6 @@ impl Cache for InMemoryCache {
         })
     }
 
-    #[must_use]
     fn put<'life0, 'async_trait>(
         &'life0 self,
         request_response: CachePutRequest,
@@ -227,7 +223,6 @@ impl Cache for InMemoryCache {
         })
     }
 
-    #[must_use]
     fn r#match<'life0, 'async_trait>(
         &'life0 self,
         request: CacheMatchRequest,
@@ -280,7 +275,6 @@ impl Cache for InMemoryCache {
         })
     }
 
-    #[must_use]
     fn delete<'life0, 'async_trait>(
         &'life0 self,
         request: CacheDeleteRequest,

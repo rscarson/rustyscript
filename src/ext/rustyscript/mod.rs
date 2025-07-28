@@ -1,6 +1,6 @@
 use super::ExtensionTrait;
 use crate::{error::Error, RsAsyncFunction, RsFunction};
-use deno_core::{anyhow::anyhow, extension, op2, serde_json, v8, Extension, OpState};
+use deno_core::{extension, op2, serde_json, v8, Extension, OpState};
 use std::collections::HashMap;
 
 type FnCache = HashMap<String, Box<dyn RsFunction>>;
@@ -54,8 +54,8 @@ fn call_registered_function_async(
 }
 
 #[op2(fast)]
-fn op_panic2(#[string] msg: &str) -> Result<(), deno_core::anyhow::Error> {
-    Err(anyhow!(msg.to_string()))
+fn op_panic2(#[string] msg: &str) -> Result<(), Error> {
+    Err(Error::Runtime(msg.to_string()))
 }
 
 extension!(
@@ -70,7 +70,7 @@ extension!(
 );
 impl ExtensionTrait<()> for rustyscript {
     fn init(options: ()) -> Extension {
-        rustyscript::init_ops_and_esm()
+        rustyscript::init()
     }
 }
 

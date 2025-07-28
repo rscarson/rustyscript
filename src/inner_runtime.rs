@@ -6,9 +6,10 @@ use crate::{
     utilities, Error, ExtensionOptions, Module, ModuleHandle,
 };
 use deno_core::{
-    futures::FutureExt, serde_json, serde_v8::from_v8, v8, FeatureChecker, JsRuntime,
+    futures::FutureExt, serde_json, serde_v8::from_v8, v8, JsRuntime,
     JsRuntimeForSnapshot, PollEventLoopOptions,
 };
+use deno_features::FeatureChecker;
 use serde::de::DeserializeOwned;
 use std::{
     collections::{HashMap, HashSet},
@@ -215,7 +216,10 @@ impl<RT: RuntimeTrait> InnerRuntime<RT> {
         #[cfg(feature = "web")]
         {
             let otel_conf = options.extension_options.web.telemetry_config.clone();
-            deno_telemetry::init(otel_conf)?;
+            deno_telemetry::init(deno_telemetry::OtelRuntimeConfig {
+                runtime_name: "rustyscript".into(),
+                runtime_version: env!("CARGO_PKG_VERSION").into(),
+            }, otel_conf)?;
         }
 
         // If a snapshot is provided, do not reload ESM for extensions
@@ -251,8 +255,6 @@ impl<RT: RuntimeTrait> InnerRuntime<RT> {
 
         let mut deno_runtime = RT::try_new(deno_core::RuntimeOptions {
             module_loader: Some(module_loader.clone()),
-
-            feature_checker: Some(feature_checker.into()),
 
             extension_transpiler: Some(module_loader.as_extension_transpiler()),
             create_params: isolate_params,

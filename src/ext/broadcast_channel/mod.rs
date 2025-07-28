@@ -13,12 +13,12 @@ extension!(
 );
 impl ExtensionTrait<()> for init_broadcast_channel {
     fn init((): ()) -> Extension {
-        init_broadcast_channel::init_ops_and_esm()
+        init_broadcast_channel::init()
     }
 }
 impl ExtensionTrait<InMemoryBroadcastChannel> for deno_broadcast_channel::deno_broadcast_channel {
     fn init(channel: InMemoryBroadcastChannel) -> Extension {
-        deno_broadcast_channel::deno_broadcast_channel::init_ops_and_esm(channel)
+        deno_broadcast_channel::deno_broadcast_channel::init(channel)
     }
 }
 

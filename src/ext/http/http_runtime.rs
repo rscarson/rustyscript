@@ -27,6 +27,33 @@ pub enum HttpStartError {
     Other(deno_core::error::AnyError),
 }
 
+impl deno_error::JsErrorClass for HttpStartError {
+    fn get_class(&self) -> std::borrow::Cow<'static, str> {
+        match self {
+            HttpStartError::TcpStreamInUse => "Error".into(),
+            HttpStartError::TlsStreamInUse => "Error".into(),
+            HttpStartError::UnixSocketInUse => "Error".into(),
+            HttpStartError::ReuniteTcp(_) => "Error".into(),
+            #[cfg(unix)]
+            HttpStartError::ReuniteUnix(_) => "Error".into(),
+            HttpStartError::Io(_) => "Error".into(),
+            HttpStartError::Other(_) => "Error".into(),
+        }
+    }
+
+    fn get_message(&self) -> std::borrow::Cow<'static, str> {
+        self.to_string().into()
+    }
+
+    fn get_additional_properties(&self) -> Box<dyn std::iter::Iterator<Item = (std::borrow::Cow<'static, str>, deno_error::PropertyValue)> + 'static> {
+        Box::new(std::iter::empty())
+    }
+
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+}
+
 #[op2(fast)]
 #[smi]
 fn op_http_start(
@@ -55,8 +82,7 @@ fn op_http_start(
         // process of starting a HTTP server on top of this TLS connection, so we just return a Busy error.
         // See also: https://github.com/denoland/deno/pull/16242
         let resource = Rc::try_unwrap(resource_rc).map_err(|_| HttpStartError::TlsStreamInUse)?;
-        let (read_half, write_half) = resource.into_inner();
-        let tls_stream = read_half.unsplit(write_half);
+        let tls_stream = resource.into_tls_stream();
         let addr = tls_stream.local_addr()?;
         return Ok(http_create_conn_resource(state, tls_stream, addr, "https"));
     }
@@ -81,5 +107,5 @@ fn op_http_start(
         ));
     }
 
-    Err(HttpStartError::Other(deno_core::error::bad_resource_id()))
+    Err(HttpStartError::Other(deno_core::anyhow::anyhow!("Invalid resource")))
 }

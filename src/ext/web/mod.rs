@@ -20,7 +20,7 @@ extension!(
 );
 impl ExtensionTrait<WebOptions> for init_fetch {
     fn init(options: WebOptions) -> Extension {
-        init_fetch::init_ops_and_esm()
+        init_fetch::init()
     }
 }
 impl ExtensionTrait<WebOptions> for deno_fetch::deno_fetch {
@@ -29,7 +29,7 @@ impl ExtensionTrait<WebOptions> for deno_fetch::deno_fetch {
             user_agent: options.user_agent.clone(),
             root_cert_store_provider: options.root_cert_store_provider.clone(),
             proxy: options.proxy.clone(),
-            request_builder_hook: options.request_builder_hook,
+            request_builder_hook: None, // TODO: Convert AnyError to JsErrorBox
             unsafely_ignore_certificate_errors: options.unsafely_ignore_certificate_errors.clone(),
             client_cert_chain_and_key: options.client_cert_chain_and_key.clone(),
             file_fetch_handler: options.file_fetch_handler.clone(),
@@ -37,7 +37,7 @@ impl ExtensionTrait<WebOptions> for deno_fetch::deno_fetch {
             resolver: options.resolver.clone(),
         };
 
-        deno_fetch::deno_fetch::init_ops_and_esm::<PermissionsContainer>(options)
+        deno_fetch::deno_fetch::init::<PermissionsContainer>(options)
     }
 }
 
@@ -49,12 +49,12 @@ extension!(
 );
 impl ExtensionTrait<WebOptions> for init_net {
     fn init(options: WebOptions) -> Extension {
-        init_net::init_ops_and_esm()
+        init_net::init()
     }
 }
 impl ExtensionTrait<WebOptions> for deno_net::deno_net {
     fn init(options: WebOptions) -> Extension {
-        deno_net::deno_net::init_ops_and_esm::<PermissionsContainer>(
+        deno_net::deno_net::init::<PermissionsContainer>(
             options.root_cert_store_provider.clone(),
             options.unsafely_ignore_certificate_errors.clone(),
         )
@@ -69,13 +69,13 @@ extension!(
 );
 impl ExtensionTrait<()> for init_telemetry {
     fn init((): ()) -> Extension {
-        init_telemetry::init_ops_and_esm()
+        init_telemetry::init()
     }
 }
 
 impl ExtensionTrait<()> for deno_telemetry::deno_telemetry {
     fn init((): ()) -> Extension {
-        deno_telemetry::deno_telemetry::init_ops_and_esm()
+        deno_telemetry::deno_telemetry::init()
     }
 }
 
@@ -91,13 +91,13 @@ extension!(
 );
 impl ExtensionTrait<WebOptions> for init_web {
     fn init(options: WebOptions) -> Extension {
-        init_web::init_ops_and_esm(options.permissions)
+        init_web::init(options.permissions)
     }
 }
 
 impl ExtensionTrait<WebOptions> for deno_web::deno_web {
     fn init(options: WebOptions) -> Extension {
-        deno_web::deno_web::init_ops_and_esm::<PermissionsContainer>(
+        deno_web::deno_web::init::<PermissionsContainer>(
             options.blob_store,
             options.base_url,
         )
@@ -106,7 +106,7 @@ impl ExtensionTrait<WebOptions> for deno_web::deno_web {
 
 impl ExtensionTrait<()> for deno_tls::deno_tls {
     fn init((): ()) -> Extension {
-        deno_tls::deno_tls::init_ops_and_esm()
+        deno_tls::deno_tls::init()
     }
 }
 

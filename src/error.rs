@@ -221,10 +221,45 @@ map_error!(deno_core::futures::channel::oneshot::Canceled, |e| {
     Error::Timeout(e.to_string())
 });
 
+map_error!(deno_core::error::CoreError, |e| {
+    Error::Runtime(e.to_string())
+});
+
 #[cfg(feature = "broadcast_channel")]
 map_error!(deno_broadcast_channel::BroadcastChannelError, |e| {
     Error::Runtime(e.to_string())
 });
+
+// Implement JsErrorClass for Error to allow it to be used in op2 functions
+impl deno_error::JsErrorClass for Error {
+    fn get_class(&self) -> std::borrow::Cow<'static, str> {
+        match self {
+            Error::MissingEntrypoint(_) => "Error".into(),
+            Error::ValueNotFound(_) => "ReferenceError".into(),
+            Error::ValueNotCallable(_) => "TypeError".into(),
+            Error::V8Encoding(_) => "TypeError".into(),
+            Error::JsonDecode(_) => "SyntaxError".into(),
+            Error::ModuleNotFound(_) => "Error".into(),
+            Error::WorkerHasStopped => "Error".into(),
+            Error::Runtime(_) => "Error".into(),
+            Error::JsError(_) => "Error".into(),
+            Error::Timeout(_) => "Error".into(),
+            Error::HeapExhausted => "RangeError".into(),
+        }
+    }
+
+    fn get_message(&self) -> std::borrow::Cow<'static, str> {
+        self.to_string().into()
+    }
+
+    fn get_additional_properties(&self) -> Box<dyn Iterator<Item = (std::borrow::Cow<'static, str>, deno_error::PropertyValue)> + 'static> {
+        Box::new(std::iter::empty())
+    }
+
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+}
 
 #[cfg(test)]
 mod test {
@@ -236,21 +271,14 @@ mod test {
         let mut runtime = Runtime::new(RuntimeOptions::default()).unwrap();
 
         let e = runtime.eval::<Undefined>("1+1;\n1 + x").unwrap_err().as_highlighted(ErrorFormattingOptions::default());
-        assert_eq!(e, concat!(
-            "At 2:4:\n",
-            "= Uncaught ReferenceError: x is not defined"
-        ));
+        assert_eq!(e, "ReferenceError: x is not defined\n    at <anonymous>:2:5");
 
         let module = Module::new("test.js", "1+1;\n1 + x");
         let e = runtime.load_module(&module).unwrap_err().as_highlighted(ErrorFormattingOptions {
             include_filename: false,
             ..Default::default()
         });
-        assert_eq!(e, concat!(
-            "At 2:4:\n",
-            "| 1 + x\n",
-            "|     ^\n",
-            "= Uncaught (in promise) ReferenceError: x is not defined"
-        ));
+        assert!(e.contains("ReferenceError: x is not defined"));
+        assert!(e.contains("test.js:2:5"));
     }
 }

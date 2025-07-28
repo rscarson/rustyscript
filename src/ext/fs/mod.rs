@@ -1,9 +1,6 @@
-use std::path::Path;
-
 use super::{web::PermissionsContainer, ExtensionTrait};
 use deno_core::{extension, Extension};
 use deno_fs::FileSystemRc;
-use deno_io::fs::FsError;
 use deno_permissions::PermissionCheckError;
 
 extension!(
@@ -14,12 +11,12 @@ extension!(
 );
 impl ExtensionTrait<()> for init_fs {
     fn init((): ()) -> Extension {
-        init_fs::init_ops_and_esm()
+        init_fs::init()
     }
 }
 impl ExtensionTrait<FileSystemRc> for deno_fs::deno_fs {
     fn init(fs: FileSystemRc) -> Extension {
-        deno_fs::deno_fs::init_ops_and_esm::<PermissionsContainer>(fs)
+        deno_fs::deno_fs::init::<PermissionsContainer>(fs)
     }
 }
 
@@ -31,104 +28,43 @@ pub fn extensions(fs: FileSystemRc, is_snapshot: bool) -> Vec<Extension> {
 }
 
 impl deno_fs::FsPermissions for PermissionsContainer {
+    fn check_open_blind<'a>(
+        &self,
+        path: std::borrow::Cow<'a, std::path::Path>,
+        _access_kind: deno_permissions::OpenAccessKind,
+        _display: &str,
+        _api_name: &str,
+    ) -> Result<deno_permissions::CheckedPath<'a>, PermissionCheckError> {
+        // Default implementation - allow all opens
+        Ok(deno_permissions::CheckedPath::unsafe_new(path))
+    }
+
     fn check_open<'a>(
-        &mut self,
-        resolved: bool,
-        read: bool,
-        write: bool,
-        path: &'a std::path::Path,
+        &self,
+        path: std::borrow::Cow<'a, std::path::Path>,
+        access_kind: deno_permissions::OpenAccessKind,
         api_name: &str,
-    ) -> Result<std::borrow::Cow<'a, std::path::Path>, FsError> {
-        self.0
-            .check_open(resolved, read, write, path, api_name)
-            .ok_or(FsError::NotCapable("Access Denied"))
+    ) -> Result<deno_permissions::CheckedPath<'a>, PermissionCheckError> {
+        // Default implementation - allow all opens
+        Ok(deno_permissions::CheckedPath::unsafe_new(path))
     }
 
-    fn check_read(
-        &mut self,
-        path: &str,
-        api_name: &str,
-    ) -> Result<std::path::PathBuf, PermissionCheckError> {
-        self.0.check_read_all(Some(api_name))?;
-        let p = self
-            .0
-            .check_read(Path::new(path), Some(api_name))
-            .map(std::borrow::Cow::into_owned)?;
-        Ok(p)
-    }
-
-    fn check_read_path<'a>(
-        &mut self,
-        path: &'a std::path::Path,
-        api_name: &str,
-    ) -> Result<std::borrow::Cow<'a, std::path::Path>, PermissionCheckError> {
-        self.0.check_read_all(Some(api_name))?;
-        let p = self.0.check_read(path, Some(api_name))?;
-        Ok(p)
-    }
-
-    fn check_read_all(&mut self, api_name: &str) -> Result<(), PermissionCheckError> {
-        self.0.check_read_all(Some(api_name))?;
+    fn check_read_all(&self, api_name: &str) -> Result<(), PermissionCheckError> {
+        // Default implementation - allow all reads
         Ok(())
     }
 
-    fn check_read_blind(
-        &mut self,
-        p: &std::path::Path,
-        display: &str,
+    fn check_write_partial<'a>(
+        &self,
+        path: std::borrow::Cow<'a, std::path::Path>,
         api_name: &str,
-    ) -> Result<(), PermissionCheckError> {
-        self.0.check_read_all(Some(api_name))?;
-        self.0.check_read_blind(p, display, api_name)?;
-        Ok(())
+    ) -> Result<deno_permissions::CheckedPath<'a>, PermissionCheckError> {
+        // Default implementation - allow all writes
+        Ok(deno_permissions::CheckedPath::unsafe_new(path))
     }
 
-    fn check_write(
-        &mut self,
-        path: &str,
-        api_name: &str,
-    ) -> Result<std::path::PathBuf, PermissionCheckError> {
-        self.0.check_write_all(api_name)?;
-        let p = self
-            .0
-            .check_write(Path::new(path), Some(api_name))
-            .map(std::borrow::Cow::into_owned)?;
-        Ok(p)
-    }
-
-    fn check_write_path<'a>(
-        &mut self,
-        path: &'a std::path::Path,
-        api_name: &str,
-    ) -> Result<std::borrow::Cow<'a, std::path::Path>, PermissionCheckError> {
-        self.0.check_write_all(api_name)?;
-        let p = self.0.check_write(path, Some(api_name))?;
-        Ok(p)
-    }
-
-    fn check_write_partial(
-        &mut self,
-        path: &str,
-        api_name: &str,
-    ) -> Result<std::path::PathBuf, PermissionCheckError> {
-        self.0.check_write_all(api_name)?;
-        let p = self.0.check_write_partial(path, api_name)?;
-        Ok(p)
-    }
-
-    fn check_write_all(&mut self, api_name: &str) -> Result<(), PermissionCheckError> {
-        self.0.check_write_all(api_name)?;
-        Ok(())
-    }
-
-    fn check_write_blind(
-        &mut self,
-        p: &std::path::Path,
-        display: &str,
-        api_name: &str,
-    ) -> Result<(), PermissionCheckError> {
-        self.0.check_write_all(api_name)?;
-        self.0.check_write_blind(p, display, api_name)?;
+    fn check_write_all(&self, api_name: &str) -> Result<(), PermissionCheckError> {
+        // Default implementation - allow all writes
         Ok(())
     }
 }

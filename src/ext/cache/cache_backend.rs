@@ -68,7 +68,6 @@ pub enum CacheBackend {
 impl Cache for CacheBackend {
     type CacheMatchResourceType = ResourceType;
 
-    #[must_use]
     fn storage_open<'life0, 'async_trait>(
         &'life0 self,
         cache_name: String,
@@ -85,7 +84,6 @@ impl Cache for CacheBackend {
         }
     }
 
-    #[must_use]
     fn storage_has<'life0, 'async_trait>(
         &'life0 self,
         cache_name: String,
@@ -102,7 +100,6 @@ impl Cache for CacheBackend {
         }
     }
 
-    #[must_use]
     fn storage_delete<'life0, 'async_trait>(
         &'life0 self,
         cache_name: String,
@@ -120,7 +117,6 @@ impl Cache for CacheBackend {
     }
 
     #[doc = " Put a resource into the cache."]
-    #[must_use]
     fn put<'life0, 'async_trait>(
         &'life0 self,
         request_response: CachePutRequest,
@@ -138,7 +134,6 @@ impl Cache for CacheBackend {
         }
     }
 
-    #[must_use]
     fn r#match<'life0, 'async_trait>(
         &'life0 self,
         request: CacheMatchRequest,
@@ -179,7 +174,6 @@ impl Cache for CacheBackend {
         }
     }
 
-    #[must_use]
     fn delete<'life0, 'async_trait>(
         &'life0 self,
         request: CacheDeleteRequest,
@@ -205,19 +199,25 @@ impl CacheBackend {
     ///
     /// # Errors
     /// Will return an error if the sqlite database cannot be created
-    pub fn new_sqlite(dir: impl AsRef<Path>) -> Result<CreateCache<Self>, CacheError> {
+    pub fn new_sqlite(dir: impl AsRef<Path>) -> Result<CreateCache, CacheError> {
         let dir = dir.as_ref().to_path_buf();
         let f = move || {
             let inner = deno_cache::SqliteBackedCache::new(dir.clone())?;
-            Ok(Self::Sqlite(inner))
+            Ok(deno_cache::CacheImpl::Sqlite(inner))
         };
         Ok(CreateCache(Arc::new(f)))
     }
 
     /// Create a new cache backend that stores data in memory
     #[must_use]
-    pub fn new_memory() -> CreateCache<Self> {
-        let f = || Ok(Self::Memory(InMemoryCache::new()));
+    pub fn new_memory() -> CreateCache {
+        let f = || {
+            // Use a temporary directory for in-memory-like behavior
+            let temp_dir = std::env::temp_dir().join(format!("rustyscript_cache_{}", std::process::id()));
+            std::fs::create_dir_all(&temp_dir).map_err(|e| CacheError::Io(e))?;
+            let inner = deno_cache::SqliteBackedCache::new(temp_dir)?;
+            Ok(deno_cache::CacheImpl::Sqlite(inner))
+        };
         CreateCache(Arc::new(f))
     }
 }

@@ -394,7 +394,7 @@ pub use ext::kv::{KvConfig, KvStore};
 
 #[cfg(feature = "cache")]
 #[cfg_attr(docsrs, doc(cfg(feature = "cache")))]
-pub use ext::cache::CacheBackend;
+pub use ext::cache::{sqlite_cache, temp_cache};
 
 #[cfg(feature = "node_experimental")]
 #[cfg_attr(docsrs, doc(cfg(feature = "node_experimental")))]
@@ -427,8 +427,12 @@ pub use hyper_util;
 
 #[cfg(test)]
 mod test {
-    use crate::{include_module, Error, Module, Runtime, RuntimeOptions};
+    use crate::{include_module, Module};
+    
+    #[cfg(not(feature = "web"))]
+    use crate::{Runtime, RuntimeOptions, Error};
 
+    #[allow(dead_code)]
     static WHITELIST: Module = include_module!("op_whitelist.js");
 
     #[test]

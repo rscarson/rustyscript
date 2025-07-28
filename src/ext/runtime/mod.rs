@@ -45,13 +45,13 @@ extension!(
 );
 impl ExtensionTrait<()> for init_runtime {
     fn init((): ()) -> Extension {
-        init_runtime::init_ops_and_esm()
+        init_runtime::init()
     }
 }
 
 impl ExtensionTrait<()> for deno_runtime::runtime {
     fn init((): ()) -> Extension {
-        let mut e = deno_runtime::runtime::init_ops_and_esm();
+        let mut e = deno_runtime::runtime::init();
         e.esm_entry_point = None;
         e
     }
@@ -61,7 +61,7 @@ use deno_runtime::fmt_errors::format_js_error;
 use deno_runtime::ops::permissions::deno_permissions;
 impl ExtensionTrait<()> for deno_permissions {
     fn init((): ()) -> Extension {
-        deno_permissions::init_ops_and_esm()
+        deno_permissions::init()
     }
 }
 
@@ -80,49 +80,49 @@ impl
     ) -> Extension {
         let options = WebWorkerCallbackOptions::new(options.0, options.1);
         let callback = create_web_worker_callback(options);
-        deno_worker_host::init_ops_and_esm(callback, None)
+        deno_worker_host::init(callback, None)
     }
 }
 
 use deno_runtime::ops::web_worker::deno_web_worker;
 impl ExtensionTrait<()> for deno_web_worker {
     fn init((): ()) -> Extension {
-        deno_web_worker::init_ops_and_esm()
+        deno_web_worker::init()
     }
 }
 
 use deno_runtime::ops::process::deno_process;
 impl ExtensionTrait<Arc<RustyResolver>> for deno_process {
     fn init(resolver: Arc<RustyResolver>) -> Extension {
-        deno_process::init_ops_and_esm(Some(resolver))
+        deno_process::init(Some(resolver))
     }
 }
 
 use deno_runtime::ops::signal::deno_signal;
 impl ExtensionTrait<()> for deno_signal {
     fn init((): ()) -> Extension {
-        deno_signal::init_ops_and_esm()
+        deno_signal::init()
     }
 }
 
 use deno_runtime::ops::os::deno_os;
 impl ExtensionTrait<()> for deno_os {
     fn init((): ()) -> Extension {
-        deno_os::init_ops_and_esm(ExitCode::default())
+        deno_os::init(ExitCode::default())
     }
 }
 
 use deno_runtime::ops::bootstrap::deno_bootstrap;
 impl ExtensionTrait<()> for deno_bootstrap {
     fn init((): ()) -> Extension {
-        deno_bootstrap::init_ops_and_esm(None)
+        deno_bootstrap::init(None)
     }
 }
 
 use deno_runtime::ops::fs_events::deno_fs_events;
 impl ExtensionTrait<()> for deno_fs_events {
     fn init((): ()) -> Extension {
-        deno_fs_events::init_ops_and_esm()
+        deno_fs_events::init()
     }
 }
 

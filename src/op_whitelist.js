@@ -132,6 +132,7 @@ export const whitelist = {
     "op_current_user_call_site": "V8 op - non breaking",
     "op_set_format_exception_callback": "V8 op - non breaking",
     "op_event_loop_has_more_work": "V8 op - non breaking",
+    "op_get_ext_import_meta_proto": "V8 op - non breaking",
 
     //
     // Cache    
@@ -186,6 +187,7 @@ export const whitelist = {
     "op_crypto_import_pkcs8_x448": "deno_crypto",
     "op_crypto_export_spki_x448": "deno_crypto",
     "op_crypto_export_pkcs8_x448": "deno_crypto",
+    "op_crypto_x25519_public_key": "deno_crypto",
 
     //
     // IO + TTY

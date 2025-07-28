@@ -1,9 +1,9 @@
 use deno_ast::{MediaType, ModuleSpecifier};
 use deno_fs::FileSystem;
 use deno_node::{
-    DenoFsNodeResolverEnv, NodeExtInitServices, NodeRequireLoader, NodeResolver,
-    PackageJsonResolver,
+    NodeExtInitServices, NodeRequireLoader, NodeResolver,
 };
+use node_resolver::PackageJsonResolver;
 use deno_resolver::{
     fs::{DenoResolverFs, DirEntry},
     npm::{ByonmNpmResolver, ByonmNpmResolverCreateOptions},
@@ -334,28 +334,30 @@ impl NodeRequireLoader for RequireLoader {
     fn load_text_file_lossy(
         &self,
         path: &Path,
-    ) -> Result<Cow<'static, str>, deno_core::error::AnyError> {
+    ) -> Result<deno_core::FastString, deno_error::JsErrorBox> {
         let media_type = MediaType::from_path(path);
-        let text = self.0.read_text_file_lossy_sync(path, None)?;
-        Ok(text)
+        let text = self.0.read_text_file_lossy_sync(path, None)
+            .map_err(|e| deno_error::JsErrorBox::new("Error", e.to_string()))?;
+        Ok(deno_core::FastString::from(text.as_ref()))
     }
 
     fn ensure_read_permission<'a>(
         &self,
         permissions: &mut dyn deno_node::NodePermissions,
-        path: &'a Path,
-    ) -> Result<std::borrow::Cow<'a, Path>, deno_core::error::AnyError> {
+        path: std::borrow::Cow<'a, Path>,
+    ) -> Result<std::borrow::Cow<'a, Path>, deno_error::JsErrorBox> {
         let is_in_node_modules = path
             .components()
             .all(|c| c.as_os_str().to_ascii_lowercase() != NODE_MODULES_DIR);
         if is_in_node_modules {
-            permissions.check_read_path(path).map_err(Into::into)
+            permissions.check_read_path(&path)
+                .map_err(|e| deno_error::JsErrorBox::new("Error", e.to_string()))
         } else {
-            Ok(Cow::Borrowed(path))
+            Ok(path)
         }
     }
 
-    fn is_maybe_cjs(&self, specifier: &reqwest::Url) -> Result<bool, ClosestPkgJsonError> {
+    fn is_maybe_cjs(&self, specifier: &reqwest::Url) -> Result<bool, node_resolver::errors::ClosestPkgJsonError> {
         if specifier.scheme() != "file" {
             return Ok(false);
         }

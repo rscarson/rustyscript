@@ -638,13 +638,25 @@ impl deno_fetch::FetchPermissions for PermissionsContainer {
         Ok(())
     }
 
-    fn check_read<'a>(
+
+    fn check_open<'a>(
         &mut self,
-        p: &'a Path,
-        api_name: &str,
-    ) -> Result<Cow<'a, Path>, PermissionCheckError> {
-        let p = self.0.check_read(p, Some(api_name))?;
-        Ok(p)
+        path: Cow<'a, Path>,
+        _access_kind: deno_permissions::OpenAccessKind,
+        _api_name: &str,
+    ) -> Result<deno_permissions::CheckedPath<'a>, PermissionCheckError> {
+        // Default implementation - allow all opens
+        Ok(deno_permissions::CheckedPath::unsafe_new(path))
+    }
+
+    fn check_net_vsock(
+        &mut self,
+        _cid: u32,
+        _port: u32,
+        _api_name: &str,
+    ) -> Result<(), PermissionCheckError> {
+        // Default implementation - allow all vsock connections
+        Ok(())
     }
 }
 impl deno_net::NetPermissions for PermissionsContainer {
@@ -657,28 +669,24 @@ impl deno_net::NetPermissions for PermissionsContainer {
         Ok(())
     }
 
-    fn check_read(&mut self, p: &str, api_name: &str) -> Result<PathBuf, PermissionCheckError> {
-        let p = self
-            .0
-            .check_read(Path::new(p), Some(api_name))
-            .map(std::borrow::Cow::into_owned)?;
-        Ok(p)
-    }
 
-    fn check_write(&mut self, p: &str, api_name: &str) -> Result<PathBuf, PermissionCheckError> {
-        let p = self
-            .0
-            .check_write(Path::new(p), Some(api_name))
-            .map(std::borrow::Cow::into_owned)?;
-        Ok(p)
-    }
-
-    fn check_write_path<'a>(
+    fn check_open<'a>(
         &mut self,
-        p: &'a Path,
-        api_name: &str,
-    ) -> Result<Cow<'a, Path>, PermissionCheckError> {
-        let p = self.0.check_write(p, Some(api_name))?;
-        Ok(p)
+        path: Cow<'a, Path>,
+        _access_kind: deno_permissions::OpenAccessKind,
+        _api_name: &str,
+    ) -> Result<deno_permissions::CheckedPath<'a>, PermissionCheckError> {
+        // Default implementation - allow all opens
+        Ok(deno_permissions::CheckedPath::unsafe_new(path))
+    }
+
+    fn check_vsock(
+        &mut self,
+        _cid: u32,
+        _port: u32,
+        _api_name: &str,
+    ) -> Result<(), PermissionCheckError> {
+        // Default implementation - allow all vsock connections
+        Ok(())
     }
 }

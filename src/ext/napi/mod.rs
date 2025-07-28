@@ -9,12 +9,12 @@ extension!(
 );
 impl ExtensionTrait<()> for init_napi {
     fn init((): ()) -> Extension {
-        init_napi::init_ops_and_esm()
+        init_napi::init()
     }
 }
 impl ExtensionTrait<()> for deno_napi::deno_napi {
     fn init((): ()) -> Extension {
-        deno_napi::deno_napi::init_ops_and_esm::<PermissionsContainer>()
+        deno_napi::deno_napi::init::<PermissionsContainer>()
     }
 }
 

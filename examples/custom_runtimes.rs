@@ -33,7 +33,7 @@ impl MyRuntime {
     /// Create a new instance of the runtime
     pub fn new() -> Result<Self, Error> {
         let mut runtime = Self(Runtime::new(RuntimeOptions {
-            extensions: vec![example_extension::example_extension::init_ops_and_esm()],
+            extensions: vec![example_extension::example_extension::init()],
             timeout: Duration::from_millis(500),
             ..Default::default()
         })?);

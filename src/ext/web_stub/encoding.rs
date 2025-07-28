@@ -1,5 +1,6 @@
 // Copyright 2018-2024 the Deno authors. All rights reserved. MIT license.
 use deno_core::{op2, v8, ByteString, ToJsBuffer};
+use deno_error::{JsErrorClass, PropertyValue};
 
 #[derive(Debug, thiserror::Error)]
 #[allow(dead_code)]
@@ -18,6 +19,32 @@ pub enum WebError {
     DataInvalid,
     #[error(transparent)]
     DataError(#[from] v8::DataError),
+}
+
+impl JsErrorClass for WebError {
+    fn get_class(&self) -> std::borrow::Cow<'static, str> {
+        match self {
+            WebError::Base64Decode => "TypeError".into(),
+            WebError::InvalidEncodingLabel(_) => "TypeError".into(),
+            WebError::BufferTooLong => "RangeError".into(),
+            WebError::ValueTooLarge => "RangeError".into(),
+            WebError::BufferTooSmall => "RangeError".into(),
+            WebError::DataInvalid => "TypeError".into(), 
+            WebError::DataError(_) => "TypeError".into(),
+        }
+    }
+
+    fn get_message(&self) -> std::borrow::Cow<'static, str> {
+        self.to_string().into()
+    }
+
+    fn get_additional_properties(&self) -> Box<dyn Iterator<Item = (std::borrow::Cow<'static, str>, PropertyValue)> + 'static> {
+        Box::new(std::iter::empty())
+    }
+
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
 }
 
 #[op2]

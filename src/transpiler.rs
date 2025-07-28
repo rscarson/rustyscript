@@ -8,7 +8,7 @@ use deno_ast::MediaType;
 use deno_ast::ParseParams;
 use deno_ast::SourceTextInfo;
 use deno_core::anyhow::Error;
-use deno_core::error::AnyError;
+use deno_error::JsErrorBox;
 use deno_core::FastString;
 use deno_core::ModuleSpecifier;
 use deno_core::SourceMapData;
@@ -90,12 +90,12 @@ pub fn transpile(module_specifier: &ModuleSpecifier, code: &str) -> Result<Modul
 pub fn transpile_extension(
     specifier: &ModuleSpecifier,
     code: &str,
-) -> Result<(FastString, Option<Cow<'static, [u8]>>), AnyError> {
-    let (code, source_map) = transpile(specifier, code)?;
+) -> Result<(FastString, Option<Cow<'static, [u8]>>), JsErrorBox> {
+    let (code, source_map) = transpile(specifier, code).map_err(|e| JsErrorBox::new("Error", e.to_string()))?;
     let code = FastString::from(code);
     Ok((code, source_map))
 }
 
 pub type ExtensionTranspiler =
-    Rc<dyn Fn(FastString, FastString) -> Result<(FastString, Option<Cow<'static, [u8]>>), Error>>;
+    Rc<dyn Fn(FastString, FastString) -> Result<(FastString, Option<Cow<'static, [u8]>>), JsErrorBox>>;
 pub type ExtensionTranspilation = (FastString, Option<Cow<'static, [u8]>>);

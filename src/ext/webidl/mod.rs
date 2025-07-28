@@ -9,12 +9,12 @@ extension!(
 );
 impl ExtensionTrait<()> for init_webidl {
     fn init((): ()) -> Extension {
-        init_webidl::init_ops_and_esm()
+        init_webidl::init()
     }
 }
 impl ExtensionTrait<()> for deno_webidl::deno_webidl {
     fn init((): ()) -> Extension {
-        deno_webidl::deno_webidl::init_ops_and_esm()
+        deno_webidl::deno_webidl::init()
     }
 }
 

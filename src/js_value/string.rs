@@ -51,7 +51,7 @@ impl String {
         let u16_len = local.length();
         let mut buffer = vec![0; u16_len];
 
-        local.write(scope, &mut buffer, 0, WriteOptions::NO_NULL_TERMINATION);
+        local.write_v2(scope, 0, &mut buffer, Default::default());
         buffer
     }
 
@@ -60,7 +60,7 @@ impl String {
         let u8_len = local.utf8_length(scope);
         let mut buffer = vec![0; u8_len];
 
-        local.write_utf8(scope, &mut buffer, None, WriteOptions::NO_NULL_TERMINATION);
+        local.write_utf8_v2(scope, &mut buffer, Default::default(), None);
         buffer
     }
 }

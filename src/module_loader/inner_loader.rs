@@ -6,10 +6,12 @@ use crate::traits::ToModuleSpecifier;
 use crate::transpiler::{transpile, transpile_extension, ExtensionTranspilation};
 use deno_core::anyhow::{anyhow, Error};
 use deno_core::error::AnyError;
+use deno_error::JsErrorBox;
 use deno_core::futures::FutureExt;
 use deno_core::{
     FastString, ModuleLoadResponse, ModuleSource, ModuleSourceCode, ModuleSpecifier, ModuleType,
 };
+use deno_core::error::ModuleLoaderError;
 use std::cell::RefCell;
 use std::path::PathBuf;
 use std::rc::Rc;
@@ -140,8 +142,9 @@ impl InnerRustyLoader {
         &self,
         specifier: &FastString,
         code: &FastString,
-    ) -> Result<ExtensionTranspilation, AnyError> {
-        let specifier = specifier.as_str().to_module_specifier(&self.cwd)?;
+    ) -> Result<ExtensionTranspilation, JsErrorBox> {
+        let specifier = specifier.as_str().to_module_specifier(&self.cwd)
+            .map_err(|e| JsErrorBox::new("Error", e.to_string()))?;
         let code = code.as_str();
         transpile_extension(&specifier, code)
     }
@@ -295,7 +298,9 @@ impl InnerRustyLoader {
         if let Some(result) = provider_result {
             return ModuleLoadResponse::Async(
                 async move {
-                    Self::handle_load(inner, module_specifier, |_, _| async move { result }).await
+                    Self::handle_load(inner, module_specifier, |_, _| async move { 
+                        result.map_err(|e| JsErrorBox::new("Error", e.to_string()).into())
+                    }).await
                 }
                 .boxed_local(),
             );
@@ -317,11 +322,14 @@ impl InnerRustyLoader {
             ),
 
             // Default deny-all
-            _ => ModuleLoadResponse::Sync(Err(anyhow!(
-                "{} imports are not allowed here: {}",
-                module_specifier.scheme(),
-                module_specifier.as_str()
-            ))),
+            _ => ModuleLoadResponse::Sync(Err(JsErrorBox::new(
+                "Error",
+                format!(
+                    "{} imports are not allowed here: {}",
+                    module_specifier.scheme(),
+                    module_specifier.as_str()
+                )
+            ).into())),
         }
     }
 
@@ -365,12 +373,14 @@ impl InnerRustyLoader {
     async fn load_file(
         inner: Rc<RefCell<Self>>,
         module_specifier: ModuleSpecifier,
-    ) -> Result<String, Error> {
+    ) -> Result<String, ModuleLoaderError> {
         let path = module_specifier
             .to_file_path()
-            .map_err(|()| anyhow!("`{module_specifier}` is not a valid file URL."))?;
-        let content = tokio::fs::read_to_string(path).await?;
-        let content = Self::translate_cjs(inner, module_specifier, content).await?;
+            .map_err(|()| -> ModuleLoaderError { JsErrorBox::new("Error", format!("`{module_specifier}` is not a valid file URL.")).into() })?;
+        let content = tokio::fs::read_to_string(path).await
+            .map_err(|e| -> ModuleLoaderError { JsErrorBox::new("Error", e.to_string()).into() })?;
+        let content = Self::translate_cjs(inner, module_specifier, content).await
+            .map_err(|e| -> ModuleLoaderError { JsErrorBox::new("Error", e.to_string()).into() })?;
 
         Ok(content)
     }
@@ -379,9 +389,12 @@ impl InnerRustyLoader {
     async fn load_remote(
         _: Rc<RefCell<Self>>,
         module_specifier: ModuleSpecifier,
-    ) -> Result<String, Error> {
-        let response = reqwest::get(module_specifier).await?;
-        Ok(response.text().await?)
+    ) -> Result<String, ModuleLoaderError> {
+        let response = reqwest::get(module_specifier).await
+            .map_err(|e| -> ModuleLoaderError { JsErrorBox::new("Error", e.to_string()).into() })?;
+        let text = response.text().await
+            .map_err(|e| -> ModuleLoaderError { JsErrorBox::new("Error", e.to_string()).into() })?;
+        Ok(text)
     }
 
     /// Loads a module's source code from the cache or from the provided handler
@@ -389,10 +402,10 @@ impl InnerRustyLoader {
         inner: Rc<RefCell<Self>>,
         module_specifier: ModuleSpecifier,
         handler: F,
-    ) -> Result<ModuleSource, deno_core::error::AnyError>
+    ) -> Result<ModuleSource, ModuleLoaderError>
     where
         F: FnOnce(Rc<RefCell<Self>>, ModuleSpecifier) -> Fut,
-        Fut: std::future::Future<Output = Result<String, deno_core::error::AnyError>>,
+        Fut: std::future::Future<Output = Result<String, ModuleLoaderError>>,
     {
         // Check if the module is in the cache first
         if let Some(Some(source)) = inner
@@ -419,8 +432,9 @@ impl InnerRustyLoader {
         };
 
         // Load the module code, and transpile it if necessary
-        let code = handler(inner.clone(), module_specifier.clone()).await?;
-        let (tcode, source_map) = transpile(&module_specifier, &code)?;
+        let code = handler(inner.clone(), module_specifier.clone()).await?.to_string();
+        let (tcode, source_map) = transpile(&module_specifier, &code)
+            .map_err(|e| -> ModuleLoaderError { JsErrorBox::new("Error", e.to_string()).into() })?;
 
         // Create the module source
         let mut source = ModuleSource::new(
@@ -433,7 +447,7 @@ impl InnerRustyLoader {
         // Add the source to our source cache
         inner.borrow_mut().add_source_map(
             module_specifier.as_str(),
-            code,
+            code.clone(),
             source_map.map(|s| s.to_vec()),
         );
 
@@ -445,7 +459,8 @@ impl InnerRustyLoader {
 
         // Run import provider post-processing
         if let Some(import_provider) = &mut inner.borrow_mut().import_provider {
-            source = import_provider.post_process(&module_specifier, source)?;
+            source = import_provider.post_process(&module_specifier, source)
+                .map_err(|e| -> ModuleLoaderError { JsErrorBox::new("Error", e.to_string()).into() })?;
         }
 
         Ok(source)

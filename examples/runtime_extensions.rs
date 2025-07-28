@@ -30,7 +30,7 @@ fn main() -> Result<(), Error> {
     // allow clone or copy from extensions
     let mut runtime = Runtime::new(RuntimeOptions {
         schema_whlist,
-        extensions: vec![example_extension::example_extension::init_ops_and_esm()],
+        extensions: vec![example_extension::example_extension::init()],
         ..Default::default()
     })?;
     let module_handle = runtime.load_module(&module)?;
