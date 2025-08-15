@@ -13,12 +13,12 @@ extension!(
 );
 impl ExtensionTrait<()> for init_cache {
     fn init((): ()) -> Extension {
-        init_cache::init_ops_and_esm()
+        init_cache::init()
     }
 }
 impl ExtensionTrait<Option<deno_cache::CreateCache>> for deno_cache::deno_cache {
     fn init(options: Option<deno_cache::CreateCache>) -> Extension {
-        deno_cache::deno_cache::init_ops_and_esm(options)
+        deno_cache::deno_cache::init(options)
     }
 }
 
