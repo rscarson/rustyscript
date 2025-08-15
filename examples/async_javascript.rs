@@ -48,7 +48,7 @@ fn main() -> Result<(), Error> {
             .call_function_async(Some(&handle), "f3", json_args!())
             .await?;
 
-        println!("v1={}\nv2={}\nv3={}", v1, v2, v3);
+        println!("v1={v1}\nv2={v2}\nv3={v3}");
 
         Ok::<(), Error>(())
     };

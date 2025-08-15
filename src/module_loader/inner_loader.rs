@@ -4,7 +4,6 @@
 use crate::module_loader::{ClonableSource, ModuleCacheProvider};
 use crate::traits::ToModuleSpecifier;
 use crate::transpiler::{transpile, transpile_extension, ExtensionTranspilation};
-use crate::utilities::to_io_err;
 use crate::Error;
 use deno_core::error::{AnyError, ModuleLoaderError};
 use deno_core::futures::FutureExt;
@@ -153,7 +152,7 @@ impl InnerRustyLoader {
         let specifier = specifier
             .as_str()
             .to_module_specifier(&self.cwd)
-            .map_err(|e| JsErrorBox::from_err(to_io_err(e)))?;
+            .map_err(|e| JsErrorBox::from_err(std::io::Error::other(e)))?;
         let code = code.as_str();
         transpile_extension(&specifier, code)
     }
@@ -170,7 +169,7 @@ impl InnerRustyLoader {
         } else {
             referrer
                 .to_module_specifier(&self.cwd)
-                .map_err(|e| JsErrorBox::from_err(to_io_err(e)))?
+                .map_err(|e| JsErrorBox::from_err(std::io::Error::other(e)))?
         };
 
         //
@@ -461,7 +460,7 @@ impl InnerRustyLoader {
         let content = tokio::fs::read_to_string(path).await?;
         let content = Self::translate_cjs(inner, module_specifier, content)
             .await
-            .map_err(to_io_err)?;
+            .map_err(std::io::Error::other)?;
 
         Ok(content)
     }
@@ -471,10 +470,10 @@ impl InnerRustyLoader {
         _: Rc<RefCell<Self>>,
         module_specifier: ModuleSpecifier,
     ) -> Result<String, ModuleLoaderError> {
-        use crate::utilities::to_io_err;
-
-        let response = reqwest::get(module_specifier).await.map_err(to_io_err)?;
-        Ok(response.text().await.map_err(to_io_err)?)
+        let response = reqwest::get(module_specifier)
+            .await
+            .map_err(std::io::Error::other)?;
+        Ok(response.text().await.map_err(std::io::Error::other)?)
     }
 
     /// Loads a module's source code from the cache or from the provided handler
@@ -513,7 +512,8 @@ impl InnerRustyLoader {
 
         // Load the module code, and transpile it if necessary
         let code = handler(inner.clone(), module_specifier.clone()).await?;
-        let (tcode, source_map) = transpile(&module_specifier, &code).map_err(to_io_err)?;
+        let (tcode, source_map) =
+            transpile(&module_specifier, &code).map_err(std::io::Error::other)?;
 
         // Create the module source
         let mut source = ModuleSource::new(

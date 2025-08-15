@@ -9,7 +9,6 @@ use std::{
 
 pub use deno_permissions::PermissionDeniedError;
 
-use crate::utilities::to_io_err;
 pub fn oops<T>(msg: impl std::fmt::Display) -> Result<T, PermissionDeniedError> {
     Err(PermissionDeniedError::Fatal {
         access: msg.to_string(),
@@ -633,7 +632,7 @@ impl deno_fetch::FetchPermissions for PermissionsContainer {
         let p = self
             .0
             .check_read(normalized_path, Some(api_name))
-            .map_err(to_io_err)?;
+            .map_err(std::io::Error::other)?;
 
         if needs_canonicalize {
             let resolved = get_path.resolved(&p)?;
@@ -654,7 +653,7 @@ impl deno_fetch::FetchPermissions for PermissionsContainer {
         let p = self
             .0
             .check_write(normalized_path, Some(api_name))
-            .map_err(to_io_err)?;
+            .map_err(std::io::Error::other)?;
 
         if needs_canonicalize {
             let resolved = get_path.resolved(&p)?;

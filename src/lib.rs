@@ -288,6 +288,9 @@
 #![allow(clippy::module_name_repetitions)] //   Does not account for crate-level re-exports
 #![allow(clippy::inline_always)] //             Does not account for deno_core's use of inline(always) on op2
 #![allow(clippy::needless_pass_by_value)] //    Disabling some features can trigger this
+#![allow(clippy::result_large_err)] //          Some Deno types trigger this
+#![allow(clippy::doc_comment_double_space_linebreaks)]
+#![allow(clippy::doc_overindented_list_items)]
 #![cfg_attr(docsrs, feature(doc_cfg))]
 
 #[cfg(feature = "snapshot_builder")]

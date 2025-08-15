@@ -2376,7 +2376,7 @@ dependencies = [
  "deno_error",
  "deno_path_util",
  "sys_traits",
- "thiserror 2.0.12",
+ "thiserror 2.0.14",
  "twox-hash",
 ]
 

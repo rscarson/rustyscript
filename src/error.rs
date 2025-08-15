@@ -86,7 +86,7 @@ pub enum Error {
     /// Runtime error we successfully downcast
     #[class(generic)]
     #[error("{0}")]
-    JsError(#[from] deno_core::error::JsError),
+    JsError(Box<deno_core::error::JsError>),
 
     /// Triggers when a module times out before finishing
     #[class(generic)]
@@ -97,6 +97,12 @@ pub enum Error {
     #[class(generic)]
     #[error("Heap exhausted")]
     HeapExhausted,
+}
+
+impl From<deno_core::error::JsError> for Error {
+    fn from(err: deno_core::error::JsError) -> Self {
+        Self::JsError(Box::new(err))
+    }
 }
 
 impl Error {
@@ -229,7 +235,7 @@ map_error!(node_resolver::analyze::TranslateCjsToEsmError, |e| {
 
 map_error!(deno_ast::TranspileError, |e| Error::Runtime(e.to_string()));
 map_error!(deno_core::error::CoreError, |e| match e {
-    CoreError::Js(js_error) => Error::JsError(js_error),
+    CoreError::Js(js_error) => Error::JsError(Box::new(js_error)),
     _ => Error::Runtime(e.to_string()),
 });
 map_error!(std::cell::BorrowMutError, |e| Error::Runtime(e.to_string()));
