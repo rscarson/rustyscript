@@ -177,7 +177,7 @@ tokio = "^1.36.0"
 tokio-util = "^0.7.4"
 
 # For web
-hyper-util = {version = "^0.1.10", optional = true}
+hyper-util = {version = "^0.1.16", optional = true}
 
 # For URL imports
 # Pinned for now due to upstream issues
