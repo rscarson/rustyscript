@@ -174,7 +174,7 @@ deno_media_type = "=0.2.8"
 
 # Runtime for async tasks
 tokio = "^1.36.0"
-tokio-util = "^0.7.4"
+tokio-util = "^0.7.16"
 
 # For web
 hyper-util = {version = "^0.1.10", optional = true}
