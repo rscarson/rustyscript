@@ -1,12 +1,15 @@
 #![allow(clippy::type_complexity)]
 #![allow(clippy::type_repetition_in_bounds)]
-use super::memory::{InMemoryCache, MyResource};
+
+use std::{path::Path, rc::Rc, sync::Arc};
+
 use deno_cache::{
     Cache, CacheDeleteRequest, CacheError, CacheMatchRequest, CacheMatchResponseMeta,
     CachePutRequest, CreateCache, SqliteBackedCache,
 };
 use deno_core::Resource;
-use std::{path::Path, rc::Rc, sync::Arc};
+
+use super::memory::{InMemoryCache, MyResource};
 
 type SqliteMeta = <SqliteBackedCache as Cache>::CacheMatchResourceType;
 pub enum ResourceType {

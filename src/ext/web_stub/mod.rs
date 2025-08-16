@@ -2,8 +2,9 @@
 //! It is used when the `web` feature is disabled.
 //!
 //! It provides a minimal set of APIs that are required for a few other extensions.
-use super::ExtensionTrait;
 use deno_core::{extension, Extension};
+
+use super::ExtensionTrait;
 
 mod encoding;
 mod timers;

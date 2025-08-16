@@ -1,7 +1,8 @@
 use std::borrow::Cow;
 
-use super::{web::PermissionsContainer, ExtensionTrait};
 use deno_core::{extension, Extension};
+
+use super::{web::PermissionsContainer, ExtensionTrait};
 
 extension!(
     init_napi,

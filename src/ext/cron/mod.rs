@@ -1,6 +1,7 @@
-use super::ExtensionTrait;
 use deno_core::{extension, Extension};
 use deno_cron::local::LocalCronHandler;
+
+use super::ExtensionTrait;
 
 extension!(
     init_cron,

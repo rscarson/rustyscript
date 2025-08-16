@@ -1,5 +1,8 @@
 #![allow(clippy::type_complexity)]
 #![allow(clippy::type_repetition_in_bounds)]
+
+use std::{cell::RefCell, rc::Rc};
+
 use deno_cache::{
     Cache, CacheDeleteRequest, CacheError, CacheMatchRequest, CacheMatchResponseMeta,
     CachePutRequest,
@@ -8,7 +11,6 @@ use deno_core::{
     anyhow::{anyhow, Error},
     AsyncResult, BufView, ByteString, Resource, ResourceId,
 };
-use std::{cell::RefCell, rc::Rc};
 
 #[derive(Clone, PartialEq)]
 struct Request {

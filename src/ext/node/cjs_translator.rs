@@ -1,22 +1,16 @@
 // Copyright 2018-2024 the Deno authors. All rights reserved. MIT license.
+use std::{borrow::Cow, cell::RefCell, collections::HashMap, sync::Arc};
 
-use std::borrow::Cow;
-use std::cell::RefCell;
-use std::collections::HashMap;
-use std::sync::Arc;
-
-use deno_ast::MediaType;
-use deno_ast::ModuleSpecifier;
+use deno_ast::{MediaType, ModuleSpecifier};
 use deno_error::JsErrorBox;
 use deno_permissions::CheckedPathBuf;
 use deno_resolver::npm::DenoInNpmPackageChecker;
 use deno_runtime::deno_fs;
-use node_resolver::analyze::CjsAnalysis as ExtNodeCjsAnalysis;
-use node_resolver::analyze::CjsAnalysisExports;
-use node_resolver::analyze::EsmAnalysisMode;
-use node_resolver::DenoIsBuiltInNodeModuleChecker;
-use serde::Deserialize;
-use serde::Serialize;
+use node_resolver::{
+    analyze::{CjsAnalysis as ExtNodeCjsAnalysis, CjsAnalysisExports, EsmAnalysisMode},
+    DenoIsBuiltInNodeModuleChecker,
+};
+use serde::{Deserialize, Serialize};
 use sys_traits::impls::RealSys;
 
 use super::resolvers::RustyNpmPackageFolderResolver;

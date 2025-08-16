@@ -1,6 +1,7 @@
-use super::ExtensionTrait;
 use deno_broadcast_channel::InMemoryBroadcastChannel;
 use deno_core::{extension, Extension};
+
+use super::ExtensionTrait;
 
 mod wrapper;
 pub use wrapper::BroadcastChannelWrapper;

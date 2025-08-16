@@ -1,4 +1,5 @@
-use super::{web::PermissionsContainer, ExtensionTrait};
+use std::{borrow::Cow, path::PathBuf};
+
 use deno_core::{extension, Extension};
 use deno_kv::{
     dynamic::MultiBackendDbHandler,
@@ -6,7 +7,8 @@ use deno_kv::{
     sqlite::{SqliteDbHandler, SqliteDbHandlerPermissions},
 };
 use deno_permissions::{CheckedPath, PermissionCheckError, PermissionDeniedError};
-use std::{borrow::Cow, path::PathBuf};
+
+use super::{web::PermissionsContainer, ExtensionTrait};
 
 extension!(
     init_kv,

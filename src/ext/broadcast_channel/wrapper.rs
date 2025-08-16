@@ -1,7 +1,9 @@
-use crate::{big_json_args, Error, Runtime};
+use std::time::Duration;
+
 use deno_broadcast_channel::BroadcastChannel;
 use serde::{de::DeserializeOwned, Serialize};
-use std::time::Duration;
+
+use crate::{big_json_args, Error, Runtime};
 
 /// Helper struct to wrap a broadcast channel
 /// Takes care of some of the boilerplate for serialization/deserialization

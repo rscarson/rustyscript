@@ -1,9 +1,9 @@
 // Copyright 2018-2024 the Deno authors. All rights reserved. MIT license.
 //! This module helps deno implement timers and performance APIs.
+use std::time::Instant;
 
 use deno_core::op2;
 use deno_core::OpState;
-use std::time::Instant;
 
 pub type StartTime = Instant;
 

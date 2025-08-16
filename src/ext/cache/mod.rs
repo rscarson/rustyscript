@@ -1,5 +1,6 @@
-use super::ExtensionTrait;
 use deno_core::{extension, Extension};
+
+use super::ExtensionTrait;
 
 //mod cache_backend;
 //mod memory;

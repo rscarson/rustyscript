@@ -1,5 +1,6 @@
-use super::ExtensionTrait;
 use deno_core::{extension, Extension};
+
+use super::ExtensionTrait;
 
 mod http_runtime;
 use http_runtime::deno_http_runtime;

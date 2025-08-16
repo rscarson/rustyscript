@@ -1,16 +1,19 @@
-use super::node::resolvers::RustyResolver;
-use super::web::PermissionsContainer;
-use super::{ExtensionOptions, ExtensionTrait};
-use crate::module_loader::{LoaderOptions, RustyLoader};
-use ::deno_permissions::Permissions;
-use deno_core::v8::{BackingStore, SharedRef};
-use deno_core::{extension, CrossIsolateStore, Extension, ExtensionFileSource};
+use std::{collections::HashSet, rc::Rc, sync::Arc};
+
+use deno_core::{
+    extension,
+    v8::{BackingStore, SharedRef},
+    CrossIsolateStore, Extension, ExtensionFileSource,
+};
+use deno_permissions::Permissions;
 use deno_runtime::permissions::RuntimePermissionDescriptorParser;
 use deno_telemetry::OtelConfig;
-use std::collections::HashSet;
-use std::rc::Rc;
-use std::sync::Arc;
 use sys_traits::impls::RealSys;
+
+use super::{
+    node::resolvers::RustyResolver, web::PermissionsContainer, ExtensionOptions, ExtensionTrait,
+};
+use crate::module_loader::{LoaderOptions, RustyLoader};
 
 fn build_permissions(
     permissions_container: &PermissionsContainer,

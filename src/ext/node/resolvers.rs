@@ -1,3 +1,11 @@
+use std::{
+    borrow::Cow,
+    collections::HashMap,
+    path::{Path, PathBuf},
+    rc::Rc,
+    sync::{Arc, RwLock},
+};
+
 use deno_ast::{MediaType, ModuleSpecifier};
 use deno_core::FastString;
 use deno_error::JsErrorBox;
@@ -22,13 +30,6 @@ use node_resolver::{
     NpmPackageFolderResolver, PackageJsonResolver, UrlOrPath, UrlOrPathRef,
 };
 use serde::{Deserialize, Serialize};
-use std::{
-    borrow::Cow,
-    collections::HashMap,
-    path::{Path, PathBuf},
-    rc::Rc,
-    sync::{Arc, RwLock},
-};
 use sys_traits::impls::RealSys;
 
 use super::cjs_translator::{NodeCodeTranslator, RustyCjsCodeAnalyzer};

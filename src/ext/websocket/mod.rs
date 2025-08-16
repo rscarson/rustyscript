@@ -1,6 +1,7 @@
-use super::{web::PermissionsContainer, web::WebOptions, ExtensionTrait};
 use deno_core::{extension, url::Url, Extension};
 use deno_permissions::PermissionCheckError;
+
+use super::{web::PermissionsContainer, web::WebOptions, ExtensionTrait};
 
 impl deno_websocket::WebSocketPermissions for PermissionsContainer {
     fn check_net_url(&mut self, url: &Url, api_name: &str) -> Result<(), PermissionCheckError> {

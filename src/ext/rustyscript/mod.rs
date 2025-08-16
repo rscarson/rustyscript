@@ -1,7 +1,9 @@
+use std::collections::HashMap;
+
+use deno_core::{extension, op2, serde_json, v8, Extension, OpState};
+
 use super::ExtensionTrait;
 use crate::{error::Error, RsAsyncFunction, RsFunction};
-use deno_core::{extension, op2, serde_json, v8, Extension, OpState};
-use std::collections::HashMap;
 
 type FnCache = HashMap<String, Box<dyn RsFunction>>;
 type AsyncFnCache = HashMap<String, Box<dyn RsAsyncFunction>>;

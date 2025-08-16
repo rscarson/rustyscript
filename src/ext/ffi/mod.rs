@@ -1,7 +1,8 @@
 use std::{borrow::Cow, path::Path};
 
-use super::{web::PermissionsContainer, ExtensionTrait};
 use deno_core::{extension, Extension};
+
+use super::{web::PermissionsContainer, ExtensionTrait};
 
 extension!(
     init_ffi,

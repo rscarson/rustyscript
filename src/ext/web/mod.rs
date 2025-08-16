@@ -74,9 +74,7 @@ extension!(
 impl ExtensionTrait<WebOptions> for init_net {
     fn init(options: WebOptions) -> Extension {
         let provider = rustls::crypto::aws_lc_rs::default_provider();
-        if let Err(e) = rustls::crypto::CryptoProvider::install_default(provider) {
-            eprintln!("Failed to install aws_lc_rs crypto provider! deno_net ops may panic beyond this point!");
-        }
+        let _ = rustls::crypto::CryptoProvider::install_default(provider); // Failure means already done for us
         init_net::init()
     }
 }
