@@ -54,6 +54,7 @@ impl ExtensionTrait<WebOptions> for deno_fetch::deno_fetch {
     }
 }
 
+#[cfg(not(feature = "node_experimental"))]
 extension!(
     init_net,
     deps = [rustyscript],
@@ -61,6 +62,15 @@ extension!(
     esm_entry_point = "ext:init_net/init_net.js",
     esm = [ dir "src/ext/web", "init_net.js" ],
 );
+
+#[cfg(feature = "node_experimental")]
+extension!(
+    init_net,
+    deps = [rustyscript],
+    esm_entry_point = "ext:init_net/init_net.js",
+    esm = [ dir "src/ext/web", "init_net.js" ],
+);
+
 impl ExtensionTrait<WebOptions> for init_net {
     fn init(options: WebOptions) -> Extension {
         let provider = rustls::crypto::aws_lc_rs::default_provider();
