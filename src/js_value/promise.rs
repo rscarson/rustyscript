@@ -1,10 +1,11 @@
-use super::V8Value;
-use crate::{async_bridge::AsyncBridgeExt, Error};
 use deno_core::{
     v8::{self, PromiseState},
     PollEventLoopOptions,
 };
 use serde::Deserialize;
+
+use super::V8Value;
+use crate::{async_bridge::AsyncBridgeExt, Error};
 
 /// A Deserializable javascript promise, that can be stored and used later
 /// Must live as long as the runtime it was birthed from

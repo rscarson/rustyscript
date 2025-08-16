@@ -1,12 +1,14 @@
+use std::{path::Path, rc::Rc, time::Duration};
+
+use deno_core::PollEventLoopOptions;
+use tokio_util::sync::CancellationToken;
+
 use crate::{
     async_bridge::{AsyncBridge, AsyncBridgeExt, TokioRuntime},
     inner_runtime::{InnerRuntime, RsAsyncFunction, RsFunction},
     js_value::Function,
     Error, Module, ModuleHandle,
 };
-use deno_core::PollEventLoopOptions;
-use std::{path::Path, rc::Rc, time::Duration};
-use tokio_util::sync::CancellationToken;
 
 /// Represents the set of options accepted by the runtime constructor
 pub use crate::inner_runtime::RuntimeOptions;

@@ -3,8 +3,10 @@
 //!
 //! [Function] and [Promise] are both specializations of [Value] providing deserialize-time type checking
 //! and additional utility functions for interacting with the runtime
-use deno_core::serde_v8::GlobalValue;
-use deno_core::v8::{self, HandleScope};
+use deno_core::{
+    serde_v8::GlobalValue,
+    v8::{self, HandleScope},
+};
 use serde::Deserialize;
 
 /// A macro to implement the common functions for [Function], [Promise], and [Value]

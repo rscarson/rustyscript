@@ -118,7 +118,7 @@ web_stub = ["webidl", "base64-simd"]
     web = [
         "deno_web", "deno_tls", "deno_fetch", "deno_net", "dep:http", "deno_permissions", "deno_telemetry", "deno_fs",
         "webidl", "console", "url", "crypto", "url_import", "fs_import",
-        "hyper-util"
+        "hyper-util", "rustls"
     ]
 
     # [https://gpuweb.github.io/gpuweb/]
@@ -178,6 +178,7 @@ tokio-util = "^0.7.4"
 
 # For web
 hyper-util = {version = "^0.1.10", optional = true}
+rustls = {version = "0.23.28", optional = true}
 
 # For URL imports
 # Pinned for now due to upstream issues

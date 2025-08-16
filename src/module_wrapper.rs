@@ -1,5 +1,6 @@
-use crate::{js_value::Function, Error, Module, ModuleHandle, Runtime, RuntimeOptions};
 use deno_core::{serde_json, v8::GetPropertyNamesArgs};
+
+use crate::{js_value::Function, Error, Module, ModuleHandle, Runtime, RuntimeOptions};
 
 /// A wrapper type representing a runtime instance loaded with a single module
 ///

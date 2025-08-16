@@ -1,5 +1,4 @@
-use crate::module_loader::ImportProvider;
-use crate::{Error, RuntimeOptions};
+use crate::{module_loader::ImportProvider, Error, RuntimeOptions};
 
 /// A builder for creating a new runtime
 ///

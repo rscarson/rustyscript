@@ -1,25 +1,30 @@
 #![allow(unused_imports)]
 #![allow(deprecated)]
 #![allow(dead_code)]
-use crate::module_loader::{ClonableSource, ModuleCacheProvider};
-use crate::traits::ToModuleSpecifier;
-use crate::transpiler::{transpile, transpile_extension, ExtensionTranspilation};
-use crate::Error;
-use deno_core::error::{AnyError, ModuleLoaderError};
-use deno_core::futures::FutureExt;
-use deno_core::url::ParseError;
+
+use std::{
+    cell::RefCell,
+    collections::{HashMap, HashSet},
+    path::Path,
+    path::PathBuf,
+    rc::Rc,
+    sync::{Arc, RwLock},
+};
+
 use deno_core::{
+    error::{AnyError, ModuleLoaderError},
+    futures::FutureExt,
+    url::ParseError,
     FastString, ModuleLoadResponse, ModuleResolutionError, ModuleSource, ModuleSourceCode,
     ModuleSpecifier, ModuleType,
 };
 use deno_error::JsErrorBox;
-use std::cell::RefCell;
-use std::path::PathBuf;
-use std::rc::Rc;
-use std::sync::{Arc, RwLock};
-use std::{
-    collections::{HashMap, HashSet},
-    path::Path,
+
+use crate::{
+    module_loader::{ClonableSource, ModuleCacheProvider},
+    traits::ToModuleSpecifier,
+    transpiler::{transpile, transpile_extension, ExtensionTranspilation},
+    Error,
 };
 
 #[cfg(feature = "node_experimental")]

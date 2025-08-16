@@ -1,6 +1,8 @@
-use crate::Error;
 use std::rc::Rc;
+
 use tokio_util::sync::CancellationToken;
+
+use crate::Error;
 
 /// A wrapper around the tokio runtime allowing for borrowed usage
 ///

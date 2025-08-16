@@ -1,6 +1,7 @@
-use super::V8Value;
 use deno_core::v8::{self, GetPropertyNamesArgs, HandleScope};
 use serde::Deserialize;
+
+use super::V8Value;
 
 /// A Deserializable javascript object, that can be stored and used later
 /// Must live as long as the runtime it was birthed from

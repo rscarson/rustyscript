@@ -1,9 +1,11 @@
 //! Contains the error type for the runtime
 //! And some associated utilities
-use crate::Module;
-use deno_core::error::CoreErrorKind;
 use std::path::PathBuf;
+
+use deno_core::error::CoreErrorKind;
 use thiserror::Error;
+
+use crate::Module;
 
 /// Options for [`Error::as_highlighted`]
 #[allow(clippy::struct_excessive_bools)]

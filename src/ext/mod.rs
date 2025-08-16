@@ -1,5 +1,6 @@
 #![allow(unused_variables)]
 #![allow(clippy::derivable_impls)]
+
 use deno_core::{
     v8::{BackingStore, SharedRef},
     CrossIsolateStore, Extension,

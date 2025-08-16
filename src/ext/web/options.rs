@@ -1,7 +1,9 @@
-use super::{DefaultWebPermissions, WebPermissions};
+use std::sync::Arc;
+
 use deno_fetch::dns::Resolver;
 use hyper_util::client::legacy::Builder;
-use std::sync::Arc;
+
+use super::{DefaultWebPermissions, WebPermissions};
 
 /// Options for configuring the web related extensions
 #[derive(Clone)]

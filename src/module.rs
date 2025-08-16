@@ -1,10 +1,13 @@
+use std::{
+    borrow::Cow,
+    ffi::OsStr,
+    fmt::Display,
+    fs::{read_dir, read_to_string},
+    path::{Path, PathBuf},
+};
+
 use maybe_path::MaybePathBuf;
 use serde::{Deserialize, Serialize};
-use std::borrow::Cow;
-use std::ffi::OsStr;
-use std::fmt::Display;
-use std::fs::{read_dir, read_to_string};
-use std::path::{Path, PathBuf};
 
 /// Creates a static module
 ///

@@ -6165,6 +6165,7 @@ dependencies = [
  "once_cell",
  "paste",
  "reqwest",
+ "rustls",
  "rustyline",
  "serde",
  "sys_traits",

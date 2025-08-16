@@ -1,16 +1,3 @@
-use crate::{
-    ext,
-    module_loader::{LoaderOptions, RustyLoader},
-    traits::{ToDefinedValue, ToModuleSpecifier, ToV8String},
-    transpiler::transpile,
-    utilities, Error, ExtensionOptions, Module, ModuleHandle,
-};
-use deno_core::{
-    futures::FutureExt, serde_json, serde_v8::from_v8, v8, JsRuntime, JsRuntimeForSnapshot,
-    PollEventLoopOptions,
-};
-use deno_features::FeatureChecker;
-use serde::de::DeserializeOwned;
 use std::{
     collections::{HashMap, HashSet},
     path::{Path, PathBuf},
@@ -19,7 +6,22 @@ use std::{
     task::Poll,
     time::Duration,
 };
+
+use deno_core::{
+    futures::FutureExt, serde_json, serde_v8::from_v8, v8, JsRuntime, JsRuntimeForSnapshot,
+    PollEventLoopOptions,
+};
+use deno_features::FeatureChecker;
+use serde::de::DeserializeOwned;
 use tokio_util::sync::CancellationToken;
+
+use crate::{
+    ext,
+    module_loader::{LoaderOptions, RustyLoader},
+    traits::{ToDefinedValue, ToModuleSpecifier, ToV8String},
+    transpiler::transpile,
+    utilities, Error, ExtensionOptions, Module, ModuleHandle,
+};
 
 /// Wrapper trait to make the `InnerRuntime` generic over the runtime types
 pub trait RuntimeTrait {

@@ -1,18 +1,19 @@
 //! Module loader implementation for rustyscript
 //! This module provides tools for caching module data, resolving module specifiers, and loading modules
 #![allow(deprecated)]
-use deno_core::{error::ModuleLoaderError, ModuleLoader, ModuleSpecifier};
+
 use std::{borrow::Cow, cell::RefCell, path::PathBuf, rc::Rc};
 
-mod cache_provider;
-mod import_provider;
-mod inner_loader;
+use deno_core::{error::ModuleLoaderError, ModuleLoader, ModuleSpecifier};
 
+mod inner_loader;
 use inner_loader::InnerRustyLoader;
 pub(crate) use inner_loader::LoaderOptions;
 
-// Public exports
+mod cache_provider;
 pub use cache_provider::{ClonableSource, ModuleCacheProvider};
+
+mod import_provider;
 pub use import_provider::ImportProvider;
 
 use crate::transpiler::ExtensionTranspiler;

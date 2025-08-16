@@ -1,5 +1,4 @@
-use deno_core::v8;
-use deno_core::ModuleId;
+use deno_core::{v8, ModuleId};
 
 use crate::Module;
 
