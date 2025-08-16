@@ -1,8 +1,11 @@
+use std::{borrow::Cow, path::Path};
+
+use deno_core::{
+    v8::{self, HandleScope},
+    ModuleSpecifier,
+};
+
 use crate::Error;
-use deno_core::v8::{self, HandleScope};
-use deno_core::ModuleSpecifier;
-use std::borrow::Cow;
-use std::path::Path;
 
 /// Converts a string representing a relative or absolute path into a
 /// `ModuleSpecifier`. A relative path is considered relative to the passed

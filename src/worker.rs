@@ -15,12 +15,14 @@
 //!     assert_eq!(result, 10);
 //!     Ok(())
 //! }
+use std::{
+    cell::RefCell,
+    rc::Rc,
+    sync::mpsc::{channel, Receiver, Sender},
+    thread::{spawn, JoinHandle},
+};
 
 use crate::{Error, RuntimeOptions};
-use std::cell::RefCell;
-use std::rc::Rc;
-use std::sync::mpsc::{channel, Receiver, Sender};
-use std::thread::{spawn, JoinHandle};
 
 /// A pool of worker threads that can be used to run javascript code in parallel
 /// Uses a round-robin strategy to distribute work between workers

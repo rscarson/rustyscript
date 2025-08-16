@@ -1,11 +1,13 @@
+use std::{path::Path, rc::Rc, time::Duration};
+
+use deno_core::{JsRuntimeForSnapshot, PollEventLoopOptions};
+use tokio_util::sync::CancellationToken;
+
 use crate::{
     async_bridge::{AsyncBridge, AsyncBridgeExt, TokioRuntime},
     inner_runtime::{InnerRuntime, RuntimeOptions},
     Error, Module, ModuleHandle,
 };
-use deno_core::{JsRuntimeForSnapshot, PollEventLoopOptions};
-use std::{path::Path, rc::Rc, time::Duration};
-use tokio_util::sync::CancellationToken;
 
 /// A more restricted version of the `Runtime` struct that is used to create a snapshot of the runtime state
 /// This runtime should ONLY be used to create a snapshot, and not for normal use

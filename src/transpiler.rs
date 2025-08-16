@@ -3,19 +3,13 @@
 //! modules.
 //!
 //! It will only transpile, not typecheck (like Deno's `--no-check` flag).
+use std::{borrow::Cow, rc::Rc};
 
-use deno_ast::MediaType;
-use deno_ast::ParseDiagnosticsError;
-use deno_ast::ParseParams;
-use deno_ast::SourceTextInfo;
-use deno_ast::TranspileError;
-use deno_core::FastString;
-use deno_core::ModuleSpecifier;
-use deno_core::SourceMapData;
+use deno_ast::{MediaType, ParseDiagnosticsError, ParseParams, SourceTextInfo, TranspileError};
+use deno_core::{FastString, ModuleSpecifier, SourceMapData};
 use deno_error::JsErrorBox;
-use std::borrow::Cow;
-use std::rc::Rc;
 
+/// Contains the results of transpilation
 pub type ModuleContents = (String, Option<SourceMapData>);
 
 fn should_transpile(media_type: MediaType) -> bool {

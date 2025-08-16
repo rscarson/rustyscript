@@ -1,7 +1,8 @@
-use crate::traits::ToModuleSpecifier;
-use crate::{Error, Module, ModuleWrapper, Runtime, RuntimeOptions};
-use deno_core::ModuleSpecifier;
 use std::path::Path;
+
+use deno_core::ModuleSpecifier;
+
+use crate::{traits::ToModuleSpecifier, Error, Module, ModuleWrapper, Runtime, RuntimeOptions};
 
 /// Evaluate a piece of non-ECMAScript-module JavaScript code
 ///

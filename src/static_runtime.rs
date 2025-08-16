@@ -33,8 +33,9 @@
 //!     })
 //! }
 //! ```
-use crate::{Error, Runtime, RuntimeOptions};
 use std::cell::{OnceCell, RefCell, RefMut};
+
+use crate::{Error, Runtime, RuntimeOptions};
 
 /// A lock for the static runtime
 /// Created using `StaticRuntime::lock`
