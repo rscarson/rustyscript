@@ -52,7 +52,7 @@ impl ImportProvider for MyImportProvider {
                     Some(Ok(specifier.clone()))
                 } else {
                     // Not found - deny the import
-                    Some(Err(ModuleLoaderError::NotFound))
+                    Some(Err(ModuleLoaderError::not_supported()))
                 }
             }
 
@@ -64,7 +64,7 @@ impl ImportProvider for MyImportProvider {
                     Some(Ok(redirected_specifier.clone()))
                 } else {
                     // No redirect, deny the import
-                    Some(Err(ModuleLoaderError::NotFound))
+                    Some(Err(ModuleLoaderError::not_supported()))
                 }
             }
 
@@ -89,7 +89,7 @@ impl ImportProvider for MyImportProvider {
                     Some(Ok(source.clone()))
                 } else {
                     // Not found, deny the import
-                    Some(Err(ModuleLoaderError::NotFound))
+                    Some(Err(ModuleLoaderError::not_supported()))
                 }
             }
 

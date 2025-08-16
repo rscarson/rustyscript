@@ -44,7 +44,7 @@ extension!(
     customizer = |e: &mut Extension| {
         e.esm_files.to_mut().push(
             ExtensionFileSource::new("ext:deno_features/flags.js", deno_features::JS_SOURCE)
-        )
+        );
     }
 );
 impl ExtensionTrait<()> for init_runtime {
@@ -210,6 +210,7 @@ fn create_web_worker_callback(options: WebWorkerCallbackOptions) -> Arc<CreateWe
         };
 
         let options = WebWorkerOptions {
+            enable_raw_imports: true,
             name: args.name,
             main_module: args.main_module.clone(),
             worker_id: args.worker_id,
@@ -239,6 +240,7 @@ fn create_web_worker_callback(options: WebWorkerCallbackOptions) -> Arc<CreateWe
                 close_on_idle: false,
                 no_legacy_abort: false,
                 is_standalone: false,
+                auto_serve: false,
             },
             extensions: vec![],
             startup_snapshot: None,

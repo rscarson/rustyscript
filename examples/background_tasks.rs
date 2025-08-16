@@ -83,7 +83,7 @@ fn main() -> Result<(), Error> {
     while runtime.advance_event_loop(PollEventLoopOptions::default())? {
         // Check for messages from the module
         if let Some(msg) = check_for_messages(&mut runtime, &module_handle)? {
-            println!("Received message: {}", msg);
+            println!("Received message: {msg}");
         }
 
         // Run the event loop for 50ms

@@ -85,7 +85,7 @@ fn op_set_raw(state: &mut OpState, rid: u32, is_raw: bool, cbreak: bool) -> Resu
 
     let mut original_mode: DWORD = 0;
     // SAFETY: winapi call
-    if unsafe { consoleapi::GetConsoleMode(handle, &mut original_mode) } == FALSE {
+    if unsafe { consoleapi::GetConsoleMode(handle, &raw mut original_mode) } == FALSE {
         return Err(TtyError::Io(Error::last_os_error()));
     }
 
@@ -139,15 +139,19 @@ fn op_set_raw(state: &mut OpState, rid: u32, is_raw: bool, cbreak: bool) -> Resu
                 );
 
                 let mut active_screen_buffer = std::mem::zeroed();
-                winapi::um::wincon::GetConsoleScreenBufferInfo(handle, &mut active_screen_buffer);
+                winapi::um::wincon::GetConsoleScreenBufferInfo(
+                    handle,
+                    &raw mut active_screen_buffer,
+                );
                 winapi::um::handleapi::CloseHandle(handle);
                 active_screen_buffer
             };
             stdin_state.screen_buffer_info = Some(active_screen_buffer);
 
             // SAFETY: winapi call to write the VK_RETURN event.
-            if unsafe { winapi::um::wincon::WriteConsoleInputW(handle, &record, 1, &mut 0) }
-                == FALSE
+            if unsafe {
+                winapi::um::wincon::WriteConsoleInputW(handle, &raw const record, 1, &mut 0)
+            } == FALSE
             {
                 return Err(TtyError::Io(Error::last_os_error()));
             }
@@ -207,7 +211,7 @@ fn console_size_from_fd(
     unsafe {
         let mut bufinfo: winapi::um::wincon::CONSOLE_SCREEN_BUFFER_INFO = std::mem::zeroed();
 
-        if winapi::um::wincon::GetConsoleScreenBufferInfo(handle, &mut bufinfo) == 0 {
+        if winapi::um::wincon::GetConsoleScreenBufferInfo(handle, &raw mut bufinfo) == 0 {
             return Err(Error::last_os_error());
         }
 

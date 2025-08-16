@@ -30,19 +30,19 @@ safe_extensions = ["web_stub", "console", "url", "crypto"]
 #
 # Enables all available extensions, except for node support
 # These extensions are not safe to use in a sandboxed environment without additional restrictions
-# (See [WebPermissions]
+# (See [WebPermissions])
 all_extensions = ["network_extensions", "io_extensions"]
 
 #
 # Extensions that provide access to the network. Also enables URL imports from JS
 # These extensions are not safe to use in a sandboxed environment without additional restrictions
-# (See [WebPermissions]
+# (See [WebPermissions])
 network_extensions = ["web", "webstorage", "websocket", "http", "url", "crypto", "console", "broadcast_channel", "url_import"]
 
 #
 # Extensions that provide access to the filesystem. Also enables file imports from JS
 # These extensions are not safe to use in a sandboxed environment without additional restrictions
-# (See [FsPermissions]
+# (See [FsPermissions])
 io_extensions = ["web", "webstorage", "fs", "io", "cache", "console", "ffi", "webgpu", "kv", "cron", "fs_import"]
 
 #
@@ -55,7 +55,7 @@ extra_features = ["worker", "snapshot_builder"]
 # Enables the use of the node and npm modules
 # CJS support not yet implemented
 # These extensions are not safe to use in a sandboxed environment without additional restrictions
-# (See [NodePermissions]
+# (See [NodePermissions])
 node_experimental = [
     "deno_node", "deno_resolver", "node_resolver", "deno_npm", "deno_semver", "deno_napi", "deno_runtime", "deno_process", "deno_package_json",
     "checksum", "sys_traits", "all_extensions"
@@ -164,13 +164,13 @@ async-trait = "^0.1.89"
 paste = "1.0.15"
 
 # The deno runtime itself, and the webidl extension for the web APIs
-deno_core = "^0.347.0"
-deno_error = "=0.5.6"
-deno_features = "0.2.0"
+deno_core = "^0.355.0"
+deno_error = "=0.7.0"
+deno_features = "0.10.0"
 
 # For transpiling typescript
-deno_ast = { version = "=0.47.0", features = ["transpiling", "cjs"] }
-deno_media_type = "=0.2.8"
+deno_ast = { version = "=0.49.0", features = ["transpiling", "cjs"] }
+deno_media_type = { version = "=0.2.9", features = ["module_specifier"] }
 
 # Runtime for async tasks
 tokio = "^1.36.0"
@@ -183,37 +183,37 @@ hyper-util = {version = "^0.1.10", optional = true}
 # Pinned for now due to upstream issues
 reqwest = { version = "=0.12.8", optional = true, default-features = false, features = ["blocking", "rustls-tls"] }
 http = { version = "^1.0", optional = true }
-deno_permissions = { version = "^0.64.0", optional = true }
+deno_permissions = { version = "^0.72.0", optional = true }
 
 
 #
 # Dependencies for the various extension features
 #
 
-deno_broadcast_channel = { version = "^0.199.0", optional = true }
+deno_broadcast_channel = { version = "^0.207.0", optional = true }
 
-deno_cache      = { version = "^0.137.0", optional = true }
-deno_console    = { version = "^0.205.0", optional = true }
-deno_cron       = { version = "^0.85.0", optional = true }
-deno_crypto     = { version = "^0.219.0", optional = true }
-deno_fetch      = { version = "^0.229.0", optional = true }
-deno_ffi        = { version = "^0.192.0", optional = true }
-deno_fs         = { version = "^0.115.0", optional = true, features = ["sync_fs"] }
-deno_http       = { version = "^0.203.0", optional = true }
-deno_kv         = { version = "^0.113.0", optional = true }
-deno_net        = { version = "^0.197.0", optional = true }
-deno_node       = { version = "^0.143.0", optional = true }
-deno_tls        = { version = "^0.192.0", optional = true }
-deno_url        = { version = "^0.205.0", optional = true }
+deno_cache      = { version = "^0.145.0", optional = true }
+deno_console    = { version = "^0.213.0", optional = true }
+deno_cron       = { version = "^0.93.0", optional = true }
+deno_crypto     = { version = "^0.227.0", optional = true }
+deno_fetch      = { version = "^0.237.0", optional = true }
+deno_ffi        = { version = "^0.200.0", optional = true }
+deno_fs         = { version = "^0.123.0", optional = true, features = ["sync_fs"] }
+deno_http       = { version = "^0.211.0", optional = true }
+deno_kv         = { version = "^0.121.0", optional = true }
+deno_net        = { version = "^0.205.0", optional = true }
+deno_node       = { version = "^0.151.0", optional = true }
+deno_tls        = { version = "^0.200.0", optional = true }
+deno_url        = { version = "^0.213.0", optional = true }
 
-deno_web        = { version = "^0.236.0", optional = true }
-deno_webidl     = { version = "^0.205.0", optional = true }
-deno_webstorage = { version = "^0.200.0", optional = true }
-deno_websocket  = { version = "^0.210.0", optional = true }
-deno_webgpu     = { version = "^0.172.0", optional = true }
+deno_web        = { version = "^0.244.0", optional = true }
+deno_webidl     = { version = "^0.213.0", optional = true }
+deno_webstorage = { version = "^0.208.0", optional = true }
+deno_websocket  = { version = "^0.218.0", optional = true }
+deno_webgpu     = { version = "^0.180.0", optional = true }
 
-deno_io = { version = "^0.115.0", optional = true }
-deno_telemetry  = { version = "^0.27.0", optional = true }
+deno_io = { version = "^0.123.0", optional = true }
+deno_telemetry  = { version = "^0.35.0", optional = true }
 
 # Dependencies for the IO feature
 rustyline = {version = "=13.0.0", optional = true}
@@ -230,17 +230,17 @@ once_cell = {version = "^1.17.1", optional = true}
 base64-simd = {version = "0.8.0", optional = true}
 
 # Dependencies for the node feature
-deno_resolver = { version = "^0.36.0", optional = true }
-node_resolver = { version = "^0.43.0", optional = true, features = ["sync"] }
-deno_runtime  = { version = "^0.213.0", optional = true, features = ["exclude_runtime_main_js"] }
+deno_resolver = { version = "^0.44.0", optional = true }
+node_resolver = { version = "^0.51.0", optional = true, features = ["sync"] }
+deno_runtime  = { version = "^0.221.0", optional = true, features = ["exclude_runtime_main_js"] }
 deno_terminal = { version = "=0.2.2", optional = true }
-deno_semver   = { version = "=0.7.1", optional = true }
-deno_napi     = { version = "^0.136.0", optional = true }
-deno_npm      = { version = "=0.33.3", optional = true }
-deno_process  = { version = "^0.20.0", optional = true }
-deno_package_json = { version = "=0.6.0", optional = true }
+deno_semver   = { version = "=0.9.0", optional = true }
+deno_napi     = { version = "^0.144.0", optional = true }
+deno_npm      = { version = "=0.36.0", optional = true }
+deno_process  = { version = "^0.28.0", optional = true }
+deno_package_json = { version = "=0.15.0", optional = true }
 checksum      = { version = "0.2.1", optional = true }
-sys_traits    = { version = "=0.1.9", optional = true }
+sys_traits    = { version = "=0.1.17", optional = true }
 
 [dev-dependencies]
 version-sync = "0.9.5"

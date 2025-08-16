@@ -9,7 +9,8 @@ use deno_core::error::{AnyError, ModuleLoaderError};
 use deno_core::futures::FutureExt;
 use deno_core::url::ParseError;
 use deno_core::{
-    FastString, ModuleLoadResponse, ModuleSource, ModuleSourceCode, ModuleSpecifier, ModuleType,
+    FastString, ModuleLoadResponse, ModuleResolutionError, ModuleSource, ModuleSourceCode,
+    ModuleSpecifier, ModuleType,
 };
 use deno_error::JsErrorBox;
 use std::cell::RefCell;
@@ -165,11 +166,11 @@ impl InnerRustyLoader {
     ) -> Result<ModuleSpecifier, ModuleLoaderError> {
         #[cfg(feature = "node_experimental")]
         let referrer_specifier = if deno_core::specifier_has_uri_scheme(referrer) {
-            deno_core::resolve_url(referrer)?
+            deno_core::resolve_url(referrer).map_err(JsErrorBox::from_err)?
         } else {
             referrer
                 .to_module_specifier(&self.cwd)
-                .map_err(|e| JsErrorBox::from_err(std::io::Error::other(e)))?
+                .map_err(JsErrorBox::from_err)?
         };
 
         //
@@ -196,7 +197,8 @@ impl InnerRustyLoader {
         }
 
         // Resolve the module specifier to an absolute URL
-        let url = deno_core::resolve_import(specifier, referrer)?;
+        let url =
+            deno_core::resolve_import(specifier, referrer).map_err(ModuleLoaderError::from_err)?;
 
         // Check if the module is in the cache
         if self
@@ -228,8 +230,7 @@ impl InnerRustyLoader {
                 #[cfg(not(feature = "url_import"))]
                 return Err(JsErrorBox::from_err(Error::Runtime(format!(
                     "{specifier} imports are not allowed here"
-                )))
-                .into());
+                ))));
             }
 
             // Dynamic FS imports
@@ -239,8 +240,7 @@ impl InnerRustyLoader {
                 if !self.whitelist_has(url.as_str()) {
                     return Err(JsErrorBox::from_err(Error::Runtime(format!(
                         "module {url} is not loaded"
-                    )))
-                    .into());
+                    ))));
                 }
             }
 
@@ -259,7 +259,7 @@ impl InnerRustyLoader {
 
             _ => {
                 let error = Error::Runtime(format!("unsupported scheme: {}", url.scheme()));
-                return Err(JsErrorBox::from_err(error).into());
+                return Err(JsErrorBox::from_err(error));
             }
         }
 
@@ -320,7 +320,7 @@ impl InnerRustyLoader {
             x => {
                 let error =
                     Error::Runtime(format!("unsupported scheme: {x} for {module_specifier}"));
-                ModuleLoadResponse::Sync(Err(JsErrorBox::from_err(error).into()))
+                ModuleLoadResponse::Sync(Err(JsErrorBox::from_err(error)))
             }
         }
     }
@@ -369,7 +369,7 @@ impl InnerRustyLoader {
     ) -> Result<Option<ModuleSpecifier>, ModuleLoaderError> {
         if specifier.starts_with('#') {
             let referrer = if deno_core::specifier_has_uri_scheme(referrer) {
-                deno_core::resolve_url(referrer)?
+                deno_core::resolve_url(referrer).map_err(JsErrorBox::from_err)?
             } else {
                 referrer
                     .to_module_specifier(&self.cwd)
@@ -387,15 +387,15 @@ impl InnerRustyLoader {
                 .get_closest_package_json(&referrer_path)
                 .map_err(JsErrorBox::from_err)?;
             if let Some(package) = package {
+                let referrer = node_resolver::UrlOrPathRef::from_url(&referrer);
                 let url = self
                     .node
                     .node_resolver
-                    .package_imports_resolve(
+                    .resolve_package_import(
                         specifier,
-                        Some(&node_resolver::UrlOrPathRef::from_url(&referrer)),
-                        ResolutionMode::Import,
+                        Some(&referrer),
                         Some(&package),
-                        node_resolver::REQUIRE_CONDITIONS,
+                        ResolutionMode::Import,
                         NodeResolutionKind::Execution,
                     )
                     .map_err(JsErrorBox::from_err)?;
@@ -404,7 +404,7 @@ impl InnerRustyLoader {
                     node_resolver::UrlOrPath::Url(url) => url,
                     node_resolver::UrlOrPath::Path(path) => {
                         let url = format!("file://{}", path.to_string_lossy());
-                        deno_core::resolve_url(&url)?
+                        deno_core::resolve_url(&url).map_err(JsErrorBox::from_err)?
                     }
                 };
 
@@ -422,7 +422,7 @@ impl InnerRustyLoader {
         referrer: &str,
     ) -> Result<ModuleSpecifier, ModuleLoaderError> {
         let referrer = if deno_core::specifier_has_uri_scheme(referrer) {
-            deno_core::resolve_url(referrer)?
+            deno_core::resolve_url(referrer).map_err(JsErrorBox::from_err)?
         } else {
             referrer
                 .to_module_specifier(&self.cwd)
@@ -457,10 +457,12 @@ impl InnerRustyLoader {
                 "{module_specifier} is not a file path"
             )))
         })?;
-        let content = tokio::fs::read_to_string(path).await?;
+        let content = tokio::fs::read_to_string(path)
+            .await
+            .map_err(ModuleLoaderError::from_err)?;
         let content = Self::translate_cjs(inner, module_specifier, content)
             .await
-            .map_err(std::io::Error::other)?;
+            .map_err(ModuleLoaderError::from_err)?;
 
         Ok(content)
     }
@@ -472,8 +474,12 @@ impl InnerRustyLoader {
     ) -> Result<String, ModuleLoaderError> {
         let response = reqwest::get(module_specifier)
             .await
-            .map_err(std::io::Error::other)?;
-        Ok(response.text().await.map_err(std::io::Error::other)?)
+            .map_err(|e| ModuleLoaderError::generic(e.to_string()))?;
+        let response = response
+            .text()
+            .await
+            .map_err(|e| ModuleLoaderError::generic(e.to_string()))?;
+        Ok(response)
     }
 
     /// Loads a module's source code from the cache or from the provided handler
@@ -513,7 +519,7 @@ impl InnerRustyLoader {
         // Load the module code, and transpile it if necessary
         let code = handler(inner.clone(), module_specifier.clone()).await?;
         let (tcode, source_map) =
-            transpile(&module_specifier, &code).map_err(std::io::Error::other)?;
+            transpile(&module_specifier, &code).map_err(ModuleLoaderError::from_err)?;
 
         // Create the module source
         let mut source = ModuleSource::new(

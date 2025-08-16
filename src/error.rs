@@ -1,7 +1,7 @@
 //! Contains the error type for the runtime
 //! And some associated utilities
 use crate::Module;
-use deno_core::error::CoreError;
+use deno_core::error::CoreErrorKind;
 use std::path::PathBuf;
 use thiserror::Error;
 
@@ -234,9 +234,12 @@ map_error!(node_resolver::analyze::TranslateCjsToEsmError, |e| {
 });
 
 map_error!(deno_ast::TranspileError, |e| Error::Runtime(e.to_string()));
-map_error!(deno_core::error::CoreError, |e| match e {
-    CoreError::Js(js_error) => Error::JsError(Box::new(js_error)),
-    _ => Error::Runtime(e.to_string()),
+map_error!(deno_core::error::CoreError, |e| {
+    let e = e.into_kind();
+    match e {
+        CoreErrorKind::Js(js_error) => Error::JsError(Box::new(js_error)),
+        _ => Error::Runtime(e.to_string()),
+    }
 });
 map_error!(std::cell::BorrowMutError, |e| Error::Runtime(e.to_string()));
 map_error!(std::io::Error, |e| Error::ModuleNotFound(e.to_string()));

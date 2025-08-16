@@ -1,8 +1,10 @@
 use deno_ast::{MediaType, ModuleSpecifier};
+use deno_core::FastString;
 use deno_error::JsErrorBox;
 use deno_fs::{FileSystem, RealFs};
 use deno_node::{NodeExtInitServices, NodeRequireLoader, NodeResolver};
 use deno_package_json::{PackageJsonCache, PackageJsonRc};
+use deno_permissions::{CheckedPath, OpenAccessKind};
 use deno_process::NpmProcessStateProvider;
 use deno_resolver::npm::{
     ByonmInNpmPackageChecker, ByonmNpmResolver, ByonmNpmResolverCreateOptions,
@@ -10,14 +12,14 @@ use deno_resolver::npm::{
 };
 use deno_semver::package::PackageReq;
 use node_resolver::{
-    analyze::CjsModuleExportAnalyzer,
+    analyze::{CjsModuleExportAnalyzer, NodeCodeTranslatorMode},
     cache::NodeResolutionSys,
     errors::{
         ClosestPkgJsonError, PackageFolderResolveError, PackageFolderResolveErrorKind,
         PackageNotFoundError,
     },
-    ConditionsFromResolutionMode, DenoIsBuiltInNodeModuleChecker, InNpmPackageChecker,
-    NodeResolutionCache, NpmPackageFolderResolver, PackageJsonResolver, UrlOrPath, UrlOrPathRef,
+    DenoIsBuiltInNodeModuleChecker, InNpmPackageChecker, NodeConditionOptions, NodeResolutionCache,
+    NpmPackageFolderResolver, PackageJsonResolver, UrlOrPath, UrlOrPathRef,
 };
 use serde::{Deserialize, Serialize};
 use std::{
@@ -85,11 +87,15 @@ impl RustyResolver {
             RealSys,
         );
 
-        NodeCodeTranslator::new(module_export_analyzer.into())
+        NodeCodeTranslator::new(
+            module_export_analyzer.into(),
+            NodeCodeTranslatorMode::ModuleLoader,
+        )
     }
 
     /// Returns a node resolver for the resolver
     #[must_use]
+    #[allow(clippy::missing_panics_doc)]
     pub fn node_resolver(
         self: &Arc<Self>,
     ) -> Arc<NodeResolver<DenoInNpmPackageChecker, RustyNpmPackageFolderResolver, RealSys>> {
@@ -100,10 +106,14 @@ impl RustyResolver {
             self.folder_resolver.pjson_resolver(),
             NodeResolutionSys::new(RealSys, Some(self.folder_resolver.resolution_cache())),
             node_resolver::NodeResolverOptions {
-                conditions_from_resolution_mode: ConditionsFromResolutionMode::default(),
                 typescript_version: Some(
-                    deno_semver::Version::parse_standard(TYPESCRIPT_VERSION).unwrap(),
+                    deno_semver::Version::parse_standard(TYPESCRIPT_VERSION)
+                        .expect("Invalid TypeScript version"),
                 ),
+
+                conditions: NodeConditionOptions::default(),
+                is_browser_platform: false,
+                bundle_mode: false,
             },
         )
         .into()
@@ -248,10 +258,10 @@ impl RustyResolver {
     /// and is a directory.
     #[must_use]
     pub fn has_node_modules_dir(&self) -> bool {
-        self.folder_resolver
-            .base_dir()
-            .as_ref()
-            .is_some_and(|d| self.fs.exists_sync(d) && self.fs.is_dir_sync(d))
+        self.folder_resolver.base_dir().as_ref().is_some_and(|d| {
+            let path = CheckedPath::unsafe_new(Cow::Borrowed(d));
+            self.fs.exists_sync(&path) && self.fs.is_dir_sync(&path)
+        })
     }
 
     /// Returns true if the given specifier is a built-in node module
@@ -508,29 +518,31 @@ impl NpmProcessStateProvider for RustyResolver {
 #[derive(Debug)]
 struct RequireLoader(Arc<dyn FileSystem + Send + Sync>);
 impl NodeRequireLoader for RequireLoader {
-    fn load_text_file_lossy(&self, path: &Path) -> Result<Cow<'static, str>, JsErrorBox> {
+    fn load_text_file_lossy(&self, path: &Path) -> Result<FastString, JsErrorBox> {
         let media_type = MediaType::from_path(path);
+        let path = CheckedPath::unsafe_new(Cow::Borrowed(path));
         let text = self
             .0
-            .read_text_file_lossy_sync(path, None)
+            .read_text_file_lossy_sync(&path)
             .map_err(JsErrorBox::from_err)?;
-        Ok(text)
+        Ok(text.into_owned().into())
     }
 
     fn ensure_read_permission<'a>(
         &self,
         permissions: &mut dyn deno_node::NodePermissions,
-        path: &'a Path,
-    ) -> Result<std::borrow::Cow<'a, Path>, JsErrorBox> {
+        path: Cow<'a, Path>,
+    ) -> Result<Cow<'a, Path>, JsErrorBox> {
         let is_in_node_modules = path
             .components()
             .all(|c| c.as_os_str().to_ascii_lowercase() != NODE_MODULES_DIR);
         if is_in_node_modules {
             permissions
-                .check_read_path(Cow::Borrowed(path))
+                .check_open(path, OpenAccessKind::Read, None)
+                .map(CheckedPath::into_path)
                 .map_err(JsErrorBox::from_err)
         } else {
-            Ok(Cow::Borrowed(path))
+            Ok(path)
         }
     }
 

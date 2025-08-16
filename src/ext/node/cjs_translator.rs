@@ -8,6 +8,7 @@ use std::sync::Arc;
 use deno_ast::MediaType;
 use deno_ast::ModuleSpecifier;
 use deno_error::JsErrorBox;
+use deno_permissions::CheckedPathBuf;
 use deno_resolver::npm::DenoInNpmPackageChecker;
 use deno_runtime::deno_fs;
 use node_resolver::analyze::CjsAnalysis as ExtNodeCjsAnalysis;
@@ -159,8 +160,10 @@ impl node_resolver::analyze::CjsCodeAnalyzer for RustyCjsCodeAnalyzer {
             Some(source) => source,
             None => {
                 if let Ok(path) = specifier.to_file_path() {
-                    if let Ok(source_from_file) =
-                        self.fs.read_text_file_lossy_async(path, None).await
+                    if let Ok(source_from_file) = self
+                        .fs
+                        .read_text_file_lossy_async(CheckedPathBuf::unsafe_new(path))
+                        .await
                     {
                         source_from_file
                     } else {

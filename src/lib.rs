@@ -406,8 +406,8 @@ pub use ext::node::resolvers::RustyResolver;
 #[cfg(feature = "web")]
 #[cfg_attr(docsrs, doc(cfg(feature = "web")))]
 pub use ext::web::{
-    AllowlistWebPermissions, DefaultWebPermissions, PermissionDeniedError, SystemsPermissionKind,
-    WebOptions, WebPermissions,
+    AllowlistWebPermissions, CheckedPath, DefaultWebPermissions, PermissionCheckError,
+    PermissionDeniedError, SystemsPermissionKind, WebOptions, WebPermissions,
 };
 pub use ext::ExtensionOptions;
 
@@ -431,9 +431,6 @@ pub use hyper_util;
 
 #[cfg(test)]
 mod test {
-    use crate::{include_module, Error, Module, Runtime, RuntimeOptions};
-
-    static WHITELIST: Module = include_module!("op_whitelist.js");
 
     #[test]
     fn test_readme_deps() {
@@ -448,6 +445,9 @@ mod test {
     #[test]
     #[cfg(not(feature = "web"))]
     fn check_op_whitelist() {
+        use crate::{include_module, Error, Module, Runtime, RuntimeOptions};
+        static WHITELIST: Module = include_module!("op_whitelist.js");
+
         let inner = || -> Result<(), Error> {
             let mut runtime = Runtime::new(RuntimeOptions::default())?;
             runtime.load_module(&WHITELIST)?;
