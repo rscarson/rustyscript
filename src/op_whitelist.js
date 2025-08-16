@@ -18,9 +18,10 @@ export const whitelist = {
     // All core ops MUST preserve the sandbox
     //
 
+    "op_structured_clone": "Harmless",
     "op_import_sync": "Harmless",
     "op_get_extras_binding_object": "Harmless",
-    
+
     "op_leak_tracing_get": "Harmless",
     "op_leak_tracing_get_all": "Harmless",
     "op_leak_tracing_submit": "Harmless",
