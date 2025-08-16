@@ -430,6 +430,9 @@ pub use ext::broadcast_channel::BroadcastChannelWrapper;
 pub use hyper_util;
 
 #[cfg(test)]
+mod op_whitelist;
+
+#[cfg(test)]
 mod test {
 
     #[test]

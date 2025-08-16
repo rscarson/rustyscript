@@ -5,7 +5,7 @@ use deno_core::{
     v8::{BackingStore, SharedRef},
     CrossIsolateStore, Extension, ExtensionFileSource,
 };
-use deno_permissions::Permissions;
+use deno_runtime::deno_permissions::Permissions;
 use deno_runtime::permissions::RuntimePermissionDescriptorParser;
 use deno_telemetry::OtelConfig;
 use sys_traits::impls::RealSys;
