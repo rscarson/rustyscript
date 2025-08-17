@@ -1,7 +1,7 @@
-///
-/// This example shows how to use the threaded worker feature using the default worker implementation
-/// In this example we load a module, and execute a function from it
-///
+//!
+//! This example shows how to use the threaded worker feature using the default worker implementation
+//! In this example we load a module, and execute a function from it
+//!
 use rustyscript::{worker::DefaultWorker, Error, Module};
 
 fn main() -> Result<(), Error> {

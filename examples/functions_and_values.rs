@@ -1,10 +1,10 @@
-///
-/// This example demonstrates how to extract values, and call functions
-/// from rust into JS
-///
-/// The sample below extracts a value which is deserialized to a custom struct
-/// as well as calling a function in JS from rust
-///
+//!
+//! This example demonstrates how to extract values, and call functions
+//! from rust into JS
+//!
+//! The sample below extracts a value which is deserialized to a custom struct
+//! as well as calling a function in JS from rust
+//!
 use rustyscript::{deno_core::serde::Deserialize, json_args, Error, Module, Runtime};
 
 #[derive(PartialEq, Debug, Deserialize)]

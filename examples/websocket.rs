@@ -1,8 +1,8 @@
-///
-/// This example demonstrates a use for the websockets extension.
-/// It will open a connection to the echo server at wss://echo.websocket.org
-/// Send a message 'ping', wait for a response, and then close the connection.
-///
+//!
+//! This example demonstrates a use for the websockets extension.
+//! It will open a connection to the echo server at wss://echo.websocket.org
+//! Send a message 'ping', wait for a response, and then close the connection.
+//!
 use rustyscript::{json_args, Error, Module, Runtime, RuntimeOptions, Undefined};
 
 fn main() -> Result<(), Error> {

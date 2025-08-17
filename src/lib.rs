@@ -429,9 +429,11 @@ pub use ext::broadcast_channel::BroadcastChannelWrapper;
 #[cfg_attr(docsrs, doc(cfg(feature = "web")))]
 pub use hyper_util;
 
+#[cfg(feature = "op_whitelist")]
+pub mod op_whitelist;
+
 #[cfg(test)]
 mod test {
-
     #[test]
     fn test_readme_deps() {
         version_sync::assert_markdown_deps_updated!("readme.md");
@@ -440,36 +442,5 @@ mod test {
     #[test]
     fn test_html_root_url() {
         version_sync::assert_html_root_url_updated!("src/lib.rs");
-    }
-
-    #[test]
-    #[cfg(not(feature = "web"))]
-    fn check_op_whitelist() {
-        use crate::{include_module, Error, Module, Runtime, RuntimeOptions};
-        static WHITELIST: Module = include_module!("op_whitelist.js");
-
-        let inner = || -> Result<(), Error> {
-            let mut runtime = Runtime::new(RuntimeOptions::default())?;
-            runtime.load_module(&WHITELIST)?;
-            let hnd = runtime.load_module(&Module::new(
-                "test_whitelist.js",
-                "
-                import { whitelist } from './op_whitelist.js';
-                let ops = Deno.core.ops.op_op_names();
-                export const unsafe_ops = ops.filter(op => !whitelist.hasOwnProperty(op));
-            ",
-            ))?;
-
-            let unsafe_ops: Vec<String> = runtime.get_value(Some(&hnd), "unsafe_ops")?;
-
-            if !unsafe_ops.is_empty() {
-                eprintln!("Found unsafe ops: {unsafe_ops:?}.\nOnce confirmed safe, add them to `src/op_whitelist.js`");
-                panic!("Whitelist test failed");
-            }
-
-            Ok(())
-        };
-
-        inner().expect("Could not verify op safety");
     }
 }

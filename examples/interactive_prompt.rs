@@ -1,3 +1,6 @@
+//!
+//! This example demonstrates an interactive prompt for evaluating JavaScript expressions
+//!
 use rustyscript::{Runtime, RuntimeOptions};
 
 fn main() {

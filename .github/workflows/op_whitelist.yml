@@ -1,20 +1,19 @@
 name: Sandbox integrity checks
 on:
   push:
-    branches: [ master ]
+    branches: [master]
   pull_request:
-    branches: [ master ]
+    branches: [master]
 
 env:
   CARGO_TERM_COLOR: always
 
 jobs:
   build:
-
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-    - name: Run whitelist check for default-feature provided ops
-      run: cargo test --lib -- test::check_op_whitelist --exact --show-output  
+      - name: Run whitelist check for default-feature provided ops
+        run: cargo run --example op_whitelist --features op_whitelist

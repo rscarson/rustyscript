@@ -1,11 +1,11 @@
-///
-/// rustyscript is not thread-safe
-/// This is due to a limitation of the underlying engine, deno_core
-/// However, rustyscript provides a mechanism to safely use it in a static context
-///
-/// See `examples/default_threaded_worker` and `examples/custom_threaded_worker`
-/// for a more flexible way to run rustyscript in a threaded environment
-///
+//!
+//! rustyscript is not thread-safe
+//! This is due to a limitation of the underlying engine, deno_core
+//! However, rustyscript provides a mechanism to safely use it in a static context
+//!
+//! See `examples/default_threaded_worker` and `examples/custom_threaded_worker`
+//! for a more flexible way to run rustyscript in a threaded environment
+//!
 use rustyscript::{module, static_runtime, Error, Module, RuntimeOptions};
 use std::time::Duration;
 

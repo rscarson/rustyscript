@@ -1,12 +1,12 @@
-///
-/// This example shows how to add deno_core extensions into the runtime.
-///
-/// Extensions like the one being used (see examples/ext/example_extension.rs)
-/// allow you to call rust code from within JS
-///
-/// Extensions consist of a set of #[op2] functions, an extension! macro,
-/// and one or more optional JS modules.
-///
+//!
+//! This example shows how to add deno_core extensions into the runtime.
+//!
+//! Extensions like the one being used (see examples/ext/example_extension.rs)
+//! allow you to call rust code from within JS
+//!
+//! Extensions consist of a set of #[op2] functions, an extension! macro,
+//! and one or more optional JS modules.
+//!
 use rustyscript::{Error, Module, Runtime, RuntimeOptions};
 use std::collections::HashSet;
 

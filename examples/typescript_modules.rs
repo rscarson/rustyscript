@@ -1,22 +1,22 @@
-///
-/// This example shows a basic usage of the runtime
-/// with Typescript modules
-///
-/// They will get transpiled automatically into JS, but
-/// provide no type checking at this time
-///
-/// The call to Runtime::execute_module is a one liner which:
-/// - Creates a new runtime with the given options
-/// - Loads the modules passed in
-/// - Calls the module's entrypoint function
-///     - Either a default passed as an option
-///     - Or the module's default export
-///     - Or a call in JS to rustyscript.register_entrypoint
-/// - Returns the result
-///
-/// Instead of just vec![], one could pass in other JS modules
-/// which could be imported using `import './filename.js';`
-///
+//!
+//! This example shows a basic usage of the runtime
+//! with Typescript modules
+//!
+//! They will get transpiled automatically into JS, but
+//! provide no type checking at this time
+//!
+//! The call to Runtime::execute_module is a one liner which:
+//! - Creates a new runtime with the given options
+//! - Loads the modules passed in
+//! - Calls the module's entrypoint function
+//!     - Either a default passed as an option
+//!     - Or the module's default export
+//!     - Or a call in JS to rustyscript.register_entrypoint
+//! - Returns the result
+//!
+//! Instead of just vec![], one could pass in other JS modules
+//! which could be imported using `import './filename.js';`
+//!
 use rustyscript::{json_args, Error, Module, Runtime};
 
 fn main() -> Result<(), Error> {

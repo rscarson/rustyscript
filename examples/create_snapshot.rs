@@ -1,11 +1,12 @@
-///
-/// This example demonstrates how to create a snapshot from a module and save it to a file.
-/// Snapshots can be used to massively decrease the startup time of a Runtime instance (15ms -> 3ms) by pre-loading
-/// extensions and modules into the runtime state before it is created. A snapshot can be used on any runtime with
-/// the same set of extensions and options as the runtime that created it.
-///
-use rustyscript::{Error, Module, SnapshotBuilder};
+//!
+//! This example demonstrates how to create a snapshot from a module and save it to a file.
+//! Snapshots can be used to massively decrease the startup time of a Runtime instance (15ms -> 3ms) by pre-loading
+//! extensions and modules into the runtime state before it is created. A snapshot can be used on any runtime with
+//! the same set of extensions and options as the runtime that created it.
+//!
 use std::fs;
+
+use rustyscript::{Error, Module, SnapshotBuilder};
 
 fn main() -> Result<(), Error> {
     // A module we want pre-loaded into the snapshot

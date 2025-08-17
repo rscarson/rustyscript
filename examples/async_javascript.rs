@@ -1,13 +1,13 @@
-///
-/// This example shows the use of async functions in JS
-///
-/// Here we have a module with 4 async functions that resolve after a given time
-/// We call them in sequence and await the results
-///
-/// Notes:
-/// - When using the async variants of the functions it is important to complete the JS event loop with [Runtime::await_event_loop]
-/// - Async variants will wait for the function's return value to resolve, but will not wait for the event loop to complete
-///
+//!
+//! This example shows the use of async functions in JS
+//!
+//! Here we have a module with 4 async functions that resolve after a given time
+//! We call them in sequence and await the results
+//!
+//! Notes:
+//! - When using the async variants of the functions it is important to complete the JS event loop with [Runtime::await_event_loop]
+//! - Async variants will wait for the function's return value to resolve, but will not wait for the event loop to complete
+//!
 use rustyscript::{js_value::Promise, json_args, Error, Module, Runtime};
 
 fn main() -> Result<(), Error> {

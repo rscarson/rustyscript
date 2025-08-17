@@ -1,6 +1,6 @@
-///
-/// This example demonstrates how to use the worker pool to run multiple workers in parallel.
-///
+//!
+//! This example demonstrates how to use the worker pool to run multiple workers in parallel.
+//!
 use rustyscript::{
     worker::{DefaultWorker, DefaultWorkerQuery, WorkerPool},
     Error, Module,

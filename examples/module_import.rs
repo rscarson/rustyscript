@@ -1,10 +1,10 @@
-///
-/// This example is meant to demonstrate the use of the import utility
-///
-/// It acts as a wrapper around a runtime with a single loaded module
-/// and is meant to simplify usecases where multiple JS sources isn't
-/// needed
-///
+//!
+//! This example is meant to demonstrate the use of the import utility
+//!
+//! It acts as a wrapper around a runtime with a single loaded module
+//! and is meant to simplify usecases where multiple JS sources isn't
+//! needed
+//!
 use rustyscript::{js_value::Function, json_args, Error, Undefined};
 
 fn main() -> Result<(), Error> {

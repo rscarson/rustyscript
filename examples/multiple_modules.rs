@@ -1,3 +1,6 @@
+//!
+//! This example demonstrates the use of multiple modules in rustyscript, in a single runtime
+//!
 use rustyscript::{json_args, module, Error, Module, Runtime, RuntimeOptions, Undefined};
 
 // This time we will embed this module into the executable directly.

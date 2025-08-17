@@ -1,7 +1,7 @@
-///
-/// This example shows how to use `Runtime::eval` to run async code
-/// Note that there is no support for top-level await but you can use `Promise` to work around this
-///
+//!
+//! This example shows how to use `Runtime::eval` to run async code
+//! Note that there is no support for top-level await but you can use `Promise` to work around this
+//!
 use rustyscript::{js_value::Promise, Error, Runtime};
 
 fn main() -> Result<(), Error> {

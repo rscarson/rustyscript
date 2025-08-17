@@ -148,6 +148,10 @@ snapshot_builder = []
 # Enables the threaded worker API
 worker = []
 
+# Grants access to op_whitelist::get_whitelist
+# Used in CI to prevent vulnerabilities!
+op_whitelist = []
+
 #
 # End of feature definitions
 #
@@ -290,6 +294,10 @@ required-features = ["node_experimental"]
 [[example]]
 name = "background_tasks"
 required-features = ["web"]
+
+[[example]]
+name = "op_whitelist"
+required-features = ["op_whitelist"]
 
 [[bench]]
 name = "runtime"

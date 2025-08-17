@@ -1,13 +1,13 @@
-///
-/// This example is meant to demonstrate the basic usage of entrypoint functions
-///
-/// A module can optionally have an entrypoint function (that can return a value and accept args)
-/// which can be called from rust on load.
-///
-/// The same effect can be achieved by calling a function later, so they are optional
-/// They are most useful in the context of Runtime::execute_module, which can be seen
-/// in the 'hello_world' example.
-///
+//!
+//! This example is meant to demonstrate the basic usage of entrypoint functions
+//!
+//! A module can optionally have an entrypoint function (that can return a value and accept args)
+//! which can be called from rust on load.
+//!
+//! The same effect can be achieved by calling a function later, so they are optional
+//! They are most useful in the context of Runtime::execute_module, which can be seen
+//! in the 'hello_world' example.
+//!
 use rustyscript::{json_args, Error, Module, Runtime, RuntimeOptions, Undefined};
 
 fn main() -> Result<(), Error> {

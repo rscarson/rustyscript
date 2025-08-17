@@ -1,11 +1,12 @@
-use rustyscript::{json_args, Error, Module, Runtime, RuntimeOptions};
-///
-/// This example shows features requiring the 'web' feature to work
-/// Stuff like setTimeout, atob/btoa, file reads and fetch are all examples
-///
-/// We will focus on timers and fetch here
-///
+//!
+//! This example shows features requiring the 'web' feature to work
+//! Stuff like setTimeout, atob/btoa, file reads and fetch are all examples
+//!
+//! We will focus on timers and fetch here
+//!
 use std::time::Duration;
+
+use rustyscript::{json_args, Error, Module, Runtime, RuntimeOptions};
 
 fn main() -> Result<(), Error> {
     // This module has an async function, which is not itself a problem

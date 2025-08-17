@@ -1,7 +1,7 @@
-///
-/// This example is meant to demonstrate sending and receiving custom types
-/// between JS and rust
-///
+//!
+//! This example is meant to demonstrate sending and receiving custom types
+//! between JS and rust
+//!
 use rustyscript::{module, Error, Module, ModuleWrapper};
 use serde::{Deserialize, Serialize};
 

@@ -1,7 +1,7 @@
-///
-/// This example is meant to demonstrate the use of the runtime state, as well as the
-/// registration of rust functions that are callable from JS
-///
+//!
+//! This example is meant to demonstrate the use of the runtime state, as well as the
+//! registration of rust functions that are callable from JS
+//!
 use rustyscript::{async_callback, serde_json, sync_callback, Error, Module, Runtime};
 
 fn main() -> Result<(), Error> {

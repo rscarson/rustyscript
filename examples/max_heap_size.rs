@@ -1,8 +1,8 @@
-///
-/// This example shows how to set the maximum heap size for the V8 isolate.
-/// This is useful when you want to limit the amount of memory a script can consume.
-/// A `HeapExhausted` error will be returned if the script exceeds the limit.
-///
+//!
+//! This example shows how to set the maximum heap size for the V8 isolate.
+//! This is useful when you want to limit the amount of memory a script can consume.
+//! A `HeapExhausted` error will be returned if the script exceeds the limit.
+//!
 use rustyscript::{Error, Module, Runtime, RuntimeOptions};
 
 fn main() -> Result<(), Error> {
