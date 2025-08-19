@@ -158,7 +158,7 @@ op_whitelist = []
 
 [dependencies]
 maybe_path = "0.1.3"
-thiserror = "^2.0.14"
+thiserror = "^2.0.15"
 serde = "^1.0.149"
 
 # Used for NodeJS compatibility and other features
