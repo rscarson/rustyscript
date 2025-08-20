@@ -6,7 +6,8 @@ use crate::{traits::ToModuleSpecifier, Error, Module, ModuleWrapper, Runtime, Ru
 
 /// Evaluate a piece of non-ECMAScript-module JavaScript code
 ///
-/// Effects on the global scope will not persist  
+/// Effects on the global scope will not persist
+///
 /// For a persistant variant, see [`Runtime::eval`]
 ///
 /// # Arguments
@@ -17,7 +18,8 @@ use crate::{traits::ToModuleSpecifier, Error, Module, ModuleWrapper, Runtime, Ru
 /// or an error if execution fails, or the result cannot be deserialized.
 ///
 /// # Errors
-/// Will return an error if the runtime cannot be started (usually due to extension issues)  
+/// Will return an error if the runtime cannot be started (usually due to extension issues)
+///
 /// Or if the expression is invalid, or if the result cannot be deserialized into the given type
 ///
 /// # Example
@@ -43,7 +45,8 @@ where
 /// A `Result` containing a boolean determining the validity of the JS
 ///
 /// # Errors
-/// Will return an error if the runtime cannot be started (usually due to extension issues)  
+/// Will return an error if the runtime cannot be started (usually due to extension issues)
+///
 /// Or if something went wrong and the validity could not be determined
 ///
 /// # Example
@@ -90,8 +93,9 @@ pub fn import(path: &str) -> Result<ModuleWrapper, Error> {
 ///
 /// # Arguments
 /// * `path` - A path
-/// * `base_dir` - An optional base directory to resolve the path from  
-///                If not provided, the current working directory is used
+/// * `base_dir` - An optional base directory to resolve the path from
+///
+/// If `base_dir` is not provided, the current working directory is used
 ///
 /// # Errors
 /// Will return an error if the given path is invalid
@@ -114,7 +118,8 @@ pub fn resolve_path(
     Ok(url)
 }
 
-/// Explicitly initialize the V8 platform  
+/// Explicitly initialize the V8 platform
+///
 /// Note that all runtimes must have a common parent thread that initalized the V8 platform
 ///
 /// This is done automatically the first time [`Runtime::new`] is called,
@@ -128,10 +133,12 @@ pub fn init_platform(thread_pool_size: u32, idle_task_support: bool) {
 mod runtime_macros {
     /// Map a series of values into a form which javascript functions can understand
     ///
-    /// Accepts a maximum of 16 arguments, of any combination of compatible types  
+    /// Accepts a maximum of 16 arguments, of any combination of compatible types
+    ///
     /// For more than 16 arguments, use `big_json_args!` instead
     ///
-    /// NOTE: Since 0.6.0, this macro is now effectively a no-op  
+    /// NOTE: Since 0.6.0, this macro is now effectively a no-op
+    ///
     /// It simply builds a tuple reference from the provided arguments
     ///
     /// You can also just pass a &tuple directly, or an &array, or even a single value
@@ -165,12 +172,14 @@ mod runtime_macros {
         };
     }
 
-    /// Map a series of values into a form which javascript functions can understand  
+    /// Map a series of values into a form which javascript functions can understand
+    ///
     /// This forms a `Vec<serde_json::Value>` from the provided arguments
     ///
     /// Useful if you need more than 16 arguments for a single function call
     ///
-    /// Warning: This macro is far slower than `json_args!` and should be used sparingly  
+    /// Warning: This macro is far slower than `json_args!` and should be used sparingly
+    ///
     /// Benchmarks place the performance difference at nearly 1,000 times slower!
     ///
     /// # Example
@@ -204,7 +213,8 @@ mod runtime_macros {
         };
     }
 
-    /// A simple helper macro to create a callback for use with `Runtime::register_function`  
+    /// A simple helper macro to create a callback for use with `Runtime::register_function`
+    ///
     /// Takes care of deserializing arguments and serializing the result
     ///
     /// # Example
@@ -233,7 +243,8 @@ mod runtime_macros {
         }
     }
 
-    /// A simple helper macro to create a callback for use with `Runtime::register_async_function`  
+    /// A simple helper macro to create a callback for use with `Runtime::register_async_function`
+    ///
     /// Takes care of deserializing arguments and serializing the result
     ///
     /// # Example

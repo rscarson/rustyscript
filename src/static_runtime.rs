@@ -100,7 +100,8 @@ pub struct StaticRuntime {
 impl StaticRuntime {
     /// Create a new static runtime instance
     ///
-    /// WARNING: This method should not be used directly, use the `static_runtime!` macro instead  
+    /// WARNING: This method should not be used directly, use the `static_runtime!` macro instead
+    ///
     /// Using this function will not encase the runtime in a `thread_local`, making it potentially unsafe
     pub const fn new(init_options: fn() -> RuntimeOptions) -> Self {
         Self {

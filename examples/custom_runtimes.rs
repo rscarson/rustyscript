@@ -11,7 +11,9 @@
 //! Extensions consist of a set of #[op2] functions, an extension! macro,
 //! and one or more optional JS modules.
 //!
-use rustyscript::{module, Error, Module, ModuleHandle, Runtime, RuntimeOptions};
+use rustyscript::{
+    module, Error, ExtensionList, ExtensionOptions, Module, ModuleHandle, Runtime, RuntimeOptions,
+};
 use std::time::Duration;
 
 // See example_extension for a demonstration
@@ -32,8 +34,10 @@ pub struct MyRuntime(Runtime);
 impl MyRuntime {
     /// Create a new instance of the runtime
     pub fn new() -> Result<Self, Error> {
+        let extension = example_extension::example_extension::init();
         let mut runtime = Self(Runtime::new(RuntimeOptions {
-            extensions: vec![example_extension::example_extension::init()],
+            extensions: ExtensionList::new_default(ExtensionOptions::default())
+                .with_appended(extension),
             timeout: Duration::from_millis(500),
             ..Default::default()
         })?);

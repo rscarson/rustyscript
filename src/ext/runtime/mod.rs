@@ -5,15 +5,18 @@ use deno_core::{
     v8::{BackingStore, SharedRef},
     CrossIsolateStore, Extension, ExtensionFileSource,
 };
-use deno_runtime::deno_permissions::Permissions;
-use deno_runtime::permissions::RuntimePermissionDescriptorParser;
+use deno_runtime::{
+    deno_permissions::Permissions, fmt_errors::format_js_error,
+    permissions::RuntimePermissionDescriptorParser,
+};
 use deno_telemetry::OtelConfig;
 use sys_traits::impls::RealSys;
 
-use super::{
-    node::resolvers::RustyResolver, web::PermissionsContainer, ExtensionOptions, ExtensionTrait,
+use super::{node::resolvers::RustyResolver, web::PermissionsContainer, ExtensionOptions};
+use crate::{
+    ext::ExtensionList,
+    module_loader::{LoaderOptions, RustyLoader},
 };
-use crate::module_loader::{LoaderOptions, RustyLoader};
 
 fn build_permissions(
     permissions_container: &PermissionsContainer,
@@ -28,8 +31,8 @@ fn build_permissions(
 // However that extension lists nearly all others as dependencies so
 // It will always be the last initialized extension
 extension!(
-    init_runtime,
-    esm_entry_point = "ext:init_runtime/init_runtime.js",
+    runtime,
+    esm_entry_point = "ext:runtime/init_runtime.js",
     esm = [ dir "src/ext/runtime",  "init_runtime.js" ],
     state = |state| {
         let options = BootstrapOptions {
@@ -50,99 +53,33 @@ extension!(
         );
     }
 );
-impl ExtensionTrait<()> for init_runtime {
-    fn init((): ()) -> Extension {
-        init_runtime::init()
-    }
-}
 
-impl ExtensionTrait<()> for deno_runtime::runtime {
-    fn init((): ()) -> Extension {
-        let mut e = deno_runtime::runtime::init();
-        e.esm_entry_point = None;
-        e
-    }
-}
+pub fn load(extensions: &mut ExtensionList) {
+    let options = extensions.options();
+    let shared_array_buffer_store = options.shared_array_buffer_store.clone();
 
-use deno_runtime::fmt_errors::format_js_error;
-use deno_runtime::ops::permissions::deno_permissions;
-impl ExtensionTrait<()> for deno_permissions {
-    fn init((): ()) -> Extension {
-        deno_permissions::init()
-    }
-}
+    let worker_callback = create_web_worker_callback(WebWorkerCallbackOptions::new(
+        options,
+        shared_array_buffer_store,
+    ));
 
-use deno_runtime::ops::worker_host::{deno_worker_host, CreateWebWorkerCb};
-impl
-    ExtensionTrait<(
-        &ExtensionOptions,
-        Option<CrossIsolateStore<SharedRef<BackingStore>>>,
-    )> for deno_worker_host
-{
-    fn init(
-        options: (
-            &ExtensionOptions,
-            Option<CrossIsolateStore<SharedRef<BackingStore>>>,
-        ),
-    ) -> Extension {
-        let options = WebWorkerCallbackOptions::new(options.0, options.1);
-        let callback = create_web_worker_callback(options);
-        deno_worker_host::init(callback, None)
-    }
-}
+    let mut runtime = deno_runtime::runtime::init();
+    runtime.esm_entry_point = None;
 
-use deno_runtime::ops::web_worker::deno_web_worker;
-impl ExtensionTrait<()> for deno_web_worker {
-    fn init((): ()) -> Extension {
-        deno_web_worker::init()
-    }
-}
+    let os_exitcode = deno_runtime::deno_os::ExitCode::default();
 
-use deno_process::deno_process;
-impl ExtensionTrait<Arc<RustyResolver>> for deno_process {
-    fn init(resolver: Arc<RustyResolver>) -> Extension {
-        deno_process::init(Some(resolver))
-    }
-}
-
-use deno_runtime::deno_os::{deno_os, ExitCode};
-impl ExtensionTrait<()> for deno_os {
-    fn init((): ()) -> Extension {
-        deno_os::init(Some(ExitCode::default()))
-    }
-}
-
-use deno_runtime::ops::bootstrap::deno_bootstrap;
-impl ExtensionTrait<()> for deno_bootstrap {
-    fn init((): ()) -> Extension {
-        deno_bootstrap::init(None, false)
-    }
-}
-
-use deno_runtime::ops::fs_events::deno_fs_events;
-impl ExtensionTrait<()> for deno_fs_events {
-    fn init((): ()) -> Extension {
-        deno_fs_events::init()
-    }
-}
-
-pub fn extensions(
-    options: &ExtensionOptions,
-    shared_array_buffer_store: Option<CrossIsolateStore<SharedRef<BackingStore>>>,
-    is_snapshot: bool,
-) -> Vec<Extension> {
-    vec![
-        deno_fs_events::build((), is_snapshot),
-        deno_bootstrap::build((), is_snapshot),
-        deno_os::build((), is_snapshot),
-        deno_process::build(options.node_resolver.clone(), is_snapshot),
-        deno_web_worker::build((), is_snapshot),
-        deno_worker_host::build((options, shared_array_buffer_store), is_snapshot),
-        deno_permissions::build((), is_snapshot),
+    extensions.extend([
+        deno_runtime::ops::fs_events::deno_fs_events::init(),
+        deno_runtime::ops::bootstrap::deno_bootstrap::init(None, false),
+        deno_runtime::deno_os::deno_os::init(Some(os_exitcode)),
+        deno_process::deno_process::init(Some(options.node_resolver.clone())),
+        deno_runtime::ops::web_worker::deno_web_worker::init(),
+        deno_runtime::ops::worker_host::deno_worker_host::init(worker_callback, None),
+        deno_runtime::ops::permissions::deno_permissions::init(),
         //
-        deno_runtime::runtime::build((), is_snapshot),
-        init_runtime::build((), is_snapshot),
-    ]
+        runtime,
+        runtime::init(),
+    ]);
 }
 
 use deno_runtime::web_worker::{WebWorker, WebWorkerOptions, WebWorkerServiceOptions};
@@ -180,7 +117,9 @@ impl WebWorkerCallbackOptions {
 }
 
 // Copyright 2018-2024 the Deno authors. All rights reserved. MIT license.
-fn create_web_worker_callback(options: WebWorkerCallbackOptions) -> Arc<CreateWebWorkerCb> {
+fn create_web_worker_callback(
+    options: WebWorkerCallbackOptions,
+) -> Arc<deno_runtime::ops::worker_host::CreateWebWorkerCb> {
     Arc::new(move |args| {
         let node_resolver = options.node_resolver.clone();
         let module_loader = Rc::new(RustyLoader::new(LoaderOptions {

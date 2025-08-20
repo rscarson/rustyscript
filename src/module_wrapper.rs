@@ -180,7 +180,8 @@ impl ModuleWrapper {
             .await
     }
 
-    /// Calls a function in the module with the given name and arguments and deserializes the result.  
+    /// Calls a function in the module with the given name and arguments and deserializes the result.
+    ///
     /// Does not await promises or the event loop.
     ///
     /// See [`Runtime::call_function_immediate`]
@@ -279,7 +280,8 @@ impl ModuleWrapper {
             .call_stored_function_immediate(Some(&self.module_context), function, args)
     }
 
-    /// Retrieves the names of the module's exports.  
+    /// Retrieves the names of the module's exports.
+    ///
     /// (Keys that are not valid UTF-8, may not work as intended due to encoding issues)
     ///
     /// # Returns

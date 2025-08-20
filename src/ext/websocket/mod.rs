@@ -1,7 +1,8 @@
-use deno_core::{extension, url::Url, Extension};
+use deno_core::{extension, url::Url};
 use deno_permissions::PermissionCheckError;
 
-use super::{web::PermissionsContainer, web::WebOptions, ExtensionTrait};
+use super::web::PermissionsContainer;
+use crate::ext::ExtensionList;
 
 impl deno_websocket::WebSocketPermissions for PermissionsContainer {
     fn check_net_url(&mut self, url: &Url, api_name: &str) -> Result<(), PermissionCheckError> {
@@ -11,29 +12,20 @@ impl deno_websocket::WebSocketPermissions for PermissionsContainer {
 }
 
 extension!(
-    init_websocket,
+    websocket,
     deps = [rustyscript],
-    esm_entry_point = "ext:init_websocket/init_websocket.js",
+    esm_entry_point = "ext:websocket/init_websocket.js",
     esm = [ dir "src/ext/websocket", "init_websocket.js" ],
 );
-impl ExtensionTrait<()> for init_websocket {
-    fn init((): ()) -> Extension {
-        init_websocket::init()
-    }
-}
-impl ExtensionTrait<WebOptions> for deno_websocket::deno_websocket {
-    fn init(options: WebOptions) -> Extension {
-        deno_websocket::deno_websocket::init::<PermissionsContainer>(
-            options.user_agent,
-            options.root_cert_store_provider,
-            options.unsafely_ignore_certificate_errors,
-        )
-    }
-}
 
-pub fn extensions(options: WebOptions, is_snapshot: bool) -> Vec<Extension> {
-    vec![
-        deno_websocket::deno_websocket::build(options, is_snapshot),
-        init_websocket::build((), is_snapshot),
-    ]
+pub fn load(extensions: &mut ExtensionList) {
+    let options = extensions.options();
+    let user_agent = options.web.user_agent.clone();
+    let store = options.web.root_cert_store_provider.clone();
+    let unsafe_ssl = options.web.unsafely_ignore_certificate_errors.clone();
+
+    extensions.extend([
+        deno_websocket::deno_websocket::init::<PermissionsContainer>(user_agent, store, unsafe_ssl),
+        websocket::init(),
+    ]);
 }

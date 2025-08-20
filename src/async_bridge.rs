@@ -51,7 +51,8 @@ pub struct AsyncBridge {
 }
 
 impl AsyncBridge {
-    /// Creates a new instance with the provided options.  
+    /// Creates a new instance with the provided options.
+    ///
     /// A new tokio runtime will be created with the provided timeout.
     pub fn new(timeout: std::time::Duration) -> Result<Self, Error> {
         let tokio = Rc::new(

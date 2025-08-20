@@ -22,7 +22,7 @@ use std::{
     thread::{spawn, JoinHandle},
 };
 
-use crate::{Error, RuntimeOptions};
+use crate::{ext::ExtensionList, Error, RuntimeOptions};
 
 /// A pool of worker threads that can be used to run javascript code in parallel
 /// Uses a round-robin strategy to distribute work between workers
@@ -372,13 +372,7 @@ impl InnerWorker for DefaultWorker {
     type Response = DefaultWorkerResponse;
 
     fn init_runtime(options: Self::RuntimeOptions) -> Result<Self::Runtime, Error> {
-        let runtime = crate::Runtime::new(crate::RuntimeOptions {
-            default_entrypoint: options.default_entrypoint,
-            timeout: options.timeout,
-            shared_array_buffer_store: options.shared_array_buffer_store,
-            startup_snapshot: options.startup_snapshot,
-            ..Default::default()
-        })?;
+        let runtime = crate::Runtime::new(options.into())?;
         let modules = std::collections::HashMap::new();
         Ok((runtime, modules))
     }
@@ -623,8 +617,18 @@ impl AsRef<Worker<DefaultWorker>> for DefaultWorker {
 }
 
 /// Options for the default worker
-#[derive(Default, Clone)]
+#[derive(Clone, Default)]
 pub struct DefaultWorkerOptions {
+    /// A function returning a set of js extensions to add to the runtime
+    ///
+    /// Uses the default set defined by the active crate features if not provided
+    ///
+    /// [`ExtensionList::new_default`] can be used to create a set of extensions defined
+    /// by the active crate features
+    ///
+    /// You can then use [`ExtensionList::append`] to add additional extensions
+    pub extensions: Option<fn() -> ExtensionList>,
+
     /// The default entrypoint function to use if none is registered
     pub default_entrypoint: Option<String>,
 
@@ -635,10 +639,24 @@ pub struct DefaultWorkerOptions {
     /// This will reduce load times, but requires the same extensions to be loaded
     /// as when the snapshot was created
     pub startup_snapshot: Option<&'static [u8]>,
+}
+impl From<DefaultWorkerOptions> for RuntimeOptions {
+    fn from(value: DefaultWorkerOptions) -> Self {
+        let extensions = if let Some(ext_fn) = value.extensions {
+            (ext_fn)()
+        } else {
+            ExtensionList::new_default(crate::ExtensionOptions::default())
+        };
 
-    /// Optional shared array buffer store to use for the runtime
-    /// Allows data-sharing between runtimes across threads
-    pub shared_array_buffer_store: Option<deno_core::SharedArrayBufferStore>,
+        Self {
+            extensions,
+            default_entrypoint: value.default_entrypoint,
+            timeout: value.timeout,
+            startup_snapshot: value.startup_snapshot,
+
+            ..Default::default()
+        }
+    }
 }
 
 /// Query types for the default worker

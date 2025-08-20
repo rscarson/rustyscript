@@ -10,21 +10,26 @@
 //!
 //! rustyscript provides a quick and simple way to integrate a runtime javascript or typescript component from within Rust.
 //!
-//! It uses the v8 engine through the `deno_core` crate, and aims to be as simple as possible to use without sacrificing flexibility or performance.  
+//! It uses the v8 engine through the `deno_core` crate, and aims to be as simple as possible to use without sacrificing flexibility or performance.
+//!
 //! I also have attempted to abstract away the v8 engine details so you can for the most part operate directly on rust types.
 //!
 //!
-//! **Sandboxed**  
-//! By default, the code being run is entirely sandboxed from the host, having no filesystem or network access.  
+//! **Sandboxed**
+//!
+//! By default, the code being run is entirely sandboxed from the host, having no filesystem or network access.
+//!
 //! [extensions](https://rscarson.github.io/rustyscript-book/extensions) can be added to grant additional capabilities that may violate sandboxing
 //!
-//! **Flexible**  
+//! **Flexible**
+//!
 //! The runtime is designed to be as flexible as possible, allowing you to modify capabilities, the module loader, and more.  
 //! - Asynchronous JS is fully supported, and the runtime can be configured to run in a multithreaded environment.  
-//! - Typescript is supported, and will be transpired into JS for execution.
+//! - Typescript is supported, and will be transpiled into JS for execution.
 //! - Node JS is supported experimentally, but is not yet fully compatible ([See the `NodeJS` Compatibility section](https://rscarson.github.io/rustyscript-book/advanced/nodejs_compatibility.md))
 //!
-//! **Unopinionated**  
+//! **Unopinionated**
+//!
 //! Rustyscript is designed to be a thin wrapper over the Deno runtime, to remove potential pitfalls and simplify the API without sacrificing flexibility or performance.
 //!
 //! -----
@@ -285,12 +290,13 @@
 //!
 #![warn(missing_docs)]
 #![warn(clippy::pedantic)]
-#![allow(clippy::module_name_repetitions)] //   Does not account for crate-level re-exports
-#![allow(clippy::inline_always)] //             Does not account for deno_core's use of inline(always) on op2
-#![allow(clippy::needless_pass_by_value)] //    Disabling some features can trigger this
-#![allow(clippy::result_large_err)] //          Some Deno types trigger this
-#![allow(clippy::doc_comment_double_space_linebreaks)]
-#![allow(clippy::doc_overindented_list_items)]
+#![allow(clippy::module_name_repetitions)] //             Does not account for crate-level re-exports
+#![allow(clippy::inline_always)] //                       Does not account for deno_core's use of inline(always) on op2
+#![allow(clippy::needless_pass_by_value)] //              Disabling some features can trigger this
+#![allow(clippy::result_large_err)]
+//                    Some Deno types trigger this
+//#![allow(clippy::doc_comment_double_space_linebreaks)] // This one I just dislike
+//#![allow(clippy::doc_overindented_list_items)] //         This one I also dislike
 #![cfg_attr(docsrs, feature(doc_cfg))]
 
 #[cfg(feature = "snapshot_builder")]
@@ -414,6 +420,7 @@ pub use ext::ExtensionOptions;
 // Expose some important stuff from us
 pub use async_bridge::TokioRuntime;
 pub use error::Error;
+pub use ext::ExtensionList;
 pub use inner_runtime::{RsAsyncFunction, RsFunction};
 pub use module::Module;
 pub use module_handle::ModuleHandle;

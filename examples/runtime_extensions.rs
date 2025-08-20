@@ -7,7 +7,7 @@
 //! Extensions consist of a set of #[op2] functions, an extension! macro,
 //! and one or more optional JS modules.
 //!
-use rustyscript::{Error, Module, Runtime, RuntimeOptions};
+use rustyscript::{Error, ExtensionList, ExtensionOptions, Module, Runtime, RuntimeOptions};
 use std::collections::HashSet;
 
 mod example_extension;
@@ -25,12 +25,11 @@ fn main() -> Result<(), Error> {
     let mut schema_whlist = HashSet::new();
     schema_whlist.insert("example:".to_string());
 
-    // We provide a function returning the set of extensions to load
-    // It needs to be a function, since deno_core does not currently
-    // allow clone or copy from extensions
+    let extension = example_extension::example_extension::init();
     let mut runtime = Runtime::new(RuntimeOptions {
         schema_whlist,
-        extensions: vec![example_extension::example_extension::init()],
+        extensions: ExtensionList::new_default(ExtensionOptions::default())
+            .with_appended(extension),
         ..Default::default()
     })?;
     let module_handle = runtime.load_module(&module)?;

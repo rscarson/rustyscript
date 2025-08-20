@@ -1,31 +1,23 @@
 use std::{borrow::Cow, path::Path};
 
-use deno_core::{extension, Extension};
+use deno_core::extension;
 
-use super::{web::PermissionsContainer, ExtensionTrait};
+use super::web::PermissionsContainer;
+use crate::ext::ExtensionList;
 
 extension!(
-    init_ffi,
+    ffi,
     deps = [rustyscript],
-    esm_entry_point = "ext:init_ffi/init_ffi.js",
+    esm_entry_point = "ext:ffi/init_ffi.js",
     esm = [ dir "src/ext/ffi", "init_ffi.js" ],
 );
-impl ExtensionTrait<()> for init_ffi {
-    fn init((): ()) -> Extension {
-        init_ffi::init()
-    }
-}
-impl ExtensionTrait<()> for deno_ffi::deno_ffi {
-    fn init((): ()) -> Extension {
-        deno_ffi::deno_ffi::init::<PermissionsContainer>(None)
-    }
-}
 
-pub fn extensions(is_snapshot: bool) -> Vec<Extension> {
-    vec![
-        deno_ffi::deno_ffi::build((), is_snapshot),
-        init_ffi::build((), is_snapshot),
-    ]
+pub fn load(extensions: &mut ExtensionList) {
+    let options = extensions.options();
+    extensions.extend([
+        deno_ffi::deno_ffi::init::<PermissionsContainer>(options.ffi_addon_loader.clone()),
+        ffi::init(),
+    ]);
 }
 
 impl deno_ffi::FfiPermissions for PermissionsContainer {

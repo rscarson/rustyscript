@@ -8,15 +8,18 @@ use std::{
 };
 
 use deno_core::{
-    futures::FutureExt, serde_json, serde_v8::from_v8, v8, JsRuntime, JsRuntimeForSnapshot,
-    PollEventLoopOptions,
+    futures::FutureExt,
+    serde_json,
+    serde_v8::from_v8,
+    v8::{self, BackingStore, SharedRef},
+    CrossIsolateStore, JsRuntime, JsRuntimeForSnapshot, PollEventLoopOptions,
 };
 use deno_features::FeatureChecker;
 use serde::de::DeserializeOwned;
 use tokio_util::sync::CancellationToken;
 
 use crate::{
-    ext,
+    ext::ExtensionList,
     module_loader::{LoaderOptions, RustyLoader},
     traits::{ToDefinedValue, ToModuleSpecifier, ToV8String},
     transpiler::transpile,
@@ -116,11 +119,13 @@ fn decode_args<'a>(
 
 /// Represents the set of options accepted by the runtime constructor
 pub struct RuntimeOptions {
-    /// A set of `deno_core` extensions to add to the runtime
-    pub extensions: Vec<deno_core::Extension>,
-
-    /// Additional options for the built-in extensions
-    pub extension_options: ext::ExtensionOptions,
+    /// A set of js extensions to add to the runtime
+    ///
+    /// [`ExtensionList::new_default`] can be used to create a set of extensions defined
+    /// by the active crate features
+    ///
+    /// You can then use [`ExtensionList::append`] to add additional extensions
+    pub extensions: ExtensionList,
 
     /// Function to use as entrypoint if the module does not provide one
     pub default_entrypoint: Option<String>,
@@ -145,7 +150,8 @@ pub struct RuntimeOptions {
 
     /// Optional snapshot to load into the runtime
     ///
-    /// This will reduce load times, but requires the same extensions to be loaded as when the snapshot was created  
+    /// This will reduce load times, but requires the same extensions to be loaded as when the snapshot was created
+    ///
     ///
     /// WARNING: Snapshots MUST be used on the same system they were created on
     pub startup_snapshot: Option<&'static [u8]>,
@@ -157,21 +163,36 @@ pub struct RuntimeOptions {
     /// See the `rusty_v8` documentation for more information
     pub isolate_params: Option<v8::CreateParams>,
 
-    /// Optional shared array buffer store to use for the runtime.
-    ///
-    /// Allows data-sharing between runtimes across threads
-    pub shared_array_buffer_store: Option<deno_core::SharedArrayBufferStore>,
-
     /// A whitelist of custom schema prefixes that are allowed to be loaded from javascript
     ///
     /// By default only `http`/`https` (`url_import` crate feature), and `file` (`fs_import` crate feature) are allowed
     pub schema_whlist: HashSet<String>,
 }
+impl RuntimeOptions {
+    /// Options used to initialize runtime extensions
+    ///
+    /// NOTE: Prior to 0.13.0, this was a field in `RuntimeOptions`
+    ///
+    /// This is now instead used to create `ExtensionList`
+    #[must_use]
+    pub fn extension_options(&self) -> &ExtensionOptions {
+        self.extensions.options()
+    }
 
+    /// Optional shared array buffer store to use for the runtime.
+    ///
+    /// Allows data-sharing between runtimes across threads
+    ///
+    /// NOTE: This option has been moved to `ExtensionOptions`
+    #[must_use]
+    pub fn shared_array_buffer_store(&self) -> Option<CrossIsolateStore<SharedRef<BackingStore>>> {
+        self.extension_options().shared_array_buffer_store.clone()
+    }
+}
 impl Default for RuntimeOptions {
     fn default() -> Self {
         Self {
-            extensions: Vec::default(),
+            extensions: ExtensionList::new_default(ExtensionOptions::default()),
             default_entrypoint: None,
             timeout: Duration::MAX,
             max_heap_size: None,
@@ -179,10 +200,7 @@ impl Default for RuntimeOptions {
             import_provider: None,
             startup_snapshot: None,
             isolate_params: None,
-            shared_array_buffer_store: None,
             schema_whlist: HashSet::default(),
-
-            extension_options: ExtensionOptions::default(),
         }
     }
 }
@@ -199,6 +217,7 @@ pub struct InnerRuntime<RT: RuntimeTrait> {
 
     pub cwd: PathBuf,
     pub default_entrypoint: Option<String>,
+    pub extension_options: ExtensionOptions,
 }
 impl<RT: RuntimeTrait> InnerRuntime<RT> {
     pub fn new(
@@ -206,6 +225,10 @@ impl<RT: RuntimeTrait> InnerRuntime<RT> {
         heap_exhausted_token: CancellationToken,
     ) -> Result<Self, Error> {
         let cwd = std::env::current_dir()?;
+
+        #[cfg(feature = "node_experimental")]
+        let node_resolver = options.extension_options().node_resolver.clone();
+
         let module_loader = Rc::new(RustyLoader::new(LoaderOptions {
             cache_provider: options.module_cache,
             import_provider: options.import_provider,
@@ -213,19 +236,16 @@ impl<RT: RuntimeTrait> InnerRuntime<RT> {
             cwd: cwd.clone(),
 
             #[cfg(feature = "node_experimental")]
-            node_resolver: options.extension_options.node_resolver.clone(),
+            node_resolver,
 
             ..Default::default()
         }));
 
         // If a snapshot is provided, do not reload ESM for extensions
-        let is_snapshot = options.startup_snapshot.is_some();
-        let extensions = ext::all_extensions(
-            options.extensions,
-            options.extension_options,
-            options.shared_array_buffer_store.clone(),
-            is_snapshot,
-        );
+        let mut extensions = options.extensions;
+        if options.startup_snapshot.is_some() {
+            extensions.clear_esm();
+        }
 
         // If a heap size is provided, set the isolate params (preserving any user-provided params otherwise)
         let isolate_params = match options.isolate_params {
@@ -246,12 +266,15 @@ impl<RT: RuntimeTrait> InnerRuntime<RT> {
             }
         };
 
+        let (extensions, extension_options) = extensions.into_inner();
+        let shared_array_buffer_store = extension_options.shared_array_buffer_store.clone();
+
         let mut deno_runtime = RT::try_new(deno_core::RuntimeOptions {
             module_loader: Some(module_loader.clone()),
 
             extension_transpiler: Some(module_loader.as_extension_transpiler()),
             create_params: isolate_params,
-            shared_array_buffer_store: options.shared_array_buffer_store.clone(),
+            shared_array_buffer_store,
 
             startup_snapshot: options.startup_snapshot,
             extensions,
@@ -261,6 +284,7 @@ impl<RT: RuntimeTrait> InnerRuntime<RT> {
 
         let mut feature_checker = FeatureChecker::default();
         feature_checker.set_exit_cb(Box::new(|_, _| {}));
+        let feature_checker = std::sync::Arc::new(feature_checker);
         deno_runtime
             .rt_mut()
             .op_state()
@@ -291,6 +315,7 @@ impl<RT: RuntimeTrait> InnerRuntime<RT> {
             deno_runtime,
             cwd,
             default_entrypoint,
+            extension_options,
         })
     }
 
@@ -320,6 +345,10 @@ impl<RT: RuntimeTrait> InnerRuntime<RT> {
 
     pub fn current_dir(&self) -> &Path {
         &self.cwd
+    }
+
+    pub fn extension_options(&self) -> &ExtensionOptions {
+        &self.extension_options
     }
 
     /// Remove and return a value from the state

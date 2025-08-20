@@ -1,29 +1,18 @@
-use std::path::PathBuf;
+use deno_core::extension;
 
-use deno_core::{extension, Extension};
-
-use super::ExtensionTrait;
+use crate::ext::ExtensionList;
 
 extension!(
-    init_webstorage,
+    webstorage,
     deps = [rustyscript],
-    esm_entry_point = "ext:init_webstorage/init_webstorage.js",
+    esm_entry_point = "ext:webstorage/init_webstorage.js",
     esm = [ dir "src/ext/webstorage", "init_webstorage.js" ],
 );
-impl ExtensionTrait<()> for init_webstorage {
-    fn init((): ()) -> Extension {
-        init_webstorage::init()
-    }
-}
-impl ExtensionTrait<Option<PathBuf>> for deno_webstorage::deno_webstorage {
-    fn init(origin_storage_dir: Option<PathBuf>) -> Extension {
-        deno_webstorage::deno_webstorage::init(origin_storage_dir)
-    }
-}
 
-pub fn extensions(origin_storage_dir: Option<PathBuf>, is_snapshot: bool) -> Vec<Extension> {
-    vec![
-        deno_webstorage::deno_webstorage::build(origin_storage_dir, is_snapshot),
-        init_webstorage::build((), is_snapshot),
-    ]
+pub fn load(extensions: &mut ExtensionList) {
+    let options = extensions.options();
+    extensions.extend([
+        deno_webstorage::deno_webstorage::init(options.webstorage_origin_storage_dir.clone()),
+        webstorage::init(),
+    ]);
 }

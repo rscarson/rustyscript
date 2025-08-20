@@ -35,11 +35,11 @@ impl RustyLoader {
         self.inner_mut().set_current_dir(current_dir);
     }
 
-    fn inner(&self) -> std::cell::Ref<InnerRustyLoader> {
+    fn inner(&self) -> std::cell::Ref<'_, InnerRustyLoader> {
         self.inner.borrow()
     }
 
-    fn inner_mut(&self) -> std::cell::RefMut<InnerRustyLoader> {
+    fn inner_mut(&self) -> std::cell::RefMut<'_, InnerRustyLoader> {
         self.inner.borrow_mut()
     }
 
@@ -104,7 +104,7 @@ impl ModuleLoader for RustyLoader {
         )
     }
 
-    fn get_source_map(&self, file_name: &str) -> Option<Cow<[u8]>> {
+    fn get_source_map(&self, file_name: &str) -> Option<Cow<'_, [u8]>> {
         let inner = self.inner();
         let map = inner.get_source_map(file_name)?.1.as_deref()?;
         Some(Cow::Owned(map.to_vec()))

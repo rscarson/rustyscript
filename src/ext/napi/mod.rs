@@ -1,31 +1,23 @@
 use std::borrow::Cow;
 
-use deno_core::{extension, Extension};
+use deno_core::extension;
 
-use super::{web::PermissionsContainer, ExtensionTrait};
+use super::web::PermissionsContainer;
+use crate::ext::ExtensionList;
 
 extension!(
-    init_napi,
+    napi,
     deps = [rustyscript],
-    esm_entry_point = "ext:init_napi/init_napi.js",
+    esm_entry_point = "ext:napi/init_napi.js",
     esm = [ dir "src/ext/napi", "init_napi.js" ],
 );
-impl ExtensionTrait<()> for init_napi {
-    fn init((): ()) -> Extension {
-        init_napi::init()
-    }
-}
-impl ExtensionTrait<()> for deno_napi::deno_napi {
-    fn init((): ()) -> Extension {
-        deno_napi::deno_napi::init::<PermissionsContainer>(None)
-    }
-}
 
-pub fn extensions(is_snapshot: bool) -> Vec<Extension> {
-    vec![
-        deno_napi::deno_napi::build((), is_snapshot),
-        init_napi::build((), is_snapshot),
-    ]
+pub fn load(extensions: &mut ExtensionList) {
+    let options = extensions.options();
+    extensions.extend([
+        deno_napi::deno_napi::init::<PermissionsContainer>(options.ffi_addon_loader.clone()),
+        napi::init(),
+    ]);
 }
 
 impl deno_napi::NapiPermissions for PermissionsContainer {

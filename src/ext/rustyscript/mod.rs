@@ -1,14 +1,13 @@
 use std::collections::HashMap;
 
-use deno_core::{extension, op2, serde_json, v8, Extension, OpState};
+use deno_core::{extension, op2, serde_json, v8, OpState};
 
-use super::ExtensionTrait;
-use crate::{error::Error, RsAsyncFunction, RsFunction};
+use crate::{error::Error, ext::ExtensionList, RsAsyncFunction, RsFunction};
+
+mod callbacks;
 
 type FnCache = HashMap<String, Box<dyn RsFunction>>;
 type AsyncFnCache = HashMap<String, Box<dyn RsAsyncFunction>>;
-
-mod callbacks;
 
 /// Registers a JS function with the runtime as being the entrypoint for the module
 ///
@@ -70,12 +69,7 @@ extension!(
         _ => op,
     }
 );
-impl ExtensionTrait<()> for rustyscript {
-    fn init(options: ()) -> Extension {
-        rustyscript::init()
-    }
-}
 
-pub fn extensions(is_snapshot: bool) -> Vec<Extension> {
-    vec![rustyscript::build((), is_snapshot)]
+pub fn load(extensions: &mut ExtensionList) {
+    extensions.extend([rustyscript::init()]);
 }

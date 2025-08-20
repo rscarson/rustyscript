@@ -1,33 +1,24 @@
 use std::{borrow::Cow, path::Path};
 
-use deno_core::{extension, Extension};
-use deno_fs::FileSystemRc;
+use deno_core::extension;
 use deno_permissions::{CheckedPath, PermissionCheckError, PermissionDeniedError};
 
-use super::{web::PermissionsContainer, ExtensionTrait};
+use super::web::PermissionsContainer;
+use crate::ext::ExtensionList;
 
 extension!(
-    init_fs,
+    fs,
     deps = [rustyscript],
-    esm_entry_point = "ext:init_fs/init_fs.js",
+    esm_entry_point = "ext:fs/init_fs.js",
     esm = [ dir "src/ext/fs", "init_fs.js" ],
 );
-impl ExtensionTrait<()> for init_fs {
-    fn init((): ()) -> Extension {
-        init_fs::init()
-    }
-}
-impl ExtensionTrait<FileSystemRc> for deno_fs::deno_fs {
-    fn init(fs: FileSystemRc) -> Extension {
-        deno_fs::deno_fs::init::<PermissionsContainer>(fs)
-    }
-}
 
-pub fn extensions(fs: FileSystemRc, is_snapshot: bool) -> Vec<Extension> {
-    vec![
-        deno_fs::deno_fs::build(fs, is_snapshot),
-        init_fs::build((), is_snapshot),
-    ]
+pub fn load(extensions: &mut ExtensionList) {
+    let options = extensions.options();
+    extensions.extend([
+        deno_fs::deno_fs::init::<PermissionsContainer>(options.filesystem.clone()),
+        fs::init(),
+    ]);
 }
 
 impl deno_fs::FsPermissions for PermissionsContainer {

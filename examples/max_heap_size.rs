@@ -19,7 +19,7 @@ fn main() -> Result<(), Error> {
 
     // Will return a `HeapExhausted` error
     let module_handle = runtime.load_module(&module);
-
+    println!(" = {:?}", module_handle);
     assert!(module_handle.is_err());
 
     Ok(())

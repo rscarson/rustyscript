@@ -5,7 +5,9 @@
 use std::time::Duration;
 
 use deno_core::PollEventLoopOptions;
-use rustyscript::{Error, Module, ModuleHandle, Runtime, RuntimeOptions};
+use rustyscript::{
+    Error, ExtensionList, ExtensionOptions, Module, ModuleHandle, Runtime, RuntimeOptions,
+};
 
 fn main() -> Result<(), Error> {
     let module = Module::new(
@@ -66,13 +68,15 @@ fn main() -> Result<(), Error> {
     );
 
     // Whitelist the echo server for certificate errors
-    let mut options = RuntimeOptions::default();
-    options
-        .extension_options
+    let mut extension_options = ExtensionOptions::default();
+    extension_options
         .web
         .whitelist_certificate_for("echo.websocket.org");
 
-    let mut runtime = Runtime::new(options)?;
+    let mut runtime = Runtime::new(RuntimeOptions {
+        extensions: ExtensionList::new_default(extension_options),
+        ..Default::default()
+    })?;
     let tokio_runtime = runtime.tokio_runtime();
 
     // Load the module

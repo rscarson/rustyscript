@@ -1,8 +1,8 @@
 use std::sync::Arc;
 
-use deno_core::{extension, Extension};
+use deno_core::extension;
 
-use super::ExtensionTrait;
+use crate::ext::ExtensionList;
 
 mod options;
 pub use options::WebOptions;
@@ -14,7 +14,7 @@ pub use permissions::{
     PermissionDeniedError, SystemsPermissionKind, WebPermissions,
 };
 
-/// Stub for a node op deno_net expects to find
+/// Stub for a node op `deno_net` expects to find
 /// We return None to show no cert available
 #[deno_core::op2]
 #[serde]
@@ -26,123 +26,84 @@ pub fn op_tls_peer_certificate(
 }
 
 extension!(
-    init_fetch,
+    fetch,
     deps = [rustyscript],
-    esm_entry_point = "ext:init_fetch/init_fetch.js",
+    esm_entry_point = "ext:fetch/init_fetch.js",
     esm = [ dir "src/ext/web", "init_fetch.js" ],
 );
-impl ExtensionTrait<WebOptions> for init_fetch {
-    fn init(options: WebOptions) -> Extension {
-        init_fetch::init()
-    }
-}
-impl ExtensionTrait<WebOptions> for deno_fetch::deno_fetch {
-    fn init(options: WebOptions) -> Extension {
-        let options = deno_fetch::Options {
-            user_agent: options.user_agent.clone(),
-            root_cert_store_provider: options.root_cert_store_provider.clone(),
-            proxy: options.proxy.clone(),
-            request_builder_hook: options.request_builder_hook,
-            unsafely_ignore_certificate_errors: options.unsafely_ignore_certificate_errors.clone(),
-            client_cert_chain_and_key: options.client_cert_chain_and_key.clone(),
-            file_fetch_handler: options.file_fetch_handler.clone(),
-            client_builder_hook: options.client_builder_hook,
-            resolver: options.resolver.clone(),
-        };
-
-        deno_fetch::deno_fetch::init::<PermissionsContainer>(options)
-    }
-}
 
 #[cfg(not(feature = "node_experimental"))]
 extension!(
-    init_net,
+    net,
     deps = [rustyscript],
     ops = [op_tls_peer_certificate],
-    esm_entry_point = "ext:init_net/init_net.js",
+    esm_entry_point = "ext:net/init_net.js",
     esm = [ dir "src/ext/web", "init_net.js" ],
 );
 
 #[cfg(feature = "node_experimental")]
 extension!(
-    init_net,
+    net,
     deps = [rustyscript],
-    esm_entry_point = "ext:init_net/init_net.js",
+    esm_entry_point = "ext:net/init_net.js",
     esm = [ dir "src/ext/web", "init_net.js" ],
 );
 
-impl ExtensionTrait<WebOptions> for init_net {
-    fn init(options: WebOptions) -> Extension {
-        let provider = rustls::crypto::aws_lc_rs::default_provider();
-        let _ = rustls::crypto::CryptoProvider::install_default(provider); // Failure means already done for us
-        init_net::init()
-    }
-}
-impl ExtensionTrait<WebOptions> for deno_net::deno_net {
-    fn init(options: WebOptions) -> Extension {
-        deno_net::deno_net::init::<PermissionsContainer>(
-            options.root_cert_store_provider.clone(),
-            options.unsafely_ignore_certificate_errors.clone(),
-        )
-    }
-}
-
 extension!(
-    init_telemetry,
+    telemetry,
     deps = [rustyscript],
-    esm_entry_point = "ext:init_telemetry/init_telemetry.js",
+    esm_entry_point = "ext:telemetry/init_telemetry.js",
     esm = [ dir "src/ext/web", "init_telemetry.js" ],
 );
-impl ExtensionTrait<()> for init_telemetry {
-    fn init((): ()) -> Extension {
-        init_telemetry::init()
-    }
-}
-
-impl ExtensionTrait<()> for deno_telemetry::deno_telemetry {
-    fn init((): ()) -> Extension {
-        deno_telemetry::deno_telemetry::init()
-    }
-}
 
 extension!(
-    init_web,
+    web,
     deps = [rustyscript],
-    esm_entry_point = "ext:init_web/init_web.js",
+    esm_entry_point = "ext:web/init_web.js",
     esm = [ dir "src/ext/web", "init_web.js", "init_errors.js" ],
     options = {
         permissions: Arc<dyn WebPermissions>
     },
     state = |state, config| state.put(PermissionsContainer(config.permissions)),
 );
-impl ExtensionTrait<WebOptions> for init_web {
-    fn init(options: WebOptions) -> Extension {
-        init_web::init(options.permissions)
-    }
-}
 
-impl ExtensionTrait<WebOptions> for deno_web::deno_web {
-    fn init(options: WebOptions) -> Extension {
-        deno_web::deno_web::init::<PermissionsContainer>(options.blob_store, options.base_url)
-    }
-}
+pub fn load(extensions: &mut ExtensionList) {
+    let options = extensions.options();
+    let web_permissions = options.web.permissions.clone();
+    let blob_store = options.web.blob_store.clone();
+    let base_url = options.web.base_url.clone();
+    let provider = options.web.root_cert_store_provider.clone();
+    let unsafe_ssl = options.web.unsafely_ignore_certificate_errors.clone();
 
-impl ExtensionTrait<()> for deno_tls::deno_tls {
-    fn init((): ()) -> Extension {
-        deno_tls::deno_tls::init()
-    }
-}
+    let _ = rustls::crypto::CryptoProvider::install_default(
+        rustls::crypto::aws_lc_rs::default_provider(),
+    ); // Failure means already done for us
 
-pub fn extensions(options: WebOptions, is_snapshot: bool) -> Vec<Extension> {
-    vec![
-        deno_web::deno_web::build(options.clone(), is_snapshot),
-        deno_telemetry::deno_telemetry::build((), is_snapshot),
-        deno_net::deno_net::build(options.clone(), is_snapshot),
-        deno_fetch::deno_fetch::build(options.clone(), is_snapshot),
-        deno_tls::deno_tls::build((), is_snapshot),
-        init_web::build(options.clone(), is_snapshot),
-        init_telemetry::build((), is_snapshot),
-        init_net::build(options.clone(), is_snapshot),
-        init_fetch::build(options, is_snapshot),
-    ]
+    let fetch_options = deno_fetch::Options {
+        user_agent: options.web.user_agent.clone(),
+        root_cert_store_provider: options.web.root_cert_store_provider.clone(),
+        proxy: options.web.proxy.clone(),
+        request_builder_hook: options.web.request_builder_hook,
+        unsafely_ignore_certificate_errors: options.web.unsafely_ignore_certificate_errors.clone(),
+        client_cert_chain_and_key: options.web.client_cert_chain_and_key.clone(),
+        file_fetch_handler: options.web.file_fetch_handler.clone(),
+        client_builder_hook: options.web.client_builder_hook,
+        resolver: options.web.resolver.clone(),
+    };
+
+    extensions.extend([
+        deno_web::deno_web::init::<PermissionsContainer>(blob_store, base_url),
+        deno_telemetry::deno_telemetry::init(),
+        deno_net::deno_net::init::<PermissionsContainer>(provider, unsafe_ssl),
+        deno_fetch::deno_fetch::init::<PermissionsContainer>(fetch_options),
+        deno_tls::deno_tls::init(),
+        //
+        web::init(web_permissions),
+        telemetry::init(),
+        //
+        #[cfg(not(feature = "node_experimental"))]
+        net::init(),
+        //
+        fetch::init(),
+    ]);
 }

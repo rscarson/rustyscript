@@ -114,7 +114,8 @@ impl Module {
         Self { filename, contents }
     }
 
-    /// Creates a new `Module` instance with the given filename and contents.  
+    /// Creates a new `Module` instance with the given filename and contents.
+    ///
     /// The function is const, and the filename and contents are static strings.
     ///
     /// If filename is relative it will be resolved to the current working dir at runtime

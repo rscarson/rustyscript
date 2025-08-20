@@ -156,11 +156,11 @@ impl AllowlistWebPermissions {
         Self(Arc::new(RwLock::new(AllowlistWebPermissionsSet::default())))
     }
 
-    fn borrow(&self) -> std::sync::RwLockReadGuard<AllowlistWebPermissionsSet> {
+    fn borrow(&self) -> std::sync::RwLockReadGuard<'_, AllowlistWebPermissionsSet> {
         self.0.read().expect("Could not lock permissions")
     }
 
-    fn borrow_mut(&self) -> std::sync::RwLockWriteGuard<AllowlistWebPermissionsSet> {
+    fn borrow_mut(&self) -> std::sync::RwLockWriteGuard<'_, AllowlistWebPermissionsSet> {
         self.0.write().expect("Could not lock permissions")
     }
 
@@ -194,7 +194,8 @@ impl AllowlistWebPermissions {
 
     /// Whitelist a path for opening
     ///
-    /// If `read` is true, the path will be allowed to be opened for reading  
+    /// If `read` is true, the path will be allowed to be opened for reading
+    ///
     /// If `write` is true, the path will be allowed to be opened for writing
     pub fn allow_open(&self, path: &str, read: bool, write: bool) {
         if read {

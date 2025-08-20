@@ -1,48 +1,38 @@
-use std::{borrow::Cow, path::Path, sync::Arc};
+use std::{borrow::Cow, path::Path};
 
-use deno_core::{extension, Extension};
+use deno_core::extension;
 use deno_node::NodePermissions;
 use deno_permissions::{CheckedPath, PermissionCheckError, PermissionDeniedError};
 use deno_resolver::npm::DenoInNpmPackageChecker;
-use resolvers::{RustyNpmPackageFolderResolver, RustyResolver};
+use resolvers::RustyNpmPackageFolderResolver;
 use sys_traits::impls::RealSys;
 
-use super::{
-    web::{PermissionsContainer, SystemsPermissionKind},
-    ExtensionTrait,
-};
+use super::web::{PermissionsContainer, SystemsPermissionKind};
+use crate::ext::ExtensionList;
 
 mod cjs_translator;
 pub mod resolvers;
 pub use cjs_translator::NodeCodeTranslator;
 
 extension!(
-    init_node,
+    node,
     deps = [rustyscript],
-    esm_entry_point = "ext:init_node/init_node.js",
+    esm_entry_point = "ext:node/init_node.js",
     esm = [ dir "src/ext/node", "init_node.js" ],
 );
-impl ExtensionTrait<()> for init_node {
-    fn init((): ()) -> Extension {
-        init_node::init()
-    }
-}
-impl ExtensionTrait<Arc<RustyResolver>> for deno_node::deno_node {
-    fn init(resolver: Arc<RustyResolver>) -> Extension {
+
+pub fn load(extensions: &mut ExtensionList) {
+    let options = extensions.options();
+    let resolver = options.node_resolver.clone();
+    extensions.extend([
         deno_node::deno_node::init::<
             PermissionsContainer,
             DenoInNpmPackageChecker,
             RustyNpmPackageFolderResolver,
             RealSys,
-        >(Some(resolver.init_services()), resolver.filesystem())
-    }
-}
-
-pub fn extensions(resolver: Arc<RustyResolver>, is_snapshot: bool) -> Vec<Extension> {
-    vec![
-        deno_node::deno_node::build(resolver, is_snapshot),
-        init_node::build((), is_snapshot),
-    ]
+        >(Some(resolver.init_services()), resolver.filesystem()),
+        node::init(),
+    ]);
 }
 
 impl NodePermissions for PermissionsContainer {
