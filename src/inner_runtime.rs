@@ -3,6 +3,7 @@ use std::{
     path::{Path, PathBuf},
     pin::Pin,
     rc::Rc,
+    sync::Arc,
     task::Poll,
     time::Duration,
 };
@@ -265,7 +266,7 @@ impl<RT: RuntimeTrait> InnerRuntime<RT> {
             .rt_mut()
             .op_state()
             .borrow_mut()
-            .put(feature_checker);
+            .put(Arc::new(feature_checker));
 
         // Add a callback to terminate the runtime if the max_heap_size limit is approached
         if options.max_heap_size.is_some() {
