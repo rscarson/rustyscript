@@ -9,6 +9,8 @@ on:
     branches: [ master ]
   pull_request:
     branches: [ master ]
+  workflow_dispatch:
+  workflow_call:
 
 env:
   CARGO_TERM_COLOR: always
@@ -38,6 +40,9 @@ jobs:
 
     - name: serialized_types
       run: cargo run --example serialized_types
+
+    - name: removing_extensions
+      run: cargo run --example removing_extensions
 
     - name: runtime_extensions
       run: cargo run --example runtime_extensions
