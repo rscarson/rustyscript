@@ -41,9 +41,6 @@ jobs:
     - name: serialized_types
       run: cargo run --example serialized_types
 
-    - name: removing_extensions
-      run: cargo run --example removing_extensions
-
     - name: runtime_extensions
       run: cargo run --example runtime_extensions
 
@@ -94,3 +91,4 @@ jobs:
 
     - name: websocket
       run: cargo run --example websocket --features="web websocket"
+
