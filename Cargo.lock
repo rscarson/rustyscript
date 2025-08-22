@@ -1388,6 +1388,35 @@ dependencies = [
 ]
 
 [[package]]
+name = "deno_cache_dir"
+version = "0.25.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "19ab8c76d18a8a7511825bfb93e8b35e79b3dd8404a48c570c536db2a3c88855"
+dependencies = [
+ "async-trait",
+ "base32",
+ "base64 0.21.7",
+ "boxed_error",
+ "cache_control",
+ "chrono",
+ "data-url",
+ "deno_error",
+ "deno_media_type",
+ "deno_path_util",
+ "http 1.1.0",
+ "indexmap 2.9.0",
+ "log",
+ "once_cell",
+ "parking_lot",
+ "serde",
+ "serde_json",
+ "sha2",
+ "sys_traits",
+ "thiserror 2.0.14",
+ "url",
+]
+
+[[package]]
 name = "deno_canvas"
 version = "0.82.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1411,7 +1440,33 @@ dependencies = [
  "boxed_error",
  "capacity_builder",
  "deno_error",
- "deno_package_json",
+ "deno_package_json 0.15.0",
+ "deno_path_util",
+ "deno_semver",
+ "glob",
+ "ignore",
+ "import_map",
+ "indexmap 2.9.0",
+ "jsonc-parser",
+ "log",
+ "serde",
+ "serde_json",
+ "sys_traits",
+ "thiserror 2.0.14",
+ "url",
+]
+
+[[package]]
+name = "deno_config"
+version = "0.64.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cf0b777870c048309df9177bbf6e11e060f241c351b0835a66d28194cde252ef"
+dependencies = [
+ "boxed_error",
+ "capacity_builder",
+ "deno_error",
+ "deno_maybe_sync",
+ "deno_package_json 0.16.0",
  "deno_path_util",
  "deno_semver",
  "glob",
@@ -1792,6 +1847,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "deno_maybe_sync"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "33401d137eb124143ce294cb8097eaa811acdaa7148ac21cda1bb40a33cdeb3e"
+
+[[package]]
 name = "deno_media_type"
 version = "0.2.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1887,7 +1948,7 @@ dependencies = [
  "deno_fs",
  "deno_io",
  "deno_net",
- "deno_package_json",
+ "deno_package_json 0.15.0",
  "deno_path_util",
  "deno_permissions",
  "deno_process",
@@ -1916,7 +1977,7 @@ dependencies = [
  "libz-sys",
  "md-5",
  "md4",
- "node_resolver",
+ "node_resolver 0.51.0",
  "num-bigint",
  "num-bigint-dig",
  "num-integer",
@@ -1959,6 +2020,27 @@ name = "deno_npm"
 version = "0.36.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "688f93cb13db227a013bfd5c5973235458615115934fc37ce2e72620c9934526"
+dependencies = [
+ "async-trait",
+ "capacity_builder",
+ "deno_error",
+ "deno_lockfile",
+ "deno_semver",
+ "futures",
+ "indexmap 2.9.0",
+ "log",
+ "monch",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.14",
+ "url",
+]
+
+[[package]]
+name = "deno_npm"
+version = "0.37.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e01f393e78bf6a8d6c47663931f08d59a589620944c6a6a0d7e3862e883884ad"
 dependencies = [
  "async-trait",
  "capacity_builder",
@@ -2021,6 +2103,25 @@ checksum = "36155ebe3074c582c533895056071dc05036548e40420bd977cc41b822a3dc49"
 dependencies = [
  "boxed_error",
  "deno_error",
+ "deno_path_util",
+ "deno_semver",
+ "indexmap 2.9.0",
+ "serde",
+ "serde_json",
+ "sys_traits",
+ "thiserror 2.0.14",
+ "url",
+]
+
+[[package]]
+name = "deno_package_json"
+version = "0.16.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6d5526cb733b34c15421509dfa8003243897d102f4ad948ca72923b87231e3e0"
+dependencies = [
+ "boxed_error",
+ "deno_error",
+ "deno_maybe_sync",
  "deno_path_util",
  "deno_semver",
  "indexmap 2.9.0",
@@ -2117,13 +2218,13 @@ dependencies = [
  "boxed_error",
  "capacity_builder",
  "dashmap",
- "deno_cache_dir",
- "deno_config",
+ "deno_cache_dir 0.24.0",
+ "deno_config 0.63.0",
  "deno_error",
  "deno_lockfile",
  "deno_media_type",
- "deno_npm",
- "deno_package_json",
+ "deno_npm 0.36.0",
+ "deno_package_json 0.15.0",
  "deno_path_util",
  "deno_semver",
  "deno_terminal",
@@ -2134,7 +2235,49 @@ dependencies = [
  "indexmap 2.9.0",
  "jsonc-parser",
  "log",
- "node_resolver",
+ "node_resolver 0.51.0",
+ "once_cell",
+ "parking_lot",
+ "phf",
+ "serde",
+ "serde_json",
+ "sys_traits",
+ "thiserror 2.0.14",
+ "twox-hash",
+ "url",
+]
+
+[[package]]
+name = "deno_resolver"
+version = "0.45.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e64af4c4633ab0d1d8726fe2eb60655d024301f7e9c3afe70bf7b2f8e2ac148f"
+dependencies = [
+ "anyhow",
+ "async-once-cell",
+ "async-trait",
+ "base32",
+ "boxed_error",
+ "capacity_builder",
+ "deno_cache_dir 0.25.0",
+ "deno_config 0.64.0",
+ "deno_error",
+ "deno_lockfile",
+ "deno_maybe_sync",
+ "deno_media_type",
+ "deno_npm 0.37.0",
+ "deno_package_json 0.16.0",
+ "deno_path_util",
+ "deno_semver",
+ "deno_terminal",
+ "deno_unsync",
+ "dissimilar",
+ "futures",
+ "import_map",
+ "indexmap 2.9.0",
+ "jsonc-parser",
+ "log",
+ "node_resolver 0.52.0",
  "once_cell",
  "parking_lot",
  "phf",
@@ -2175,7 +2318,7 @@ dependencies = [
  "deno_path_util",
  "deno_permissions",
  "deno_process",
- "deno_resolver",
+ "deno_resolver 0.44.0",
  "deno_signals",
  "deno_telemetry",
  "deno_terminal",
@@ -2195,7 +2338,7 @@ dependencies = [
  "libc",
  "log",
  "nix 0.27.1",
- "node_resolver",
+ "node_resolver 0.51.0",
  "notify",
  "ntapi",
  "once_cell",
@@ -4734,7 +4877,37 @@ dependencies = [
  "dashmap",
  "deno_error",
  "deno_media_type",
- "deno_package_json",
+ "deno_package_json 0.15.0",
+ "deno_path_util",
+ "deno_semver",
+ "futures",
+ "lazy-regex",
+ "once_cell",
+ "path-clean",
+ "pretty_assertions",
+ "regex",
+ "serde",
+ "serde_json",
+ "sys_traits",
+ "thiserror 2.0.14",
+ "url",
+]
+
+[[package]]
+name = "node_resolver"
+version = "0.52.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "277b7fa1e5371c1eda6194e5acd7387371a0a783bc82d7cd47033d5826072bbf"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "boxed_error",
+ "capacity_builder",
+ "dashmap",
+ "deno_error",
+ "deno_maybe_sync",
+ "deno_media_type",
+ "deno_package_json 0.16.0",
  "deno_path_util",
  "deno_semver",
  "futures",
@@ -6140,11 +6313,11 @@ dependencies = [
  "deno_napi",
  "deno_net",
  "deno_node",
- "deno_npm",
- "deno_package_json",
+ "deno_npm 0.36.0",
+ "deno_package_json 0.15.0",
  "deno_permissions",
  "deno_process",
- "deno_resolver",
+ "deno_resolver 0.45.0",
  "deno_runtime",
  "deno_semver",
  "deno_telemetry",
@@ -6161,7 +6334,7 @@ dependencies = [
  "libc",
  "maybe_path",
  "nix 0.27.1",
- "node_resolver",
+ "node_resolver 0.51.0",
  "once_cell",
  "paste",
  "reqwest",
