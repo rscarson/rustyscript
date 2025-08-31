@@ -8,6 +8,7 @@ use super::ExtensionTrait;
 
 mod encoding;
 mod timers;
+use timers::StartTime;
 
 extension!(
     deno_web,
@@ -17,6 +18,9 @@ extension!(
     ],
     esm_entry_point = "ext:deno_web/init_stub.js",
     esm = [ dir "src/ext/web_stub", "init_stub.js", "01_dom_exception.js", "02_timers.js", "05_base64.js" ],
+    state = |state| {
+        state.put(StartTime::default());
+    }
 );
 impl ExtensionTrait<()> for deno_web {
     fn init((): ()) -> Extension {

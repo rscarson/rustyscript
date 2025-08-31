@@ -5,7 +5,21 @@ use std::time::Instant;
 use deno_core::op2;
 use deno_core::OpState;
 
-pub type StartTime = Instant;
+pub struct StartTime(Instant);
+
+impl Default for StartTime {
+    fn default() -> Self {
+        Self(Instant::now())
+    }
+}
+
+impl std::ops::Deref for StartTime {
+    type Target = Instant;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
 
 // Returns a milliseconds and nanoseconds subsec
 // since the start time of the deno runtime.
