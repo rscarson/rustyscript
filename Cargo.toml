@@ -173,7 +173,7 @@ deno_error = "=0.7.0"
 deno_features = "0.10.0"
 
 # For transpiling typescript
-deno_ast = { version = "=0.49.0", features = ["transpiling", "cjs"] }
+deno_ast = { version = "=0.50.2", features = ["transpiling", "cjs"] }
 deno_media_type = { version = "=0.2.9", features = ["module_specifier"] }
 
 # Runtime for async tasks
