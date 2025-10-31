@@ -249,7 +249,7 @@ sys_traits    = { version = "=0.1.17", optional = true }
 
 [dev-dependencies]
 version-sync = "0.9.5"
-criterion = "0.5.1"
+criterion = "0.7.0"
 
 [[example]]
 name = "custom_threaded_worker"
