@@ -1,154 +1,68 @@
-import * as init from 'ext:deno_webgpu/00_init.js';
-//import * as webgpu from 'ext:deno_webgpu/01_webgpu.js';
-import * as webgpuSurface from 'ext:deno_webgpu/02_surface.js';
+import { core } from 'ext:core/mod.js';
+import { loadWebGPU } from 'ext:deno_webgpu/00_init.js';
+import { GPUCanvasContext, UnsafeWindowSurface } from 'ext:deno_webgpu/02_surface.js';
 
-globalThis.Deno.UnsafeWindowSurface = webgpuSurface.UnsafeWindowSurface;
+const lazy = (name) =>
+    core.propNonEnumerableLazyLoaded((webgpu) => webgpu[name], loadWebGPU);
 
+Object.defineProperties(globalThis, {
+    GPU: lazy('GPU'),
+    GPUAdapter: lazy('GPUAdapter'),
+    GPUAdapterInfo: lazy('GPUAdapterInfo'),
+    GPUBindGroup: lazy('GPUBindGroup'),
+    GPUBindGroupLayout: lazy('GPUBindGroupLayout'),
+    GPUBuffer: lazy('GPUBuffer'),
+    GPUBufferUsage: lazy('GPUBufferUsage'),
+    GPUColorWrite: lazy('GPUColorWrite'),
+    GPUCommandBuffer: lazy('GPUCommandBuffer'),
+    GPUCommandEncoder: lazy('GPUCommandEncoder'),
+    GPUCompilationInfo: lazy('GPUCompilationInfo'),
+    GPUCompilationMessage: lazy('GPUCompilationMessage'),
+    GPUComputePassEncoder: lazy('GPUComputePassEncoder'),
+    GPUComputePipeline: lazy('GPUComputePipeline'),
+    GPUDevice: lazy('GPUDevice'),
+    GPUDeviceLostInfo: lazy('GPUDeviceLostInfo'),
+    GPUError: lazy('GPUError'),
+    GPUExternalTexture: lazy('GPUExternalTexture'),
+    GPUInternalError: lazy('GPUInternalError'),
+    GPUMapMode: lazy('GPUMapMode'),
+    GPUOutOfMemoryError: lazy('GPUOutOfMemoryError'),
+    GPUPipelineLayout: lazy('GPUPipelineLayout'),
+    GPUQuerySet: lazy('GPUQuerySet'),
+    GPUQueue: lazy('GPUQueue'),
+    GPURenderBundle: lazy('GPURenderBundle'),
+    GPURenderBundleEncoder: lazy('GPURenderBundleEncoder'),
+    GPURenderPassEncoder: lazy('GPURenderPassEncoder'),
+    GPURenderPipeline: lazy('GPURenderPipeline'),
+    GPUSampler: lazy('GPUSampler'),
+    GPUShaderModule: lazy('GPUShaderModule'),
+    GPUShaderStage: lazy('GPUShaderStage'),
+    GPUSupportedFeatures: lazy('GPUSupportedFeatures'),
+    GPUSupportedLimits: lazy('GPUSupportedLimits'),
+    GPUTexture: lazy('GPUTexture'),
+    GPUTextureUsage: lazy('GPUTextureUsage'),
+    GPUTextureView: lazy('GPUTextureView'),
+    GPUUncapturedErrorEvent: lazy('GPUUncapturedErrorEvent'),
+    GPUValidationError: lazy('GPUValidationError'),
+    GPUCanvasContext: core.propNonEnumerable(GPUCanvasContext),
+});
 
+if (typeof globalThis.navigator !== 'object' || globalThis.navigator === null) {
+    Object.defineProperty(globalThis, 'navigator', {
+        configurable: true,
+        enumerable: true,
+        writable: true,
+        value: {},
+    });
+}
+Object.defineProperty(globalThis.navigator, 'gpu', {
+    configurable: true,
+    enumerable: true,
+    get() {
+        const webgpu = loadWebGPU();
+        webgpu.initGPU();
+        return webgpu.gpu;
+    },
+});
 
-/*
-import { applyToGlobal, nonEnumerable } from 'ext:rustyscript/rustyscript.js';
-applyToGlobal({
-    GPU: nonEnumerable((webgpu) => webgpu.GPU, loadWebGPU),
-    GPUAdapter: nonEnumerable(
-        (webgpu) => webgpu.GPUAdapter,
-        loadWebGPU,
-    ),
-    GPUAdapterInfo: nonEnumerable(
-        (webgpu) => webgpu.GPUAdapterInfo,
-        loadWebGPU,
-    ),
-    GPUBuffer: nonEnumerable(
-        (webgpu) => webgpu.GPUBuffer,
-        loadWebGPU,
-    ),
-    GPUBufferUsage: nonEnumerable(
-        (webgpu) => webgpu.GPUBufferUsage,
-        loadWebGPU,
-    ),
-    GPUCanvasContext: nonEnumerable(webgpuSurface.GPUCanvasContext),
-    GPUColorWrite: nonEnumerable(
-        (webgpu) => webgpu.GPUColorWrite,
-        loadWebGPU,
-    ),
-    GPUCommandBuffer: nonEnumerable(
-        (webgpu) => webgpu.GPUCommandBuffer,
-        loadWebGPU,
-    ),
-    GPUCommandEncoder: nonEnumerable(
-        (webgpu) => webgpu.GPUCommandEncoder,
-        loadWebGPU,
-    ),
-    GPUComputePassEncoder: nonEnumerable(
-        (webgpu) => webgpu.GPUComputePassEncoder,
-        loadWebGPU,
-    ),
-    GPUComputePipeline: nonEnumerable(
-        (webgpu) => webgpu.GPUComputePipeline,
-        loadWebGPU,
-    ),
-    GPUDevice: nonEnumerable(
-        (webgpu) => webgpu.GPUDevice,
-        loadWebGPU,
-    ),
-    GPUDeviceLostInfo: nonEnumerable(
-        (webgpu) => webgpu.GPUDeviceLostInfo,
-        loadWebGPU,
-    ),
-    GPUError: nonEnumerable(
-        (webgpu) => webgpu.GPUError,
-        loadWebGPU,
-    ),
-    GPUBindGroup: nonEnumerable(
-        (webgpu) => webgpu.GPUBindGroup,
-        loadWebGPU,
-    ),
-    GPUBindGroupLayout: nonEnumerable(
-        (webgpu) => webgpu.GPUBindGroupLayout,
-        loadWebGPU,
-    ),
-    GPUInternalError: nonEnumerable(
-        (webgpu) => webgpu.GPUInternalError,
-        loadWebGPU,
-    ),
-    GPUPipelineError: nonEnumerable(
-        (webgpu) => webgpu.GPUPipelineError,
-        loadWebGPU,
-    ),
-    GPUUncapturedErrorEvent: nonEnumerable(
-        (webgpu) => webgpu.GPUUncapturedErrorEvent,
-        loadWebGPU,
-    ),
-    GPUPipelineLayout: nonEnumerable(
-        (webgpu) => webgpu.GPUPipelineLayout,
-        loadWebGPU,
-    ),
-    GPUQueue: nonEnumerable(
-        (webgpu) => webgpu.GPUQueue,
-        loadWebGPU,
-    ),
-    GPUQuerySet: nonEnumerable(
-        (webgpu) => webgpu.GPUQuerySet,
-        loadWebGPU,
-    ),
-    GPUMapMode: nonEnumerable(
-        (webgpu) => webgpu.GPUMapMode,
-        loadWebGPU,
-    ),
-    GPUOutOfMemoryError: nonEnumerable(
-        (webgpu) => webgpu.GPUOutOfMemoryError,
-        loadWebGPU,
-    ),
-    GPURenderBundle: nonEnumerable(
-        (webgpu) => webgpu.GPURenderBundle,
-        loadWebGPU,
-    ),
-    GPURenderBundleEncoder: nonEnumerable(
-        (webgpu) => webgpu.GPURenderBundleEncoder,
-        loadWebGPU,
-    ),
-    GPURenderPassEncoder: nonEnumerable(
-        (webgpu) => webgpu.GPURenderPassEncoder,
-        loadWebGPU,
-    ),
-    GPURenderPipeline: nonEnumerable(
-        (webgpu) => webgpu.GPURenderPipeline,
-        loadWebGPU,
-    ),
-    GPUSampler: nonEnumerable(
-        (webgpu) => webgpu.GPUSampler,
-        loadWebGPU,
-    ),
-    GPUShaderModule: nonEnumerable(
-        (webgpu) => webgpu.GPUShaderModule,
-        loadWebGPU,
-    ),
-    GPUShaderStage: nonEnumerable(
-        (webgpu) => webgpu.GPUShaderStage,
-        loadWebGPU,
-    ),
-    GPUSupportedFeatures: nonEnumerable(
-        (webgpu) => webgpu.GPUSupportedFeatures,
-        loadWebGPU,
-    ),
-    GPUSupportedLimits: nonEnumerable(
-        (webgpu) => webgpu.GPUSupportedLimits,
-        loadWebGPU,
-    ),
-    GPUTexture: nonEnumerable(
-        (webgpu) => webgpu.GPUTexture,
-        loadWebGPU,
-    ),
-    GPUTextureView: nonEnumerable(
-        (webgpu) => webgpu.GPUTextureView,
-        loadWebGPU,
-    ),
-    GPUTextureUsage: nonEnumerable(
-        (webgpu) => webgpu.GPUTextureUsage,
-        loadWebGPU,
-    ),
-    GPUValidationError: nonEnumerable(
-        (webgpu) => webgpu.GPUValidationError,
-        loadWebGPU,
-    ),
-})*/
+globalThis.Deno.UnsafeWindowSurface = UnsafeWindowSurface;
