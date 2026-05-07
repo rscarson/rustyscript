@@ -243,7 +243,6 @@ fn create_web_worker_callback(options: WebWorkerCallbackOptions) -> Arc<CreateWe
                     .map(std::num::NonZero::get)
                     .unwrap_or(1),
                 log_level: WorkerLogLevel::default(),
-                enable_op_summary_metrics: false,
                 enable_testing_features: false,
                 locale: deno_core::v8::icu::get_language_tag(),
                 location: Some(args.main_module),
@@ -254,6 +253,8 @@ fn create_web_worker_callback(options: WebWorkerCallbackOptions) -> Arc<CreateWe
                 has_node_modules_dir: node_resolver.has_node_modules_dir(),
                 argv0: None,
                 node_debug: None,
+                node_cluster_unique_id: None,
+                node_cluster_sched_policy: None,
                 node_ipc_init: None,
                 mode: WorkerExecutionMode::Worker,
                 serve_port: None,
@@ -279,6 +280,7 @@ fn create_web_worker_callback(options: WebWorkerCallbackOptions) -> Arc<CreateWe
             create_params: None,
             enable_stack_trace_arg_in_ops: false,
             maybe_coverage_dir: None,
+            maybe_cpu_prof_config: None,
         };
         WebWorker::bootstrap_from_options(services, options)
     })

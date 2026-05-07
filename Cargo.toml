@@ -57,7 +57,8 @@ extra_features = ["worker", "snapshot_builder"]
 # These extensions are not safe to use in a sandboxed environment without additional restrictions
 # (See [NodePermissions])
 node_experimental = [
-    "deno_node", "deno_resolver", "node_resolver", "deno_npm", "deno_semver", "deno_napi", "deno_runtime", "deno_process", "deno_package_json",
+    "deno_node", "deno_node_crypto", "deno_node_sqlite", "deno_resolver", "node_resolver", "deno_npm", "deno_semver", "deno_napi",
+    "deno_package_json", "deno_process", "deno_runtime",
     "deno_bundle_runtime",
     "checksum", "sys_traits", "all_extensions"
 ]
@@ -169,9 +170,9 @@ async-trait = "^0.1.89"
 paste = "1.0.15"
 
 # The deno runtime itself, and the webidl extension for the web APIs
-deno_core = "^0.380.1"
+deno_core = "^0.400.0"
 deno_error = "=0.7.1"
-deno_features = "^0.25.0"
+deno_features = "^0.44.0"
 
 # For transpiling typescript
 deno_ast = { version = "^0.52.0", features = ["transpiling", "cjs"] }
@@ -189,7 +190,7 @@ rustls = {version = "0.23.28", optional = true}
 # Upgraded to support axum 0.8+
 reqwest = { version = "^0.12.20", optional = true, default-features = false, features = ["blocking", "rustls-tls"] }
 http = { version = "^1.0", optional = true }
-deno_permissions       = { version = "^0.87.0", optional = true }
+deno_permissions = { version = "^0.106.0", optional = true }
 
 
 #
@@ -199,38 +200,40 @@ deno_permissions       = { version = "^0.87.0", optional = true }
 deno_broadcast_channel = { version = "^0.216.0", optional = true }
 uuid = { version = "1.10.0", optional = true, features = ["v4"] }
 
-deno_bundle_runtime = { version = "^0.15.0", optional = true }
-deno_cache      = { version = "^0.161.0", optional = true }
+deno_bundle_runtime = { version = "^0.34.0", optional = true }
+deno_cache          = { version = "^0.180.0", optional = true }
 deno_console    = { version = "^0.222.0", optional = true }
-deno_cron       = { version = "^0.108.0", optional = true }
-deno_crypto     = { version = "^0.242.0", optional = true }
-deno_fetch      = { version = "^0.252.0", optional = true }
-deno_ffi        = { version = "^0.215.0", optional = true }
-deno_fs         = { version = "^0.138.0", optional = true, features = ["sync_fs"] }
-deno_http       = { version = "^0.226.0", optional = true }
-deno_kv         = { version = "^0.136.0", optional = true }
-deno_net        = { version = "^0.220.0", optional = true }
-deno_node       = { version = "^0.166.0", optional = true }
-deno_tls        = { version = "^0.215.0", optional = true }
+deno_cron           = { version = "^0.127.0", optional = true }
+deno_crypto         = { version = "^0.261.0", optional = true }
+deno_fetch          = { version = "^0.271.0", optional = true }
+deno_ffi            = { version = "^0.234.0", optional = true }
+deno_fs             = { version = "^0.157.0", optional = true, features = ["sync_fs"] }
+deno_http           = { version = "^0.245.0", optional = true }
+deno_kv             = { version = "^0.155.0", optional = true }
+deno_net            = { version = "^0.239.0", optional = true }
+deno_node           = { version = "^0.185.0", optional = true }
+deno_node_crypto    = { version = "^0.17.0", optional = true }
+deno_node_sqlite    = { version = "^0.17.0", optional = true }
+deno_tls            = { version = "^0.234.0", optional = true }
 deno_url        = { version = "^0.222.0", optional = true }
 
-deno_web        = { version = "^0.259.0", optional = true }
-deno_webidl     = { version = "^0.228.0", optional = true }
-deno_webstorage = { version = "^0.223.0", optional = true }
-deno_websocket  = { version = "^0.233.0", optional = true }
-deno_webgpu     = { version = "^0.195.0", optional = true }
+deno_web            = { version = "^0.278.0", optional = true }
+deno_webidl         = { version = "^0.247.0", optional = true }
+deno_webstorage     = { version = "^0.242.0", optional = true }
+deno_websocket      = { version = "^0.252.0", optional = true }
+deno_webgpu         = { version = "^0.214.0", optional = true }
 
-deno_io = { version = "^0.138.0", optional = true }
-deno_telemetry  = { version = "^0.50.0", optional = true }
+deno_io             = { version = "^0.157.0", optional = true }
+deno_telemetry      = { version = "^0.69.0", optional = true }
 
 # Dependencies for the IO feature
-rustyline = {version = "=13.0.0", optional = true}
+rustyline = {version = "=17.0.0", optional = true}
 winapi = {version = "=0.3.9", optional = true, features = [
     "commapi", "knownfolders", "mswsock", "objbase", "psapi", "shlobj", 
     "tlhelp32", "winbase", "winerror", "winuser", "winsock2", "processenv", 
     "wincon", "wincontypes", "consoleapi"
 ]}
-nix = {version = "=0.27.1", optional = true, features = ["term"]}
+nix = { version = "=0.30.1", optional = true, features = ["term"] }
 libc = {version = "^0.2.168", optional = true}
 once_cell = {version = "^1.17.1", optional = true}
 
@@ -238,17 +241,17 @@ once_cell = {version = "^1.17.1", optional = true}
 base64-simd = {version = "0.8.0", optional = true}
 
 # Dependencies for the node feature
-deno_resolver       = { version = "^0.59.0", optional = true }
-node_resolver       = { version = "^0.66.0", optional = true, features = ["sync"] }
-deno_runtime       = { version = "^0.236.0", optional = true, features = ["exclude_runtime_main_js"] }
+deno_resolver = { version = "^0.78.0", optional = true }
+node_resolver = { version = "^0.85.0", optional = true, features = ["sync"] }
+deno_runtime  = { version = "^0.255.0", optional = true, features = ["exclude_runtime_main_js"] }
 deno_terminal = { version = "^0.2.3", optional = true }
 deno_semver   = { version = "^0.9.1", optional = true }
-deno_napi     = { version = "^0.159.0", optional = true }
+deno_napi     = { version = "^0.178.0", optional = true }
 deno_npm      = { version = "^0.43.0", optional = true }
-deno_process       = { version = "^0.43.0", optional = true }
-deno_package_json       = { version = "^0.30.0", optional = true }
+deno_process  = { version = "^0.62.0", optional = true }
+deno_package_json = { version = "^0.49.0", optional = true }
 checksum      = { version = "0.2.1", optional = true }
-sys_traits    = { version = "=0.1.22", optional = true, features = ["libc", "real", "winapi"] }
+sys_traits    = { version = "=0.1.27", optional = true, features = ["libc", "real", "winapi"] }
 
 [dev-dependencies]
 version-sync = "0.9.5"

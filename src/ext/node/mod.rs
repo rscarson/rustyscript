@@ -30,9 +30,21 @@ impl ExtensionTrait<Arc<RustyResolver>> for deno_node::deno_node {
         )
     }
 }
+impl ExtensionTrait<()> for deno_node_crypto::deno_node_crypto {
+    fn init((): ()) -> Extension {
+        deno_node_crypto::deno_node_crypto::init()
+    }
+}
+impl ExtensionTrait<()> for deno_node_sqlite::deno_node_sqlite {
+    fn init((): ()) -> Extension {
+        deno_node_sqlite::deno_node_sqlite::init()
+    }
+}
 
 pub fn extensions(resolver: Arc<RustyResolver>, is_snapshot: bool) -> Vec<Extension> {
     vec![
+        deno_node_crypto::deno_node_crypto::build((), is_snapshot),
+        deno_node_sqlite::deno_node_sqlite::build((), is_snapshot),
         deno_node::deno_node::build(resolver, is_snapshot),
         init_node::build((), is_snapshot),
     ]

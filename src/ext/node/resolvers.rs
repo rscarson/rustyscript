@@ -318,6 +318,7 @@ impl RustyNpmPackageFolderResolver {
         let options = ByonmNpmResolverCreateOptions {
             sys: NodeResolutionSys::new(RealSys, Some(resolution_cache.clone())),
             root_node_modules_dir: base_dir.clone(),
+            search_stop_dir: None,
             pkg_json_resolver: pjson.clone(),
         };
 

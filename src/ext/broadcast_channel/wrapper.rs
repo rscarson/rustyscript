@@ -464,7 +464,7 @@ impl Drop for IsolatedBroadcastChannelWrapper {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::{Module, Runtime, RuntimeOptions};
+    use crate::{Runtime, RuntimeOptions};
 
     #[test]
     fn test_isolated_broadcast_channel_send_recv() {

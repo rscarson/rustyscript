@@ -15,9 +15,13 @@ mod callbacks;
 /// # Arguments
 /// * `state` - The runtime's state, into which the function will be put
 /// * `callback` - The function to register
-#[op2]
-fn op_register_entrypoint(state: &mut OpState, #[global] callback: v8::Global<v8::Function>) {
-    state.put(callback);
+#[op2(fast)]
+fn op_register_entrypoint<'s>(
+    scope: &mut v8::PinScope<'s, '_>,
+    state: &mut OpState,
+    callback: v8::Local<'s, v8::Function>,
+) {
+    state.put(v8::Global::new(scope, callback));
 }
 
 #[op2]
@@ -38,7 +42,7 @@ fn call_registered_function(
     Err(Error::ValueNotCallable(name.to_string()))
 }
 
-#[op2(async)]
+#[op2]
 #[serde]
 fn call_registered_function_async(
     #[string] name: String,
