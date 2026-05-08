@@ -166,7 +166,7 @@ rs_fn! {
     }
 }
 
-#[op2(async)]
+#[op2]
 #[serde]
 pub async fn run_rscallback<T: RsCallback>(
     #[serde] args: T::Arguments,
@@ -176,7 +176,7 @@ pub async fn run_rscallback<T: RsCallback>(
 
 type CallbackTable = std::collections::HashMap<String, Rc<Box<dyn RsStoredCallback>>>;
 
-#[op2(async)]
+#[op2]
 #[serde]
 pub fn rscallback(
     #[string] name: &str,

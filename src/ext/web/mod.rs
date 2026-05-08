@@ -17,6 +17,7 @@ pub use permissions::{
 
 /// Stub for a node op deno_net expects to find
 /// We return None to show no cert available
+#[cfg(not(feature = "node_experimental"))]
 #[deno_core::op2]
 #[serde]
 pub fn op_tls_peer_certificate(
