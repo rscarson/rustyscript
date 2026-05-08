@@ -240,8 +240,7 @@ fn create_web_worker_callback(options: WebWorkerCallbackOptions) -> Arc<CreateWe
                 deno_version: env!("CARGO_PKG_VERSION").to_string(),
                 args: vec![],
                 cpu_count: std::thread::available_parallelism()
-                    .map(std::num::NonZero::get)
-                    .unwrap_or(1),
+                    .map_or(1, std::num::NonZero::get),
                 log_level: WorkerLogLevel::default(),
                 enable_op_summary_metrics: false,
                 enable_testing_features: false,

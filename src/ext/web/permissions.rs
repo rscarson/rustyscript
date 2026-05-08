@@ -640,10 +640,10 @@ impl_sys_permission_kinds!(
 #[derive(Clone, Debug)]
 pub struct PermissionsContainer(pub Arc<dyn WebPermissions>);
 
-/// Convert WebPermissions to deno_permissions::PermissionsOptions
+/// Convert `WebPermissions` to `deno_permissions::PermissionsOptions`
 ///
-/// This function probes the WebPermissions trait methods to determine
-/// what should be allowed, then converts to PermissionsOptions format.
+/// This function probes the `WebPermissions` trait methods to determine
+/// what should be allowed, then converts to `PermissionsOptions` format.
 ///
 /// - For `DefaultWebPermissions` (or equivalent allow-all): returns options that allow everything
 /// - For restrictive permissions (e.g., `AllowlistWebPermissions`): returns options that deny by default

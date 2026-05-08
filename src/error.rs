@@ -201,7 +201,7 @@ impl Error {
             };
 
             // Combine all the parts
-            format!("{position_part}{source_line_part}{msg_part}",)
+            format!("{position_part}{source_line_part}{msg_part}")
         } else {
             self.to_string()
         };

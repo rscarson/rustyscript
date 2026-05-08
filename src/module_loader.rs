@@ -269,7 +269,7 @@ mod test {
         }
     }
 
-    /// Test backward compatibility for ImportProvider trait
+    /// Test backward compatibility for `ImportProvider` trait
     #[test]
     fn test_import_provider_backward_compat() {
         use deno_core::RequestedModuleType;
