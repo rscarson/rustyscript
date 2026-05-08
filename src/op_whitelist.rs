@@ -14,6 +14,7 @@ macro_rules! whitelist {
 }
 
 /// Get the global whitelist of ops.
+#[must_use] 
 pub fn get_whitelist() -> &'static OpWhitelist {
     &WHITELIST
 }
@@ -243,11 +244,13 @@ whitelist!(
 pub struct OpWhitelist(&'static [OpSrc]);
 impl OpWhitelist {
     /// Create a new list of safe ops.
+    #[must_use] 
     pub const fn new(ops: &'static [OpSrc]) -> Self {
         OpWhitelist(ops)
     }
 
     /// Check if the whitelist contains a specific op.
+    #[must_use] 
     pub fn contains_op(&self, op: &str) -> bool {
         self.0.iter().any(|src| src.contains_op(op))
     }
@@ -274,7 +277,8 @@ pub struct OpSrc {
     pub stubs: &'static [&'static str],
 }
 impl OpSrc {
-    /// Create a new OpSrc.
+    /// Create a new `OpSrc`.
+    #[must_use] 
     pub const fn new(
         src: &'static str,
         ops: &'static [&'static str],
@@ -283,7 +287,8 @@ impl OpSrc {
         OpSrc { src, ops, stubs }
     }
 
-    /// Check if the OpSrc contains a specific op.
+    /// Check if the `OpSrc` contains a specific op.
+    #[must_use] 
     pub fn contains_op(&self, op: &str) -> bool {
         self.ops.contains(&op) || self.stubs.contains(&op)
     }

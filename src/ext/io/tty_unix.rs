@@ -203,7 +203,7 @@ fn console_size_from_fd(fd: std::os::unix::prelude::RawFd) -> Result<ConsoleSize
     // SAFETY: libc calls
     unsafe {
         let mut size: libc::winsize = std::mem::zeroed();
-        if libc::ioctl(fd, libc::TIOCGWINSZ, &mut size as *mut _) != 0 {
+        if libc::ioctl(fd, libc::TIOCGWINSZ, std::ptr::from_mut(&mut size)) != 0 {
             return Err(Error::last_os_error());
         }
         Ok(ConsoleSize {

@@ -125,7 +125,7 @@ fn decode_args_to_globals(
         let len = arr.length();
         let mut result = Vec::with_capacity(len as usize);
         for i in 0..len {
-            let index = v8::Integer::new(&context_scope, i as i32);
+            let index = v8::Integer::new(&context_scope, i.cast_signed());
             if let Some(arg) = arr.get(&context_scope, index.into()) {
                 let isolate: &v8::Isolate = &context_scope;
                 result.push(v8::Global::new(isolate, arg));

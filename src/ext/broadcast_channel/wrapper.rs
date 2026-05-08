@@ -20,7 +20,7 @@
 //!
 //! ## Example
 //!
-//! ### JavaScript ↔ Rust (BroadcastChannelWrapper)
+//! ### JavaScript ↔ Rust (`BroadcastChannelWrapper`)
 //! ```rust,ignore
 //! use rustyscript::{BroadcastChannelWrapper, Runtime, RuntimeOptions};
 //!
@@ -35,7 +35,7 @@
 //! // JavaScript BroadcastChannel('my_channel') receives this message
 //! ```
 //!
-//! ### Rust ↔ Rust (IsolatedBroadcastChannel)
+//! ### Rust ↔ Rust (`IsolatedBroadcastChannel`)
 //! ```rust,ignore
 //! use rustyscript::{IsolatedBroadcastChannel, Runtime, RuntimeOptions};
 //!
@@ -61,7 +61,7 @@ use uuid::Uuid;
 
 use crate::{big_json_args, Error, Runtime};
 
-/// Message type matching deno_web's internal InMemoryChannelMessage structure
+/// Message type matching `deno_web`'s internal `InMemoryChannelMessage` structure
 #[derive(Clone, Debug)]
 struct InMemoryChannelMessage {
     name: Arc<String>,
@@ -73,7 +73,7 @@ struct InMemoryChannelMessage {
 ///
 /// Takes care of some of the boilerplate for serialization/deserialization.
 /// Messages are serialized through the JavaScript runtime to ensure compatibility
-/// with the JavaScript BroadcastChannel API.
+/// with the JavaScript `BroadcastChannel` API.
 ///
 /// This wrapper shares the same underlying channel as JavaScript's `BroadcastChannel`,
 /// enabling bidirectional Rust ↔ JavaScript communication.
@@ -91,7 +91,7 @@ pub struct BroadcastChannelWrapper {
 impl BroadcastChannelWrapper {
     /// Create a new broadcast channel wrapper and subscribe to the channel
     ///
-    /// This wrapper shares the same underlying channel as JavaScript's BroadcastChannel,
+    /// This wrapper shares the same underlying channel as JavaScript's `BroadcastChannel`,
     /// enabling bidirectional communication.
     ///
     /// Unsubscribe is called when the wrapper is dropped
@@ -108,8 +108,7 @@ impl BroadcastChannelWrapper {
         //
         // We can access the field by transmuting to the inner type:
         let sender: &Arc<Mutex<broadcast::Sender<InMemoryChannelMessage>>> = unsafe {
-            &*(channel as *const InMemoryBroadcastChannel
-                as *const Arc<Mutex<broadcast::Sender<InMemoryChannelMessage>>>)
+            &*std::ptr::from_ref::<InMemoryBroadcastChannel>(channel).cast::<Arc<Mutex<broadcast::Sender<InMemoryChannelMessage>>>>()
         };
 
         let sender = sender.clone();
@@ -180,6 +179,8 @@ impl BroadcastChannelWrapper {
         runtime: &mut Runtime,
         timeout: Option<Duration>,
     ) -> Result<Option<T>, Error> {
+        use tokio::sync::broadcast::error::RecvError::{Closed, Lagged};
+
         let mut guard = self.receiver.lock().await;
         let (broadcast_rx, cancel_rx) = &mut *guard;
 
@@ -197,12 +198,11 @@ impl BroadcastChannelWrapper {
                 }
             };
 
-            use tokio::sync::broadcast::error::RecvError::*;
             match result {
                 Err(Closed) => return Ok(None),
-                Err(Lagged(_)) => continue, // Backlogged, messages dropped - try again
-                Ok(message) if message.uuid == self.uuid => continue, // Self-send, skip
-                Ok(message) if *message.name != self.name => continue, // Different channel name
+                Err(Lagged(_)) => {} // Backlogged, messages dropped - try again
+                Ok(message) if message.uuid == self.uuid => {} // Self-send, skip
+                Ok(message) if *message.name != self.name => {} // Different channel name
                 Ok(message) => {
                     // Deserialize through JavaScript for compatibility
                     let data: T = runtime
@@ -392,6 +392,8 @@ impl IsolatedBroadcastChannelWrapper {
         runtime: &mut Runtime,
         timeout: Option<Duration>,
     ) -> Result<Option<T>, Error> {
+        use tokio::sync::broadcast::error::RecvError::{Closed, Lagged};
+
         let mut guard = self.receiver.lock().await;
         let (broadcast_rx, cancel_rx) = &mut *guard;
 
@@ -409,12 +411,11 @@ impl IsolatedBroadcastChannelWrapper {
                 }
             };
 
-            use tokio::sync::broadcast::error::RecvError::*;
             match result {
                 Err(Closed) => return Ok(None),
-                Err(Lagged(_)) => continue, // Backlogged, messages dropped - try again
-                Ok(message) if message.sender_id == self.uuid => continue, // Self-send, skip
-                Ok(message) if *message.name != self.name => continue, // Different channel name
+                Err(Lagged(_)) => {} // Backlogged, messages dropped - try again
+                Ok(message) if message.sender_id == self.uuid => {} // Self-send, skip
+                Ok(message) if *message.name != self.name => {} // Different channel name
                 Ok(message) => {
                     // Deserialize through JavaScript for compatibility
                     let data: T = runtime
@@ -464,7 +465,7 @@ impl Drop for IsolatedBroadcastChannelWrapper {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::{Module, Runtime, RuntimeOptions};
+    use crate::{Runtime, RuntimeOptions};
 
     #[test]
     fn test_isolated_broadcast_channel_send_recv() {

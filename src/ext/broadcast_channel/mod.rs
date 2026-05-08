@@ -61,7 +61,7 @@ mod test {
     /// This test is identical to the original test from origin/master that verified
     /// JavaScript ↔ Rust bidirectional communication.
     ///
-    /// BroadcastChannelWrapper has been restored to maintain full backward compatibility
+    /// `BroadcastChannelWrapper` has been restored to maintain full backward compatibility
     /// with origin/master behavior.
     #[test]
     fn test_broadcast_channel() {
