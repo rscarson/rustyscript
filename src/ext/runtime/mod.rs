@@ -4,7 +4,7 @@ use deno_bundle_runtime::BundleProvider;
 use deno_core::{
     extension,
     v8::{BackingStore, SharedRef},
-    CrossIsolateStore, Extension, ExtensionFileSource,
+    CrossIsolateStore, Extension,
 };
 use deno_runtime::deno_permissions::Permissions;
 use deno_runtime::permissions::RuntimePermissionDescriptorParser;
@@ -54,11 +54,6 @@ extension!(
         let permissions = build_permissions(container);
         state.put(permissions);
     },
-    customizer = |e: &mut Extension| {
-        e.esm_files.to_mut().push(
-            ExtensionFileSource::new("ext:deno_features/flags.js", deno_features::JS_SOURCE)
-        );
-    }
 );
 impl ExtensionTrait<()> for init_runtime {
     fn init((): ()) -> Extension {
@@ -70,6 +65,9 @@ impl ExtensionTrait<()> for deno_runtime::runtime {
     fn init((): ()) -> Extension {
         let mut e = deno_runtime::runtime::init();
         e.esm_entry_point = None;
+        e.esm_files
+            .to_mut()
+            .retain(|f| f.specifier != "ext:runtime_main/js/99_main.js");
         e
     }
 }
