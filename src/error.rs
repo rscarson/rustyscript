@@ -142,7 +142,7 @@ impl Error {
             };
 
             let mut line = e.source_line.as_ref().map(|s| s.trim_end());
-            let col = col - 1;
+            let col = col.saturating_sub(1);
 
             // Get at most 50 characters, centered on column_number
             let mut padding = String::new();
@@ -319,5 +319,30 @@ mod test {
             "|     ^\n",
             "= Uncaught (in promise) ReferenceError: x is not defined"
         ));
+    }
+
+    #[test]
+    fn highlight_with_zero_column_does_not_panic() {
+        let js_error = deno_core::error::JsError {
+            name: Some("ReferenceError".to_string()),
+            message: Some("x is not defined".to_string()),
+            stack: None,
+            cause: None,
+            exception_message: "Uncaught ReferenceError: x is not defined".to_string(),
+            frames: vec![deno_core::error::JsStackFrame::from_location(
+                Some("file:///test.js".to_string()),
+                Some(1),
+                Some(0),
+            )],
+            source_line: Some("const x = y;".to_string()),
+            source_line_frame_index: Some(0),
+            aggregated: None,
+            additional_properties: vec![],
+        };
+
+        let err = crate::Error::from(Box::new(js_error));
+        let out = err.as_highlighted(ErrorFormattingOptions::default());
+        assert!(out.contains("const x = y;"));
+        assert!(out.contains("ReferenceError"));
     }
 }
